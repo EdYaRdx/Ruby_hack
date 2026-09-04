@@ -1,0 +1,65 @@
+openapi: 3.0.3
+info:
+  title: Ambiguous Provider
+  version: '1.0'
+servers:
+  - url: https://sandbox.ambiguous-provider.example/v1
+    description: Sandbox
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    CreatePayoutRequest:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: integer
+          description: Amount accepted by the provider.
+        currency:
+          type: string
+          enum:
+            - RUB
+    PayoutResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - completed
+        amount:
+          type: integer
+        currency:
+          type: string
+          enum:
+            - RUB
+paths:
+  /payouts:
+    post:
+      operationId: createPayout
+      summary: Create payout
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePayoutRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResponse'
+        '422':
+          description: Validation error

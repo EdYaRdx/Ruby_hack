@@ -54,7 +54,7 @@ OpenAPI описывает структуру транспорта. Платёж
 - Детерминированная Ruby-проекция и verification: реализация generator присутствует.
 - Канонический пример NovaPay: 7 файлов в `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
 - Independent semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
-- Live provider calls и Web UI: в этом vertical slice не реализованы; Web UI остаётся планом.
+- Live provider calls не реализованы; Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
 Для обновления снимка запустите `ruby bin/update_docs`.
 <!-- END GENERATED: CAPABILITIES -->
@@ -108,7 +108,7 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущая проверка (сгенерировано автоматически)**
 
-- RSpec: 42 examples, failures: 0.
+- RSpec: 55 examples, failures: 0.
 - Mutation cases NovaPay: безопасно пройдено 37/37; decision accuracy: 100.0%; safe decision coverage: 100.0%.
 - ACCEPT rate: 48.6%; REVIEW_REQUIRED rate: 40.5%; UNKNOWN rate: 10.8%.
 - Independent semantic ACCEPT accuracy: 100.0%; critical false ACCEPTs: 0.
@@ -116,6 +116,23 @@ runner-ов и текущего запуска RSpec. Числа не копир
 
 Для обновления блока запустите `ruby bin/update_docs`.
 <!-- END GENERATED: PROJECT_STATUS -->
+
+## Web UI Demo Workbench
+
+The local workbench follows the Figma reference and exposes the existing
+pipeline without changing compiler semantics:
+
+```powershell
+bundle exec ruby bin/provider_compiler_web
+```
+
+Open `http://127.0.0.1:4567`. Use a local OpenAPI file or the NovaPay,
+Ambiguous and Aurora demo buttons. The screens are Upload → Analysis → Review
+→ Preview → Generate. Preview executes the generated runtime, and Generate
+uses the existing `DeterministicGenerator` and `Verification`; no provider
+network calls are made.
+
+UI regression coverage is in [`spec/web_spec.rb`](spec/web_spec.rb).
 
 ## Навигация по репозиторию
 

@@ -71,7 +71,7 @@ capabilities_block = <<~MARKDOWN
   - Детерминированная Ruby-проекция и verification: реализация generator присутствует.
   - Канонический пример NovaPay: #{example_files.length} файлов в `examples/novapay/` (`#{example_files.join("`, `")}`).
   - Independent semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
-  - Live provider calls и Web UI: в этом vertical slice не реализованы; Web UI остаётся планом.
+  - Live provider calls не реализованы; Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
   Для обновления снимка запустите `ruby bin/update_docs`.
 MARKDOWN

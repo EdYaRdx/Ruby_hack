@@ -37,4 +37,15 @@ fail-closed проверку webhook. `verify` компилирует generated 
 ruby bin/provider_compiler inspect --spec path/to/provider_api.yaml --profile profiles/space_payments_v1.yml --defaults fixtures/novapay_case_defaults.yml
 ```
 
-Web UI запланирован на последующий goal и не входит в эту демонстрацию.
+## Web UI Demo Workbench
+
+Запустите локальный сервер:
+
+```powershell
+bundle exec ruby bin/provider_compiler_web
+```
+
+Откройте `http://127.0.0.1:4567`. Workbench поддерживает локальную загрузку OpenAPI,
+демо NovaPay/Ambiguous/Aurora, Analysis с evidence, fail-closed Review, runtime Preview
+и генерацию тех же артефактов через существующие `Pipeline`, `Blueprint`,
+`DeterministicGenerator` и `Verification`. Сетевые вызовы к provider не выполняются.

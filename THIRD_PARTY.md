@@ -22,3 +22,6 @@ specifications, использованным при проверке текущ�
 Ruby и его standard library являются prerequisites, поставляемыми runtime; этот
 репозиторий их не vendored. Для запуска tests, generation и benchmark не нужны
 credentials или сетевой доступ к провайдеру.
+
+Web UI использует `webrick` 1.9.2 из RubyGems (MIT) как небольшой локальный
+HTTP-сервер. Он не добавляет внешние runtime API или сетевые вызовы к provider.

@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+require "provider_compiler"
+require "provider_compiler/web"
+
+host = ENV.fetch("PROVIDER_COMPILER_WEB_HOST", "127.0.0.1")
+port = Integer(ENV.fetch("PROVIDER_COMPILER_WEB_PORT", "4567"))
+ProviderCompiler::Web::Server.start(host: host, port: port)

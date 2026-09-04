@@ -9,6 +9,16 @@ bundle install
 bundle exec rspec
 ```
 
+Для ручной проверки Web UI:
+
+```powershell
+bundle exec ruby bin/provider_compiler_web
+```
+
+После запуска откройте `http://127.0.0.1:4567`. UI-тесты находятся в
+`spec/web_spec.rb`; они проверяют upload, demo-сценарии, Review safety,
+runtime Preview и generated artifacts.
+
 ## Процесс изменения
 
 1. Меняйте минимально необходимый loader, analyzer, profile или generator.

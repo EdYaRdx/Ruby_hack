@@ -10,6 +10,16 @@ defaults. Provider Blueprint создаётся только после анал
 доказательств. Ruby generator — детерминированная проекция этой Blueprint, а не
 независимый источник семантики интеграции.
 
+## Web UI Demo Workbench
+
+`lib/provider_compiler/web.rb` — тонкий WEBrick HTTP-слой, а
+`lib/provider_compiler/web_renderer.rb` и `web/public/` отвечают только за
+server-rendered представление и браузерное взаимодействие. Он создаёт
+изолированный временный workspace на каждую загрузку, вызывает существующий
+`Pipeline`, показывает `ReviewManifest`, а Preview и Generate используют
+существующие generated runtime и verification. Web-слой не добавляет новую
+семантическую модель, БД, auth или live provider calls.
+
 ## Конвейер
 
 ```text

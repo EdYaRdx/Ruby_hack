@@ -16,6 +16,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.13.0)
     rspec-support (3.13.7)
+    webrick (1.9.2)
 
 PLATFORMS
   x64-mingw-ucrt
@@ -23,6 +24,7 @@ PLATFORMS
 DEPENDENCIES
   bigdecimal (>= 3.1)
   rspec (~> 3.13)
+  webrick (~> 1.9)
 
 BUNDLED WITH
    2.5.22
