@@ -1,0 +1,135 @@
+{
+  "create_request": {
+    "operation": {
+      "amount": 15000.0,
+      "currency": "RUB",
+      "external_id": "op_abc123",
+      "idempotency_key": "key-1",
+      "recipient": {
+        "type": "sbp",
+        "phone": "79001234567",
+        "bank_code": "044525225"
+      }
+    },
+    "expected_provider_amount": 1500000,
+    "expected_http_status": 201
+  },
+  "fetch_status": {
+    "operation": {
+      "provider_operation_id": "np_7f3a9b2c"
+    },
+    "response": {
+      "id": "np_7f3a9b2c",
+      "status": "completed",
+      "amount": 1500000,
+      "currency": "RUB"
+    },
+    "expected_host_status": "approved",
+    "expected_host_amount": 15000.0,
+    "expected_http_status": 200
+  },
+  "validation_error": {
+    "operation": {
+      "amount": 999.99,
+      "currency": "RUB",
+      "external_id": "op_too_small",
+      "recipient": {
+        "type": "sbp",
+        "phone": "79001234567",
+        "bank_code": "044525225"
+      }
+    },
+    "expected_http_status": 422,
+    "expected_error_code": "validation_error"
+  },
+  "callback_completed": {
+    "body": {
+      "event": "payout.completed",
+      "payout_id": "np_7f3a9b2c",
+      "external_id": "op_abc123",
+      "status": "completed"
+    },
+    "expected_host_status": "approved"
+  },
+  "callback_processing": {
+    "body": {
+      "event": "payout.processing",
+      "payout_id": "np_7f3a9b2c",
+      "external_id": "op_abc123",
+      "status": "processing"
+    },
+    "expected_host_status": "in_progress"
+  },
+  "callback_failed": {
+    "body": {
+      "event": "payout.failed",
+      "payout_id": "np_7f3a9b2c",
+      "external_id": "op_abc123",
+      "status": "failed"
+    },
+    "expected_host_status": "rejected"
+  },
+  "callback_cancelled": {
+    "body": {
+      "event": "payout.cancelled",
+      "payout_id": "np_7f3a9b2c",
+      "external_id": "op_abc123",
+      "status": "cancelled"
+    },
+    "expected_host_status": "rejected"
+  },
+  "response": {
+    "provider_amount": 1500000,
+    "expected_host_amount": 15000.0,
+    "status": "completed"
+  },
+  "webhook": {
+    "status": "completed",
+    "signature_algorithm": "HMAC-SHA256",
+    "encoding": "hex"
+  },
+  "extra_operations": [
+    {
+      "operation_id": "cancelPayout",
+      "method": "POST",
+      "path": "/payouts/{payout_id}/cancel",
+      "kind": "EXTRA_OPERATION",
+      "preserved": true,
+      "blocking": false,
+      "canonical_binding": "none_unless_profile_declares_cancelpayout"
+    },
+    {
+      "operation_id": "getBalance",
+      "method": "GET",
+      "path": "/balance",
+      "kind": "EXTRA_OPERATION",
+      "preserved": true,
+      "blocking": false,
+      "canonical_binding": "none_unless_profile_declares_balance"
+    }
+  ],
+  "blueprint_expectations": {
+    "source_fingerprint": "sha256:05d52c95b18c2ca611e0b72ec73b989661ceb42b1b7bcc05b3af89208559cc7c",
+    "sandbox_url": "https://api.sandbox.novapay.example/v1",
+    "canonical_operations": [
+      "create_request",
+      "fetch_status",
+      "process_callback"
+    ],
+    "money_request_factor": 100,
+    "money_response_factor": 0.01,
+    "status_map": {
+      "pending": "in_progress",
+      "processing": "in_progress",
+      "completed": "approved",
+      "failed": "rejected",
+      "cancelled": "rejected"
+    },
+    "webhook_events": {
+      "payout.completed": "approved",
+      "payout.failed": "rejected",
+      "payout.processing": "in_progress",
+      "payout.cancelled": "rejected"
+    }
+  }
+}

@@ -1,0 +1,82 @@
+schema_version: 1
+purpose: Hand-authored runtime expectations for Aurora generated adapter behavior.
+provider: Aurora Transfers
+vectors:
+  host_create_input:
+    kind: create_request
+    credentials:
+      api_key: aurora-test-key
+    input:
+      amount: '12.50'
+      currency: USD
+      external_id: aurora-op-001
+      idempotency_key: aurora-token-001
+      recipient:
+        type: bank
+        account: US123456789
+        routing_number: '011000015'
+    expected:
+      method: POST
+      path: /transfers
+      url: https://sandbox.api.aurora-transfers.example/v2/transfers
+      headers:
+        Authorization: Bearer aurora-test-key
+        X-Aurora-Request-Token: aurora-token-001
+      query: {}
+      body:
+        money:
+          value: '12.50'
+          currency: USD
+        external_reference: aurora-op-001
+        destination:
+          type: bank
+          account: US123456789
+          routing_number: '011000015'
+  provider_status_response:
+    kind: fetch_status
+    credentials:
+      api_key: aurora-test-key
+    input:
+      provider_operation_id: tr-123
+    provider_response:
+      http_status: 200
+      body:
+        id: tr-123
+        status: settled
+        money:
+          value: '12.50'
+          currency: USD
+    expected:
+      ok: true
+      provider_status: settled
+      status: approved
+      provider_operation_id: tr-123
+      amount: '12.50'
+  settled_webhook:
+    kind: webhook
+    credentials:
+      webhook_secret: aurora-webhook-secret
+    input:
+      raw_body: '{"event":"transfer.settled","transfer_id":"tr-123","status":"settled"}'
+    expected:
+      ok: true
+      provider_status: settled
+      status: approved
+      event: transfer.settled
+      provider_operation_id: tr-123
+      action: approve_operation
+      terminal: true
+  declined_webhook:
+    kind: webhook
+    credentials:
+      webhook_secret: aurora-webhook-secret
+    input:
+      raw_body: '{"event":"transfer.declined","transfer_id":"tr-456","status":"declined"}'
+    expected:
+      ok: true
+      provider_status: declined
+      status: rejected
+      event: transfer.declined
+      provider_operation_id: tr-456
+      action: reject_operation
+      terminal: true

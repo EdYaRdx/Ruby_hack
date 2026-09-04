@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "fileutils"
+require "open3"
+require "rbconfig"
+
+ROOT = File.expand_path("..", __dir__)
+SOURCE = File.join(ROOT, "fixtures", "novapay_provider_api.yaml")
+OUTPUT = File.join(ROOT, "examples", "novapay")
+
+abort "missing source fixture: #{SOURCE}" unless File.file?(SOURCE)
+
+expected_output = File.expand_path(File.join(ROOT, "examples", "novapay"))
+abort "unsafe example output path" unless File.expand_path(OUTPUT) == expected_output
+
+FileUtils.rm_rf(OUTPUT)
+FileUtils.mkdir_p(OUTPUT)
+FileUtils.cp(SOURCE, File.join(OUTPUT, "provider_api.yaml"))
+
+def run_cli(*arguments)
+  stdout, stderr, status = Open3.capture3(RbConfig.ruby, "bin/provider_compiler", *arguments, chdir: ROOT)
+  $stdout.write(stdout)
+  $stderr.write(stderr)
+  abort "command failed: ruby bin/provider_compiler #{arguments.join(" ")}" unless status.success?
+end
+
+run_cli(
+  "generate",
+  "--spec", "fixtures/novapay_provider_api.yaml",
+  "--profile", "profiles/space_payments_v1.yml",
+  "--defaults", "fixtures/novapay_case_defaults.yml",
+  "--out", "examples/novapay"
+)
+run_cli("verify", "--out", "examples/novapay")
+
+puts "Updated examples/novapay from fixtures/novapay_provider_api.yaml"

@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "fileutils"
+require "json"
+require "open3"
+require "rbconfig"
+
+ROOT = File.expand_path("..", __dir__)
+TMP = File.join(ROOT, "tmp", "benchmark")
+BENCHMARK_JSON = File.join(TMP, "results.json")
+AURORA_JSON = File.join(TMP, "second_provider.json")
+RSPEC_JSON = File.join(TMP, "rspec.json")
+
+def run_ruby(environment, *arguments)
+  stdout, stderr, status = Open3.capture3(environment, RbConfig.ruby, *arguments, chdir: ROOT)
+  return if status.success?
+
+  warn stdout
+  warn stderr
+  abort "command failed: ruby #{arguments.join(" ")}"
+end
+
+FileUtils.mkdir_p(TMP)
+run_ruby({ "BENCHMARK_OUTPUT" => BENCHMARK_JSON }, "research/benchmark/run.rb")
+run_ruby({ "SECOND_PROVIDER_OUTPUT" => AURORA_JSON }, "research/benchmark/second_provider.rb")
+run_ruby({}, "-rbundler/setup", "-S", "rspec", "--format", "json", "--out", RSPEC_JSON)
+
+benchmark = JSON.parse(File.read(BENCHMARK_JSON, encoding: "UTF-8"))
+aurora = JSON.parse(File.read(AURORA_JSON, encoding: "UTF-8"))
+rspec = JSON.parse(File.read(RSPEC_JSON, encoding: "UTF-8"))
+
+aggregate = benchmark.fetch("aggregate")
+aurora_aggregate = aurora.fetch("aggregate")
+rspec_summary = rspec.fetch("summary")
+aurora_vectors = aurora_aggregate.fetch("resolved").fetch("behavioral_vectors").fetch("vectors")
+aurora_vectors_total = aurora_vectors.length
+aurora_vectors_passed = aurora_vectors.count { |vector| vector.fetch("passed") }
+example_files = Dir[File.join(ROOT, "examples", "novapay", "*")].select { |path| File.file?(path) }.map { |path| File.basename(path) }.sort
+
+def percent(value)
+  value.nil? ? "n/a" : "#{value}%"
+end
+
+def replace_block(path, name, content)
+  source = File.read(path, encoding: "UTF-8")
+  start_marker = "<!-- BEGIN GENERATED: #{name} -->"
+  end_marker = "<!-- END GENERATED: #{name} -->"
+  pattern = /#{Regexp.escape(start_marker)}.*?#{Regexp.escape(end_marker)}/m
+  abort "missing or duplicate generated block #{name} in #{path}" unless source.scan(pattern).length == 1
+
+  replacement = "#{start_marker}\n#{content.rstrip}\n#{end_marker}"
+  File.write(path, source.sub(pattern, replacement), encoding: "UTF-8")
+end
+
+status_block = <<~MARKDOWN
+  **Текущая проверка (сгенерировано автоматически)**
+
+  - RSpec: #{rspec_summary.fetch("example_count")} examples, failures: #{rspec_summary.fetch("failure_count")}.
+  - Mutation cases NovaPay: безопасно пройдено #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}; decision accuracy: #{percent(aggregate["decision_accuracy"])}; safe decision coverage: #{percent(aggregate["safe_decision_coverage"])}.
+  - ACCEPT rate: #{percent(aggregate["automatic_accept_rate"])}; REVIEW_REQUIRED rate: #{percent(aggregate["review_required_rate"])}; UNKNOWN rate: #{percent(aggregate["unknown_rate"])}.
+  - Independent semantic ACCEPT accuracy: #{percent(aggregate["semantic_accept_accuracy"])}; critical false ACCEPTs: #{aggregate.fetch("critical_false_accept_count")}.
+  - Aurora: levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}.
+
+  Для обновления блока запустите `ruby bin/update_docs`.
+MARKDOWN
+
+capabilities_block = <<~MARKDOWN
+  - Загрузка и проверка OpenAPI, локальные references и source fingerprinting: присутствует `lib/provider_compiler/core.rb`.
+  - Анализ с учётом evidence, Review Manifest и Provider Blueprint: реализации analyzer/profile/blueprint присутствуют.
+  - Детерминированная Ruby-проекция и verification: реализация generator присутствует.
+  - Канонический пример NovaPay: #{example_files.length} файлов в `examples/novapay/` (`#{example_files.join("`, `")}`).
+  - Independent semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
+  - Live provider calls и Web UI: в этом vertical slice не реализованы; Web UI остаётся планом.
+
+  Для обновления снимка запустите `ruby bin/update_docs`.
+MARKDOWN
+
+benchmark_block = <<~MARKDOWN
+  **Mutation benchmark NovaPay**
+
+  - Кейсы: пройдено #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}.
+  - Decision accuracy: #{percent(aggregate["decision_accuracy"])}.
+  - Automatic ACCEPT rate: #{percent(aggregate["automatic_accept_rate"])}.
+  - Safe decision coverage: #{percent(aggregate["safe_decision_coverage"])}.
+  - REVIEW_REQUIRED rate: #{percent(aggregate["review_required_rate"])}; UNKNOWN rate: #{percent(aggregate["unknown_rate"])}.
+  - Semantic ACCEPT accuracy: #{percent(aggregate["semantic_accept_accuracy"])}.
+  - Operations / money / statuses / auth / webhook / idempotency / field mappings: #{%w[operation_semantic_accuracy money_semantic_accuracy status_semantic_accuracy auth_semantic_accuracy webhook_semantic_accuracy idempotency_semantic_accuracy field_mapping_semantic_accuracy].map { |key| percent(aggregate[key]) }.join(" / ")}.
+  - Critical false ACCEPTs: #{aggregate.fetch("critical_false_accept_count")}.
+  - Generation: успешно #{aggregate.fetch("generation_pass_count")}/#{aggregate.fetch("generation_attempt_count")} попыток; generated Ruby syntax pass rate: #{percent(aggregate["generated_syntax_pass_rate"])}.
+  - Второй provider Aurora: semantic levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}; critical false ACCEPTs: #{aurora_aggregate.fetch("critical_false_accept_count")}.
+
+  Legacy decision-only automatic-coverage: #{percent(aggregate["legacy_decision_only_automatic_coverage"])}. Значение оставлено для сравнения и не используется как safety gate.
+MARKDOWN
+
+replace_block(File.join(ROOT, "README.md"), "PROJECT_STATUS", status_block)
+replace_block(File.join(ROOT, "README.md"), "CAPABILITIES", capabilities_block)
+replace_block(File.join(ROOT, "docs", "BENCHMARK.md"), "BENCHMARK", benchmark_block)
+puts "README.md и docs/BENCHMARK.md обновлены по результатам benchmark и RSpec"

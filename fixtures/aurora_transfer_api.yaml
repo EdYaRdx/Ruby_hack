@@ -1,0 +1,191 @@
+openapi: 3.1.0
+info:
+  title: Aurora Transfers API
+  version: 2.4.0
+servers:
+  - url: https://sandbox.api.aurora-transfers.example/v2
+    description: Sandbox environment
+  - url: https://api.aurora-transfers.example/v2
+    description: Production environment
+paths:
+  /transfers:
+    post:
+      tags: [Transfers]
+      summary: Initiate a transfer
+      description: Creates a transfer to a destination account.
+      operationId: initiateTransfer
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AuroraRequestToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransferRequest'
+      responses:
+        '201':
+          description: Transfer accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '409':
+          description: Duplicate transfer token
+        '429':
+          description: Rate limited
+  /transfers/{transfer_id}:
+    get:
+      tags: [Transfers]
+      summary: Read transfer state
+      operationId: getTransferState
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current transfer state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+  /transfers/{transfer_id}/void:
+    post:
+      tags: [Transfers]
+      summary: Void a transfer
+      operationId: voidTransfer
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transfer voided
+  /notifications:
+    post:
+      tags: [Notifications]
+      summary: Transfer status notification
+      description: Aurora sends signed status notifications to the merchant endpoint.
+      operationId: transferNotification
+      security: []
+      parameters:
+        - name: X-Aurora-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of the raw request body
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferNotification'
+      responses:
+        '202':
+          description: Notification accepted
+  /limits:
+    get:
+      tags: [Account]
+      summary: Account transfer limits
+      operationId: getTransferLimits
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current limits
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AuroraRequestToken:
+      name: X-Aurora-Request-Token
+      in: header
+      required: false
+      description: Token prevents duplicate transfers on retry.
+      schema:
+        type: string
+        maxLength: 128
+  schemas:
+    CreateTransferRequest:
+      type: object
+      required: [money, destination, external_reference]
+      properties:
+        money:
+          type: object
+          description: Settlement amount in major USD units.
+          required: [value, currency]
+          properties:
+            value:
+              type: string
+              description: Decimal major-unit amount, for example 12.50 USD.
+              pattern: '^\d+(\.\d{1,2})?$'
+            currency:
+              type: string
+              enum: [USD]
+        destination:
+          $ref: '#/components/schemas/Destination'
+        external_reference:
+          type: string
+          maxLength: 80
+    Destination:
+      type: object
+      required: [type, account]
+      properties:
+        type:
+          type: string
+          enum: [bank, card]
+        account:
+          type: string
+        routing_number:
+          type: string
+          description: Required when type=bank.
+        card_token:
+          type: string
+          description: Required when type=card.
+    TransferResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        external_reference:
+          type: string
+        status:
+          type: string
+          enum: [queued, settled, declined, voided]
+        money:
+          type: object
+          description: Settlement amount in major USD units.
+          properties:
+            value:
+              type: string
+            currency:
+              type: string
+              enum: [USD]
+    TransferNotification:
+      type: object
+      required: [event, transfer_id, status]
+      properties:
+        event:
+          type: string
+          enum: [transfer.queued, transfer.settled, transfer.declined, transfer.voided]
+        transfer_id:
+          type: string
+        external_reference:
+          type: string
+        status:
+          type: string
+          enum: [queued, settled, declined, voided]

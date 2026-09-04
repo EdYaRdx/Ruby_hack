@@ -1,0 +1,24 @@
+# Generated benchmark and compiler output
+/tmp/
+
+# Ruby dependencies and local artifacts
+/.bundle/
+vendor/bundle/
+*.gem
+
+# Coverage and test output
+/coverage/
+.rspec_status
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# IDE and operating-system files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

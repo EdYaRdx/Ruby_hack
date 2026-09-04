@@ -1,0 +1,27 @@
+profile_version: 1
+name: aurora_payments_v1
+class_name: Provider::BaseService
+service_name_pattern: Provider::<Name>Service
+required_methods:
+  - check_conditions
+  - create_request
+  - process_callback
+  - fetch_status
+request_method_semantics: logical_action
+canonical_operations:
+  - create
+  - status
+  - callback
+canonical_amount:
+  field: operation.amount
+  currency: USD
+  unit: major
+callback_actions:
+  approved: approve_operation
+  rejected: reject_operation
+  in_progress: null
+helpers:
+  - success
+  - failure
+  - approve_operation
+  - reject_operation

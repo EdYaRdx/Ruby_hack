@@ -1,0 +1,311 @@
+schema_version: 1
+provider: Aurora Transfers
+spec: aurora_transfer_api.yaml
+profile: aurora_payments_v1.yml
+canonical_operations:
+  create_request:
+    operation_id: initiateTransfer
+    method: POST
+    path: /transfers
+  fetch_status:
+    operation_id: getTransferState
+    method: GET
+    path: /transfers/{transfer_id}
+  process_callback:
+    operation_id: transferNotification
+    method: POST
+    path: /notifications
+extra_operations:
+  - operation_id: voidTransfer
+    path: /transfers/{transfer_id}/void
+    kind: EXTRA_OPERATION
+    blocking: false
+  - operation_id: getTransferLimits
+    path: /limits
+    kind: EXTRA_OPERATION
+    blocking: false
+auth:
+  kind: bearer
+  transport: header
+  scheme: Bearer
+money:
+  host:
+    field: operation.amount
+    currency: USD
+    unit: major
+  provider:
+    request_field: request.money.value
+    response_field: response.money.value
+    currency_field: request.money.currency
+    unit: major
+    unit_name: dollars
+    scale: 1
+    representation: decimal_string
+  request_conversion:
+    direction: same_unit
+    operation: identity
+    factor_decimal: '1'
+  response_conversion:
+    direction: same_unit
+    operation: identity
+    factor_decimal: '1'
+field_mappings:
+  - operation.amount -> request.money.value
+  - operation.currency -> request.money.currency
+  - operation.external_id -> request.external_reference
+  - operation.recipient -> request.destination
+  - operation.provider_operation_id -> response.id
+  - operation.status -> response.status
+  - operation.amount <- response.money.value
+statuses:
+  queued: in_progress
+  settled: approved
+  declined: rejected
+  voided: rejected
+webhook:
+  endpoint: POST /notifications
+  signature_header: X-Aurora-Signature
+  algorithm: HMAC-SHA256
+  input: raw_body
+  encoding: hex
+idempotency:
+  header: X-Aurora-Request-Token
+  required: false
+  duplicate_prevention: explicit description
+conditions:
+  - destination.routing_number required when destination.type=bank
+  - destination.card_token required when destination.type=card
+semantic_subset: &resolved_semantic_subset
+  operations:
+    create_request:
+      operation_id: initiateTransfer
+      method: POST
+      path: /transfers
+    fetch_status:
+      operation_id: getTransferState
+      method: GET
+      path: /transfers/{transfer_id}
+    process_callback:
+      operation_id: transferNotification
+      method: POST
+      path: /notifications
+  extra_operations:
+    - operation_id: voidTransfer
+      method: POST
+      path: /transfers/{transfer_id}/void
+      kind: EXTRA_OPERATION
+      preserved: true
+      blocking: false
+    - operation_id: getTransferLimits
+      method: GET
+      path: /limits
+      kind: EXTRA_OPERATION
+      preserved: true
+      blocking: false
+  auth:
+    selected: BearerAuth
+    strategy:
+      kind: bearer
+      transport: header
+      name: Authorization
+      scheme: Bearer
+  money:
+    host:
+      field: operation.amount
+      currency: USD
+      unit: major
+    provider:
+      field: request.money.value
+      response_field: response.money.value
+      currency: USD
+      unit: major
+      subunit: dollars
+      scale: 1
+    request_conversion:
+      status: resolved
+      direction: same_unit
+      operation: identity
+      factor_decimal: '1'
+      scale: 1
+    response_conversion:
+      status: resolved
+      direction: same_unit
+      operation: identity
+      factor_decimal: '1'
+      scale: 1
+  field_mappings:
+    - canonical_path: operation.amount
+      provider_path: request.money.value
+      direction: request
+      transform: identity
+      factor: 1
+    - canonical_path: operation.currency
+      provider_path: request.money.currency
+      direction: request
+      transform: identity
+      factor: 1
+    - canonical_path: operation.external_id
+      provider_path: request.external_reference
+      direction: request
+      transform: identity
+      factor: 1
+    - canonical_path: operation.recipient
+      provider_path: request.destination
+      direction: request
+      transform: identity
+      factor: 1
+    - canonical_path: operation.provider_operation_id
+      provider_path: response.id
+      direction: response
+      transform: identity
+      factor: 1
+    - canonical_path: operation.status
+      provider_path: response.status
+      direction: response
+      transform: status_map
+      factor: 1
+    - canonical_path: operation.amount
+      provider_path: response.money.value
+      direction: response
+      transform: identity
+      factor: 1
+  statuses:
+    queued: in_progress
+    settled: approved
+    declined: rejected
+    voided: rejected
+  webhook:
+    endpoint: POST /notifications
+    signature:
+      algorithm: HMAC-SHA256
+      header: X-Aurora-Signature
+      input: raw_body
+      encoding: hex
+    events:
+      transfer.queued: in_progress
+      transfer.settled: approved
+      transfer.declined: rejected
+      transfer.voided: rejected
+  idempotency:
+    header: X-Aurora-Request-Token
+    spec_required: false
+    spec_evidence_source: SPEC_FACT
+    adapter_policy:
+      send_header: if_available
+      provenance: ADAPTER_POLICY
+    retry_policy:
+      name: preserve_same_key
+      provenance: ADAPTER_POLICY
+resolution_levels:
+  pure_generic:
+    expected_decision: REVIEW_REQUIRED
+    reason: status aliases and webhook encoding need explicit resolution; nested money may be proposed but not assumed
+    semantic_subset:
+      operations:
+        create_request:
+          operation_id: initiateTransfer
+          method: POST
+          path: /transfers
+        fetch_status:
+          operation_id: getTransferState
+          method: GET
+          path: /transfers/{transfer_id}
+        process_callback:
+          operation_id: transferNotification
+          method: POST
+          path: /notifications
+      extra_operations:
+        - operation_id: voidTransfer
+          method: POST
+          path: /transfers/{transfer_id}/void
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+        - operation_id: getTransferLimits
+          method: GET
+          path: /limits
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+      auth:
+        strategy:
+          kind: bearer
+          transport: header
+          name: Authorization
+          scheme: Bearer
+      money:
+        host:
+          unit: major
+          currency: USD
+        provider:
+          field: request.money.value
+          unit: major
+          currency: USD
+      webhook:
+        endpoint: POST /notifications
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-Aurora-Signature
+      idempotency:
+        header: X-Aurora-Request-Token
+        spec_required: false
+        spec_evidence_source: SPEC_FACT
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - webhook.signature.input
+        - webhook.signature.encoding
+  generic_plus_safe_reusable_rules:
+    expected_decision: REVIEW_REQUIRED
+    reason: provider-neutral built-in rules may propose status aliases but do not resolve critical provider semantics without explicit evidence
+    semantic_subset:
+      operations:
+        create_request:
+          operation_id: initiateTransfer
+          method: POST
+          path: /transfers
+        fetch_status:
+          operation_id: getTransferState
+          method: GET
+          path: /transfers/{transfer_id}
+        process_callback:
+          operation_id: transferNotification
+          method: POST
+          path: /notifications
+      auth:
+        strategy:
+          kind: bearer
+          transport: header
+          name: Authorization
+          scheme: Bearer
+      money:
+        provider:
+          field: request.money.value
+          unit: major
+          currency: USD
+      webhook:
+        endpoint: POST /notifications
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-Aurora-Signature
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - webhook.signature.input
+        - webhook.signature.encoding
+  generic_plus_case_defaults:
+    expected_decision: ACCEPT
+    reason: all provider-specific choices are explicit in the hand-authored defaults
+    semantic_subset: *resolved_semantic_subset

@@ -1,0 +1,401 @@
+schema_version: 1
+purpose: Hand-authored semantic subsets and safety assertions for the real NovaPay mutation benchmark.
+cases:
+  M01:
+    semantics:
+      operations:
+        create_request:
+          operation_id: createPayout
+          method: POST
+          path: /transfers
+    safety:
+      required_decisions:
+        - id: operation:createpayout
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+  M02:
+    semantics:
+      operations:
+        create_request:
+          operation_id: createPayout
+          method: POST
+          path: /withdrawals
+    safety:
+      required_decisions:
+        - id: operation:createpayout
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+  M03:
+    semantics:
+      operations:
+        create_request:
+          operation_id: initiateTransfer
+          method: POST
+          path: /payouts
+    safety:
+      required_decisions:
+        - id: operation:initiatetransfer
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+  M04:
+    semantics:
+      operations:
+        create_request:
+          operation_id: makeWithdrawal
+          method: POST
+          path: /payouts
+    safety:
+      required_decisions:
+        - id: operation:makewithdrawal
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+  M05:
+    semantics:
+      operations:
+        create_request:
+          method: POST
+          path: /payouts
+  M06:
+    semantics:
+      operations:
+        create_request:
+          operation_id: createPayout
+          method: POST
+          path: /payouts
+  M07:
+    semantics:
+      operations:
+        create_request:
+          operation_id: createPayout
+          method: POST
+          path: /payouts
+  M08:
+    semantics:
+      money:
+        decision: REVIEW_REQUIRED
+        provider:
+          unit: UNKNOWN
+        request_conversion:
+          status: unresolved
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - money.request_conversion
+        - money.response_conversion
+  M09:
+    semantics:
+      money:
+        decision: REVIEW_REQUIRED
+        provider:
+          unit: UNKNOWN
+        request_conversion:
+          status: unresolved
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - money.request_conversion
+        - money.response_conversion
+  M10:
+    semantics:
+      money:
+        decision: REVIEW_REQUIRED
+        provider:
+          unit: UNKNOWN
+        request_conversion:
+          status: unresolved
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - money.request_conversion
+        - money.response_conversion
+  M11:
+    semantics:
+      money:
+        host:
+          unit: major
+          currency: RUB
+          evidence_source: BASE_SERVICE_PROFILE
+        provider:
+          field: request.amount
+          response_field: response.amount
+          unit: minor
+          subunit: kopecks
+          scale: 100
+          scale_source: CASE_DEFAULT
+          evidence_sources: [SPEC_DESCRIPTION, CASE_DEFAULT]
+        request_conversion:
+          direction: major_to_minor
+          operation: multiply
+          factor_decimal: '100'
+        response_conversion:
+          direction: minor_to_major
+          operation: divide
+          factor_decimal: '0.01'
+      field_mappings:
+        - canonical_path: operation.amount
+          provider_path: request.amount
+          direction: request
+          transform: multiply
+          factor: 100
+  M12:
+    semantics:
+      money:
+        host:
+          unit: major
+          currency: RUB
+        provider:
+          unit: major
+          scale: 100
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - money.request_conversion
+        - money.response_conversion
+  M13:
+    semantics:
+      money:
+        host:
+          unit: major
+          currency: RUB
+          evidence_source: BASE_SERVICE_PROFILE
+        provider:
+          field: request.amount
+          response_field: response.amount
+          unit: minor
+          subunit: kopecks
+          scale: 100
+          scale_source: CASE_DEFAULT
+          evidence_sources: [CASE_DEFAULT]
+        request_conversion:
+          direction: major_to_minor
+          operation: multiply
+          factor_decimal: '100'
+        response_conversion:
+          direction: minor_to_major
+          operation: divide
+          factor_decimal: '0.01'
+  M14:
+    semantics:
+      statuses:
+        settled: UNKNOWN
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+      forbid_status_mappings: [settled]
+  M15:
+    semantics:
+      statuses:
+        success: UNKNOWN
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+      forbid_status_mappings: [success]
+  M16:
+    semantics:
+      statuses:
+        declined: UNKNOWN
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+      forbid_status_mappings: [declined]
+  M17:
+    semantics:
+      statuses:
+        voided: UNKNOWN
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+      forbid_status_mappings: [voided]
+  M18:
+    semantics:
+      statuses:
+        chargeback: UNKNOWN
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: UNKNOWN
+          severity: BLOCKING
+  M19:
+    semantics:
+      auth:
+        strategy:
+          kind: bearer
+          transport: header
+          name: Authorization
+          scheme: Bearer
+  M20:
+    semantics:
+      auth:
+        strategy:
+          kind: api_key
+          transport: query
+          name: X-API-Key
+  M21:
+    semantics:
+      auth:
+        strategy:
+          kind: api_key
+          transport: header
+          name: X-Client-Token
+  M22:
+    semantics:
+      idempotency:
+        header: X-Request-Token
+        spec_required: false
+        spec_evidence_source: SPEC_FACT
+        adapter_policy:
+          send_header: if_available
+          provenance: ADAPTER_POLICY
+  M23:
+    semantics:
+      idempotency:
+        header: null
+        spec_required: null
+        spec_evidence_source: UNKNOWN
+        adapter_policy:
+          send_header: if_available
+          provenance: ADAPTER_POLICY
+        retry_policy:
+          name: unknown
+          provenance: ADAPTER_POLICY
+    safety:
+      required_decisions:
+        - id: idempotency:header
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+      forbid_resolved:
+        - idempotency.header
+  M24:
+    semantics:
+      webhook:
+        endpoint: POST /callbacks/payment
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-NovaPay-Signature
+          input: raw_body
+          encoding: hex
+  M25:
+    semantics:
+      webhook:
+        endpoint: POST /notifications/payout
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-NovaPay-Signature
+          input: raw_body
+          encoding: hex
+  M26:
+    semantics:
+      webhook:
+        endpoint: POST {$request.body#/callback_url}
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-NovaPay-Signature
+          input: raw_body
+          encoding: hex
+  M27:
+    semantics:
+      webhook:
+        endpoint: POST payoutNotifications
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-NovaPay-Signature
+          input: raw_body
+          encoding: hex
+  M28:
+    semantics:
+      webhook:
+        mode: polling_only
+  M29:
+    semantics:
+      webhook:
+        endpoint: POST /webhooks/payout
+        signature:
+          algorithm: UNKNOWN
+          header: X-NovaPay-Signature
+          input: raw_body
+          encoding: hex
+    safety:
+      required_decisions:
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - webhook.signature.algorithm
+  M30:
+    semantics:
+      extra_operations:
+        - operation_id: getLimits
+          method: GET
+          path: /limits
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+  M31:
+    safety:
+      preserve_error: true
+  M32:
+    semantics:
+      extra_operations:
+        - operation_id: voidPayout
+          method: POST
+          path: /payouts/{payout_id}/void
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+  M33:
+    semantics:
+      source:
+        resolved_files: [components.yml]
+  M34:
+    safety:
+      preserve_error: true
+  M35:
+    safety:
+      required_decisions:
+        - id: operation:createtransaction
+          outcome: UNKNOWN
+          severity: BLOCKING
+  M36:
+    semantics:
+      webhook:
+        endpoint: POST /webhooks/payout
+        signature:
+          algorithm: UNKNOWN
+          header: X-NovaPay-Signature
+          input: raw_body
+          encoding: hex
+    safety:
+      required_decisions:
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved:
+        - webhook.signature.algorithm
+  M37:
+    semantics:
+      field_mappings:
+        - canonical_path: operation.amount
+          provider_path: request.amount
+          direction: request
+          transform: multiply
+          factor: 100

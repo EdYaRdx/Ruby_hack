@@ -1,0 +1,18 @@
+schema_version: 1
+purpose: Resolve labels whose original expectation conflicts with the active input contract without deleting the original dataset labels.
+cases:
+  M12:
+    original_expected_decision: ACCEPT
+    adjudicated_decision: REVIEW_REQUIRED
+    status: disputed
+    reason: The mutation states major units in the current spec while the active NovaPay case defaults state minor units; explicit spec fact and case default conflict, so safety requires review.
+  M13:
+    original_expected_decision: REVIEW_REQUIRED
+    adjudicated_decision: ACCEPT
+    status: disputed
+    reason: The current spec removes the unit description, but the active named-case defaults explicitly provide provider minor units and scale 100; CASE_DEFAULT is evidence, not a generic guess.
+  M32:
+    original_expected_decision: REVIEW_REQUIRED
+    adjudicated_decision: ACCEPT
+    status: disputed
+    reason: The profile does not bind cancel as a canonical operation; an unbound void endpoint is preserved as a non-blocking extra operation and is never executed as cancel.

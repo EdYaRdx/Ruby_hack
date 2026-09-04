@@ -1,0 +1,144 @@
+provider: NovaPay
+money:
+  provider_unit: minor
+  provider_subunit: kopecks
+  scale: 100
+  source: CASE_DEFAULT
+field_mappings:
+  - canonical_path: operation.amount
+    provider_path: request.amount
+    direction: request
+    transform: multiply
+    factor: 100
+    required: true
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+  - canonical_path: operation.currency
+    provider_path: request.currency
+    direction: request
+    transform: identity
+    factor: 1
+    required: true
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+  - canonical_path: operation.external_id
+    provider_path: request.external_id
+    direction: request
+    transform: identity
+    factor: 1
+    required: true
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+  - canonical_path: operation.recipient
+    provider_path: request.recipient
+    direction: request
+    transform: identity
+    factor: 1
+    required: true
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+  - canonical_path: operation.provider_operation_id
+    provider_path: response.id
+    direction: response
+    transform: identity
+    factor: 1
+    required: false
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+  - canonical_path: operation.status
+    provider_path: response.status
+    direction: response
+    transform: status_map
+    factor: 1
+    required: false
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+  - canonical_path: operation.amount
+    provider_path: response.amount
+    direction: response
+    transform: divide
+    factor: 0.01
+    required: false
+    provenance: CASE_DEFAULT
+    decision: ACCEPT
+statuses:
+  pending: in_progress
+  processing: in_progress
+  completed: approved
+  failed: rejected
+  cancelled: rejected
+webhook:
+  raw_body: true
+  signature_encoding: hex
+  source: CASE_DEFAULT
+examples:
+  create_request:
+    operation:
+      amount: 15000.0
+      currency: RUB
+      external_id: op_abc123
+      idempotency_key: key-1
+      recipient:
+        type: sbp
+        phone: "79001234567"
+        bank_code: "044525225"
+    expected_provider_amount: 1500000
+    expected_http_status: 201
+  fetch_status:
+    operation:
+      provider_operation_id: np_7f3a9b2c
+    response:
+      id: np_7f3a9b2c
+      status: completed
+      amount: 1500000
+      currency: RUB
+    expected_host_status: approved
+    expected_host_amount: 15000.0
+    expected_http_status: 200
+  validation_error:
+    operation:
+      amount: 999.99
+      currency: RUB
+      external_id: op_too_small
+      recipient:
+        type: sbp
+        phone: "79001234567"
+        bank_code: "044525225"
+    expected_http_status: 422
+    expected_error_code: validation_error
+  callback_completed:
+    body:
+      event: payout.completed
+      payout_id: np_7f3a9b2c
+      external_id: op_abc123
+      status: completed
+    expected_host_status: approved
+  callback_processing:
+    body:
+      event: payout.processing
+      payout_id: np_7f3a9b2c
+      external_id: op_abc123
+      status: processing
+    expected_host_status: in_progress
+  callback_failed:
+    body:
+      event: payout.failed
+      payout_id: np_7f3a9b2c
+      external_id: op_abc123
+      status: failed
+    expected_host_status: rejected
+  callback_cancelled:
+    body:
+      event: payout.cancelled
+      payout_id: np_7f3a9b2c
+      external_id: op_abc123
+      status: cancelled
+    expected_host_status: rejected
+  response:
+    provider_amount: 1500000
+    expected_host_amount: 15000.0
+    status: completed
+  webhook:
+    status: completed
+    signature_algorithm: HMAC-SHA256
+    encoding: hex
