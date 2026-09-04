@@ -1,5 +1,8 @@
 # ADR-0001: Evidence-gated semantic Blueprint architecture
 
+> **ИСТОРИЧЕСКИЙ ADR.** Документ сохраняет research-решение для планирования;
+> фактический runtime contract сверяйте с [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md).
+
 - Статус: принято для планирования MVP
 - Дата: 2026-09-03
 - Область: только research Hack.Genesis 2026

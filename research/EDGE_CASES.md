@@ -5,7 +5,7 @@
 | Decision | Meaning | Codegen |
 |---|---|---|
 | `ACCEPT` | evidence достаточно, конфликтов нет, margin достаточный | blueprint может идти в generator |
-| `REVIEW_REQUIRED` | есть кандидат, но критичное решение нельзя принять автоматически | blueprint сохраняется, генерация требует `--allow-review`/override |
+| `REVIEW_REQUIRED` | есть кандидат, но критичное решение нельзя принять автоматически | blueprint сохраняется, generation блокируется при blocking issue; текущий CLI не имеет `--allow-review` |
 | `UNKNOWN` | конфликт, невозможная ссылка или нет надёжного кандидата | codegen блокируется, причина обязательна |
 
 Score — это объяснимый вес evidence, не вероятность. Каждое решение хранит:

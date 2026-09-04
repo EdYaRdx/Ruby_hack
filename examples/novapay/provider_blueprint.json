@@ -110,8 +110,7 @@
       "status",
       "callback"
     ],
-    "money": {
-    },
+    "money": {},
     "callback_actions": {
       "approved": "approve_operation",
       "rejected": "reject_operation",
@@ -162,9 +161,7 @@
             "note": null
           }
         ],
-        "conflicts": [
-
-        ],
+        "conflicts": [],
         "rationale": "operationId/path/method provide a deterministic operation candidate"
       }
     },
@@ -188,9 +185,7 @@
             "note": null
           }
         ],
-        "conflicts": [
-
-        ],
+        "conflicts": [],
         "rationale": "status text/path/response evidence identifies a status read"
       }
     },
@@ -214,9 +209,7 @@
             "note": null
           }
         ],
-        "conflicts": [
-
-        ],
+        "conflicts": [],
         "rationale": "webhook/callback evidence identifies a callback operation"
       }
     }
@@ -526,9 +519,7 @@
     {
       "operation_id": "createPayout",
       "http_status": "201",
-      "provider_codes": [
-
-      ],
+      "provider_codes": [],
       "description": "Выплата создана",
       "retry_after_header": null,
       "evidence_sources": [
@@ -1023,9 +1014,7 @@
     {
       "operation_id": "getPayoutStatus",
       "http_status": "200",
-      "provider_codes": [
-
-      ],
+      "provider_codes": [],
       "description": "Статус выплаты",
       "retry_after_header": null,
       "evidence_sources": [
@@ -1188,9 +1177,7 @@
     {
       "operation_id": "cancelPayout",
       "http_status": "200",
-      "provider_codes": [
-
-      ],
+      "provider_codes": [],
       "description": "Выплата отменена",
       "retry_after_header": null,
       "evidence_sources": [
@@ -1277,9 +1264,7 @@
     {
       "operation_id": "payoutWebhook",
       "http_status": "200",
-      "provider_codes": [
-
-      ],
+      "provider_codes": [],
       "description": "Webhook принят",
       "retry_after_header": null,
       "evidence_sources": [
@@ -1290,9 +1275,7 @@
     {
       "operation_id": "getBalance",
       "http_status": "200",
-      "provider_codes": [
-
-      ],
+      "provider_codes": [],
       "description": "Текущий баланс",
       "retry_after_header": null,
       "evidence_sources": [
@@ -1391,9 +1374,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "operationId/path/method provide a deterministic operation candidate"
     },
     {
@@ -1411,9 +1392,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "status text/path/response evidence identifies a status read"
     },
     {
@@ -1431,9 +1410,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "operationId/path/method provide a deterministic operation candidate"
     },
     {
@@ -1451,9 +1428,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "webhook/callback evidence identifies a callback operation"
     },
     {
@@ -1471,9 +1446,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "operationId/path/method provide a deterministic operation candidate"
     },
     {
@@ -1503,9 +1476,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "an explicit supported security scheme is present"
     },
     {
@@ -1550,9 +1521,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "host and provider amount units are explicit and directional conversion is deterministic"
     },
     {
@@ -1624,9 +1593,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "every provider status has an explicit case-default canonical mapping"
     },
     {
@@ -1647,9 +1614,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "header presence and requiredness are read from the OpenAPI parameter"
     },
     {
@@ -1679,9 +1644,7 @@
             "decision": "ACCEPT"
           }
         ],
-        "unresolved": [
-
-        ]
+        "unresolved": []
       },
       "evidence": [
         {
@@ -1698,9 +1661,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "all conditional phrases were parsed without relying on a fixed branch count"
     },
     {
@@ -1790,9 +1751,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "canonical fields have explicit direct or transformed mappings"
     },
     {
@@ -1876,9 +1835,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "structured request constraints are preserved for generated validation"
     },
     {
@@ -1914,9 +1871,7 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "endpoint, signature header, algorithm, raw body, encoding and event outcomes are represented"
     },
     {
@@ -1927,9 +1882,7 @@
         {
           "operation_id": "createPayout",
           "http_status": "201",
-          "provider_codes": [
-
-          ],
+          "provider_codes": [],
           "description": "Выплата создана",
           "retry_after_header": null,
           "evidence_sources": [
@@ -2424,9 +2377,7 @@
         {
           "operation_id": "getPayoutStatus",
           "http_status": "200",
-          "provider_codes": [
-
-          ],
+          "provider_codes": [],
           "description": "Статус выплаты",
           "retry_after_header": null,
           "evidence_sources": [
@@ -2589,9 +2540,7 @@
         {
           "operation_id": "cancelPayout",
           "http_status": "200",
-          "provider_codes": [
-
-          ],
+          "provider_codes": [],
           "description": "Выплата отменена",
           "retry_after_header": null,
           "evidence_sources": [
@@ -2678,9 +2627,7 @@
         {
           "operation_id": "payoutWebhook",
           "http_status": "200",
-          "provider_codes": [
-
-          ],
+          "provider_codes": [],
           "description": "Webhook принят",
           "retry_after_header": null,
           "evidence_sources": [
@@ -2691,9 +2638,7 @@
         {
           "operation_id": "getBalance",
           "http_status": "200",
-          "provider_codes": [
-
-          ],
+          "provider_codes": [],
           "description": "Текущий баланс",
           "retry_after_header": null,
           "evidence_sources": [
@@ -2713,17 +2658,11 @@
           "note": null
         }
       ],
-      "conflicts": [
-
-      ],
+      "conflicts": [],
       "rationale": "known and example-only provider codes are represented with conservative retry policies"
     }
   ],
-  "warnings": [
-
-  ],
-  "unknowns": [
-
-  ],
+  "warnings": [],
+  "unknowns": [],
   "decision": "ACCEPT"
 }

@@ -1,5 +1,9 @@
 # ROI дополнительных features
 
+> **ИСТОРИЧЕСКИЙ ПЛАН.** Таблица отражает приоритеты до появления текущего Web
+> UI и не описывает сегодняшнее scope. За актуальным поведением обращайтесь к
+> [`docs/DEMO.md`](../docs/DEMO.md) и [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md).
+
 Дата: 2026-09-03
 
 Рейтинг рассчитан для solo implementation и judged demo. Features ценны только

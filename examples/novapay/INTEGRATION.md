@@ -6,9 +6,9 @@
 - Runtime base URL: `NOVAPAY_BASE_URL` (по умолчанию используется sandbox URL)
 - Аутентификация: ApiKeyAuth
 - Сумма: major RUB -> kopecks; scale 100; request factor 100
-- Idempotency обязательна по spec: false
+- Обязательность Idempotency по spec: false
 - Подпись webhook: HMAC-SHA256 / hex
-- Действия callback: {"approved"=>"approve_operation", "rejected"=>"reject_operation", "in_progress"=>nil}
+- Действия callback: {"approved" => "approve_operation", "rejected" => "reject_operation", "in_progress" => nil}
 - Дополнительные operations: /payouts/{payout_id}/cancel, /balance
 
 ## Endpoints

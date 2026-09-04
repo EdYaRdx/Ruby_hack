@@ -1,18 +1,20 @@
-# Компилятор интеграций с провайдерами
+# Provider Compiler
 
-Компилятор интеграций с контролем доказательности для платёжных провайдеров.
+Принимает OpenAPI платёжного провайдера, строит проверенный Provider Blueprint
+для Space Payments и детерминированно генерирует Ruby adapter, docs и fixtures.
 
 Он преобразует OpenAPI-документ провайдера в проверенную Provider Blueprint и
 детерминированную проекцию Ruby-адаптера:
 
 ```text
 OpenAPI + local refs
-  -> resolved immutable Facts IR
-  -> analyzers and evidence
-  -> Review Manifest
-  -> Provider Blueprint
-  -> Ruby adapter, fixtures, integration notes
-  -> syntax and contract verification
+  -> immutable Facts IR
+  -> Analyzers
+  -> Evidence + Review Manifest
+  -> Resolved Provider Blueprint
+  -> Validation
+  -> Deterministic Generation
+  -> Verification
 ```
 
 ## Проблема
@@ -24,6 +26,10 @@ OpenAPI описывает структуру транспорта. Платёж
 семантические решения нельзя надёжно получить обычным генератором клиентов из
 схемы.
 
+На практике ручная интеграция нового платёжного провайдера занимает примерно
+2–5 дней: нужно отдельно разобрать transport contract, money units, statuses,
+webhooks, retries и host adapter.
+
 Проект делает такие решения явными, связывает их с доказательствами и блокирует
 небезопасную генерацию, когда критический факт не разрешён.
 
@@ -31,6 +37,10 @@ OpenAPI описывает структуру транспорта. Платёж
 
 Компилятор — это не просто генератор клиентских заглушек. Это семантический
 контур безопасности вокруг небольшой детерминированной проекции. Он различает:
+
+Обычный OpenAPI Generator строит `OpenAPI → API client`. Здесь поток другой:
+`OpenAPI → payment semantics → Provider Blueprint → BaseService adapter`, с
+отдельной проверкой доказательств и safety decision.
 
 - `SPEC_FACT` — непосредственно подтверждённый документом провайдера факт;
 - `CASE_DEFAULT` — значение из fixture конкретного интеграционного кейса;
@@ -53,7 +63,7 @@ OpenAPI описывает структуру транспорта. Платёж
 - Анализ с учётом evidence, Review Manifest и Provider Blueprint: реализации analyzer/profile/blueprint присутствуют.
 - Детерминированная Ruby-проекция и verification: реализация generator присутствует.
 - Канонический пример NovaPay: 7 файлов в `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
-- Independent semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
+- Независимая semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
 - Live provider calls не реализованы; Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
 Для обновления снимка запустите `ruby bin/update_docs`.
@@ -61,7 +71,7 @@ OpenAPI описывает структуру транспорта. Платёж
 
 ## Быстрый старт
 
-Требуется Ruby 3.3+ (рекомендуется); gemspec требует Ruby >= 3.0.
+Требуется Ruby >= 3.0; текущий checkout проверен на Ruby 4.0.6 и Bundler 2.5.22.
 
 ```powershell
 bundle install
@@ -88,10 +98,12 @@ ruby bin/provider_compiler verify --out tmp/generated
 - `POST /payouts` -> `create_request`;
 - `GET /payouts/{payout_id}` -> `fetch_status`, operationId
   `getPayoutStatus`;
+- sandbox base URL из официальной спецификации: `https://api.sandbox.novapay.example/v1`;
 - `operation.amount` хоста как major RUB и amount провайдера как minor kopecks;
   request conversion — `major -> minor` с factor `100`;
-- необязательный по OpenAPI `Idempotency-Key`; поведение always-send
-  представлено как политика адаптера;
+- необязательный по OpenAPI `Idempotency-Key`; по умолчанию адаптер отправляет
+  переданный ключ (`if_available`), а `--always-send-idempotency` — явная политика
+  адаптера, не факт спецификации;
 - `/balance` сохраняется как неблокирующий `EXTRA_OPERATION`;
 - проверку подписи webhook и действия для terminal status.
 
@@ -108,31 +120,31 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущая проверка (сгенерировано автоматически)**
 
-- RSpec: 55 examples, failures: 0.
-- Mutation cases NovaPay: безопасно пройдено 37/37; decision accuracy: 100.0%; safe decision coverage: 100.0%.
-- ACCEPT rate: 48.6%; REVIEW_REQUIRED rate: 40.5%; UNKNOWN rate: 10.8%.
-- Independent semantic ACCEPT accuracy: 100.0%; critical false ACCEPTs: 0.
-- Aurora: levels 3/3, behavioral vectors 4/4; semantic accuracy: 100.0%.
+- RSpec: 59 examples, failures: 0.
+- Mutation benchmark NovaPay: безопасно пройдено 37/37; decision_accuracy: 100.0%; safe_decision_coverage: 100.0%.
+- automatic_accept_rate: 48.6%; review_required_rate: 40.5%; unknown_rate: 10.8%.
+- semantic_accept_accuracy: 100.0%; critical_false_accept_count: 0.
+- Aurora: levels 3/3, behavioral vectors 4/4; semantic_accuracy: 100.0%.
 
 Для обновления блока запустите `ruby bin/update_docs`.
 <!-- END GENERATED: PROJECT_STATUS -->
 
 ## Web UI Demo Workbench
 
-The local workbench follows the Figma reference and exposes the existing
-pipeline without changing compiler semantics:
+Локальный Workbench показывает тот же конвейер, не меняя семантику компилятора:
 
 ```powershell
 bundle exec ruby bin/provider_compiler_web
 ```
 
-Open `http://127.0.0.1:4567`. Use a local OpenAPI file or the NovaPay,
-Ambiguous and Aurora demo buttons. The screens are Upload → Analysis → Review
-→ Preview → Generate. Preview executes the generated runtime, and Generate
-uses the existing `DeterministicGenerator` and `Verification`; no provider
-network calls are made.
+Откройте `http://127.0.0.1:4567`, нажмите «Загрузить пример NovaPay» и пройдите
+экраны «Загрузка» → «Анализ» → «Review» → «Preview» → «Generate». В Analysis
+видны методы, операции, evidence и денежная семантика; Preview показывает
+runtime fixture, а Generate создаёт те же детерминированные артефакты и запускает
+Verification. Кнопки Ambiguous и Aurora демонстрируют fail-closed и переносимость
+на другую форму API. Реальных сетевых вызовов к провайдеру нет.
 
-UI regression coverage is in [`spec/web_spec.rb`](spec/web_spec.rb).
+Регрессионное покрытие UI находится в [`spec/web_spec.rb`](spec/web_spec.rb).
 
 ## Навигация по репозиторию
 
@@ -140,35 +152,46 @@ UI regression coverage is in [`spec/web_spec.rb`](spec/web_spec.rb).
   инварианты;
 - [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — методика, формулы и актуальные
   результаты;
-- [`docs/DEMO.md`](docs/DEMO.md) — воспроизводимый CLI-сценарий;
+- [`docs/DEMO.md`](docs/DEMO.md) — готовый live-сценарий для Web UI, fail-closed,
+  Aurora и CLI fallback;
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — процесс разработки и проверок;
 - [`docs/DOCS_POLICY.md`](docs/DOCS_POLICY.md) — правила для стабильной и
   generated-документации;
 - [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — единый словарь терминов;
 - [`THIRD_PARTY.md`](THIRD_PARTY.md) — зависимости и лицензии;
 - [`research/README.md`](research/README.md) — supporting research и audit
-  artifacts.
+  artifacts с явным разделением текущих и исторических материалов.
 
 ## Структура проекта
 
 ```text
-bin/                    CLI и deterministic updaters документации/examples
-lib/provider_compiler/  loader, facts, analyzers, blueprint и generator
-profiles/               host-contract profiles
-fixtures/               reproducible provider specs, defaults и Aurora truth
-examples/               generated, reviewable provider projections
-spec/                   RSpec regression и semantic validation suite
-research/               benchmark corpus, independent comparator и history
-docs/                   стабильная engineering и judge-facing documentation
+bin/                    CLI, Web entrypoint и детерминированные updater-ы
+lib/provider_compiler/  Facts IR, analyzers, Blueprint, generation, Web/API
+profiles/               BaseServiceProfile для host-контракта
+fixtures/               OpenAPI, case defaults и независимая Aurora ground truth
+examples/               сгенерированные и проверяемые provider projections
+spec/                   RSpec regression, semantic и Web UI проверки
+research/               benchmark corpus, comparator и исторические материалы
+docs/                   актуальная engineering и judge-facing документация
 ```
 
 ## Область применения и ограничения
 
-Это production-oriented vertical slice, а не заявление о поддержке любого
-провайдера. Для нового провайдера всё равно нужны явные profile, case defaults
-и review полученного manifest. Текущий CLI работает с локальными входами;
-загрузка по сети, реальные credentials, deployment и Web UI находятся вне
-области этого этапа.
+Это исследовательский hackathon prototype, а не production-ready SaaS и не
+заявление о поддержке любого провайдера. Для нового провайдера всё равно нужны
+явные profile, case defaults и review полученного manifest. BaseService в текущем
+репозитории представлен тестовым host-контрактом/сгенерированным harness; live
+вызовы провайдера, production credentials и deployment не входят в scope.
+
+## Безопасность и соответствие ограничениям
+
+Спецификации обрабатываются локально; UI не сохраняет production credentials и
+не выполняет вызовы провайдера. Текущая политика разрешает локальные `$ref`, а
+неподдержанные remote refs отклоняются. В runtime нет нейросетевой модели и нет
+обязательной проприетарной зависимости; проект использует Ruby и open-source
+gems. Ruby — основной язык реализации и составляет более 50% исходного кода.
+Неизвестная или критически неоднозначная семантика сохраняется в Review Manifest
+и не превращается молча в ACCEPT.
 
 Для расширения системы используйте [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
 и соблюдайте инварианты безопасности из

@@ -9,7 +9,7 @@ decision. GOAL 3.5 добавляет независимое сравнение 
 subsets с полученным Blueprint, а также runtime checks для независимого Aurora
 provider-а.
 
-Production pipeline не изменён, кроме одной fail-closed correction, доказанной
+Текущий pipeline не изменён, кроме одной fail-closed correction, доказанной
 comparator-ом: conflicting money-unit evidence больше не оставляет resolved
 conversion candidate в Blueprint.
 
@@ -123,7 +123,7 @@ Machine-readable outputs:
 - `1500.50 ↔ 150050`: exact;
 - webhook invalid signature: fail-closed;
 - default CLI generate/verify: PASS;
-- full RSpec: `42 examples, 0 failures`.
+- full RSpec at the current documentation checkpoint: `59 examples, 0 failures`.
 
 ## Вердикт
 

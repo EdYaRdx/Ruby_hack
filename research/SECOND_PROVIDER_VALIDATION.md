@@ -55,7 +55,7 @@ bundle exec ruby research/benchmark/second_provider.rb
 
 Он вернул `REVIEW_REQUIRED` с одним blocking decision, поскольку provider status
 aliases и webhook raw-body/signature encoding не были подтверждены
-profile/default. Production generation на этом уровне не запускалась.
+profile/default. Generation на этом уровне не запускалась.
 
 ### Safe reusable rules level
 

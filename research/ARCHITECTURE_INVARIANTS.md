@@ -2,7 +2,7 @@
 
 Дата: 2026-09-03
 
-Это обязательные свойства proposed compiler. Изменение, нарушающее один из
+Это обязательные свойства текущего compiler. Изменение, нарушающее один из
 инвариантов, требует architecture review, а не только нового template.
 
 1. **Facts не являются inferences.** Structural facts сохраняют source locations и никогда не перезаписываются mapping decision.

@@ -57,10 +57,10 @@ status_block = <<~MARKDOWN
   **Текущая проверка (сгенерировано автоматически)**
 
   - RSpec: #{rspec_summary.fetch("example_count")} examples, failures: #{rspec_summary.fetch("failure_count")}.
-  - Mutation cases NovaPay: безопасно пройдено #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}; decision accuracy: #{percent(aggregate["decision_accuracy"])}; safe decision coverage: #{percent(aggregate["safe_decision_coverage"])}.
-  - ACCEPT rate: #{percent(aggregate["automatic_accept_rate"])}; REVIEW_REQUIRED rate: #{percent(aggregate["review_required_rate"])}; UNKNOWN rate: #{percent(aggregate["unknown_rate"])}.
-  - Independent semantic ACCEPT accuracy: #{percent(aggregate["semantic_accept_accuracy"])}; critical false ACCEPTs: #{aggregate.fetch("critical_false_accept_count")}.
-  - Aurora: levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}.
+  - Mutation benchmark NovaPay: безопасно пройдено #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}; decision_accuracy: #{percent(aggregate["decision_accuracy"])}; safe_decision_coverage: #{percent(aggregate["safe_decision_coverage"])}.
+  - automatic_accept_rate: #{percent(aggregate["automatic_accept_rate"])}; review_required_rate: #{percent(aggregate["review_required_rate"])}; unknown_rate: #{percent(aggregate["unknown_rate"])}.
+  - semantic_accept_accuracy: #{percent(aggregate["semantic_accept_accuracy"])}; critical_false_accept_count: #{aggregate.fetch("critical_false_accept_count")}.
+  - Aurora: levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic_accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}.
 
   Для обновления блока запустите `ruby bin/update_docs`.
 MARKDOWN
@@ -70,7 +70,7 @@ capabilities_block = <<~MARKDOWN
   - Анализ с учётом evidence, Review Manifest и Provider Blueprint: реализации analyzer/profile/blueprint присутствуют.
   - Детерминированная Ruby-проекция и verification: реализация generator присутствует.
   - Канонический пример NovaPay: #{example_files.length} файлов в `examples/novapay/` (`#{example_files.join("`, `")}`).
-  - Independent semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
+  - Независимая semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
   - Live provider calls не реализованы; Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
   Для обновления снимка запустите `ruby bin/update_docs`.
@@ -80,17 +80,17 @@ benchmark_block = <<~MARKDOWN
   **Mutation benchmark NovaPay**
 
   - Кейсы: пройдено #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}.
-  - Decision accuracy: #{percent(aggregate["decision_accuracy"])}.
-  - Automatic ACCEPT rate: #{percent(aggregate["automatic_accept_rate"])}.
-  - Safe decision coverage: #{percent(aggregate["safe_decision_coverage"])}.
-  - REVIEW_REQUIRED rate: #{percent(aggregate["review_required_rate"])}; UNKNOWN rate: #{percent(aggregate["unknown_rate"])}.
-  - Semantic ACCEPT accuracy: #{percent(aggregate["semantic_accept_accuracy"])}.
+  - decision_accuracy: #{percent(aggregate["decision_accuracy"])}.
+  - automatic_accept_rate: #{percent(aggregate["automatic_accept_rate"])}.
+  - safe_decision_coverage: #{percent(aggregate["safe_decision_coverage"])}.
+  - review_required_rate: #{percent(aggregate["review_required_rate"])}; unknown_rate: #{percent(aggregate["unknown_rate"])}.
+  - semantic_accept_accuracy: #{percent(aggregate["semantic_accept_accuracy"])}.
   - Operations / money / statuses / auth / webhook / idempotency / field mappings: #{%w[operation_semantic_accuracy money_semantic_accuracy status_semantic_accuracy auth_semantic_accuracy webhook_semantic_accuracy idempotency_semantic_accuracy field_mapping_semantic_accuracy].map { |key| percent(aggregate[key]) }.join(" / ")}.
-  - Critical false ACCEPTs: #{aggregate.fetch("critical_false_accept_count")}.
+  - critical_false_accept_count: #{aggregate.fetch("critical_false_accept_count")}.
   - Generation: успешно #{aggregate.fetch("generation_pass_count")}/#{aggregate.fetch("generation_attempt_count")} попыток; generated Ruby syntax pass rate: #{percent(aggregate["generated_syntax_pass_rate"])}.
   - Второй provider Aurora: semantic levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}; critical false ACCEPTs: #{aurora_aggregate.fetch("critical_false_accept_count")}.
 
-  Legacy decision-only automatic-coverage: #{percent(aggregate["legacy_decision_only_automatic_coverage"])}. Значение оставлено для сравнения и не используется как safety gate.
+  Legacy `automatic_coverage`: #{percent(aggregate["legacy_decision_only_automatic_coverage"])}. Значение оставлено для сравнения и не используется как safety gate.
 MARKDOWN
 
 replace_block(File.join(ROOT, "README.md"), "PROJECT_STATUS", status_block)

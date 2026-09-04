@@ -10,6 +10,20 @@ defaults. Provider Blueprint создаётся только после анал
 доказательств. Ruby generator — детерминированная проекция этой Blueprint, а не
 независимый источник семантики интеграции.
 
+## Слои и ответственность
+
+- **Input:** OpenAPI, локальные `$ref`, `BaseServiceProfile` и case defaults.
+- **Core:** загрузка, разрешение references, immutable Facts IR и fingerprint.
+- **Analysis:** `OperationFact`, analyzers, evidence, provenance и precedence.
+- **Decision:** `ACCEPT`, `REVIEW_REQUIRED` или `UNKNOWN`; критические нерешённые
+  вопросы получают blocking severity.
+- **Blueprint:** resolved Provider Blueprint и Review Manifest — соответственно
+  WHAT и WHY выбранных решений.
+- **Generation:** детерминированная Ruby-проекция без нового semantic inference.
+- **Verification:** Ruby syntax, generated contract smoke и consistency checks.
+- **Application:** orchestration общего pipeline для CLI и Web UI.
+- **CLI/Web:** разные presentation adapters над теми же Application/Core слоями.
+
 ## Web UI Demo Workbench
 
 `lib/provider_compiler/web.rb` — тонкий WEBrick HTTP-слой, а
@@ -27,7 +41,8 @@ source files
   -> OpenAPILoader / OpenAPIValidator
   -> FactsBuilder (immutable provider facts)
   -> AnalyzerEngine (evidence, precedence, safety decisions)
-  -> BlueprintBuilder + ReviewManifest
+  -> Evidence + ReviewManifest
+  -> Resolved Provider Blueprint
   -> BlueprintValidator
   -> DeterministicGenerator
   -> Verification (Ruby syntax + contract smoke)
@@ -72,8 +87,9 @@ Blueprint. Например, host amount в major units может требов�
 provider minor units; такая conversion является first-class Blueprint value и
 проверяется до generation.
 
-Решения адаптера, например always-send idempotency header, представляются как
-adapter policy. Их нельзя выдавать за provider specification facts.
+Решения адаптера, например отправлять доступный idempotency header по выбранной
+политике, представляются как `ADAPTER_POLICY`. Их нельзя выдавать за provider
+specification facts: в NovaPay OpenAPI `Idempotency-Key` имеет `required: false`.
 
 ## Точки расширения
 

@@ -4,7 +4,7 @@ Date: 2026-09-04
 
 ## Методика
 
-Benchmark запускает production Ruby pipeline. Поток выглядит так:
+Benchmark запускает текущий Ruby pipeline. Поток выглядит так:
 
 ```text
 hand-authored mutation case

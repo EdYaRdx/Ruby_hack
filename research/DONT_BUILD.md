@@ -1,5 +1,9 @@
 # Что не следует строить в hackathon MVP
 
+> **POLICY RECORD.** Упомянутые ниже LLM, embeddings, neural models и внешние
+> neural APIs — явно исключённые исторические альтернативы. Текущий prototype
+> работает на детерминированном Ruby pipeline и не использует их.
+
 Эти элементы намеренно исключены после сравнения ожидаемого прироста score с
 risk solo implementation.
 

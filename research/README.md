@@ -6,6 +6,30 @@
 research, benchmark corpus и исторические записи решений; его snapshots не
 являются источником актуальных dynamic metrics.
 
+> **Статус каталога:** supporting research. Текущий runtime и judge-facing
+> claims определяются кодом, fixtures, корневым README и [`docs/`](../docs/).
+> Исторические планы и snapshots ниже помечаются явно и не заменяют текущую
+> реализацию.
+
+## Текущие supporting materials
+
+`REFERENCE_GROUND_TRUTH.md`, `GROUND_TRUTH_CORRECTIONS.md`,
+`PROVIDER_BLUEPRINT_V1.md`, `RULE_PRECEDENCE.md`, `ARCHITECTURE_INVARIANTS.md`,
+`ARCHITECTURE_RED_TEAM.md`, `REAL_MUTATION_BENCHMARK.md`,
+`SEMANTIC_BENCHMARK_VALIDATION.md` и `SECOND_PROVIDER_VALIDATION.md` содержат
+актуальные technical evidence. Их aggregate-метрики всё равно публикуются
+канонически через [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
+
+## Исторические и плановые материалы
+
+`RESEARCH_DECISION.md`, `FINAL_VERDICT.md`, `FINAL_SYSTEM_SUMMARY.md`,
+`INDEPENDENT_ARCHITECTURE_PROPOSAL.md`, `IMPLEMENTATION_PLAN_FINAL.md`,
+`MVP_BACKLOG.md`, `EXPECTED_SCORE.md`, `BONUS_FEATURE_ROI.md`, scorecards
+предыдущих goals, `ARCHITECTURE_COMPARISON.md` и `adr/0001-final-architecture.md`
+сохраняют ход исследования.
+Они не описывают автоматически текущий runtime; перед использованием сверяйте
+их с README и `docs/`.
+
 ## GOAL 3: артефакты реальной проверки
 
 - [SEMANTIC_BENCHMARK_VALIDATION.md](SEMANTIC_BENCHMARK_VALIDATION.md) — независимый semantic comparator, safety rules и metrics GOAL 3.5.
@@ -13,7 +37,7 @@ research, benchmark corpus и исторические записи решени
 - [REAL_MUTATION_BENCHMARK.md](REAL_MUTATION_BENCHMARK.md) — реальный mutation run из 37 кейсов, baseline/final metrics, taxonomy ошибок и safety gate.
 - [SECOND_PROVIDER_VALIDATION.md](SECOND_PROVIDER_VALIDATION.md) — независимый провайдер Aurora Transfers, pure-generic и resolved levels.
 - [GOAL_3_SCORECARD.md](GOAL_3_SCORECARD.md) — scorecard и итоговый verdict GOAL 3.
-- [benchmark/run.rb](benchmark/run.rb) — mutation runner production compiler; возвращает ненулевой код при critical false ACCEPT.
+- [benchmark/run.rb](benchmark/run.rb) — mutation runner текущего Ruby compiler; возвращает ненулевой код при critical false ACCEPT.
 - [benchmark/second_provider.rb](benchmark/second_provider.rb) — runner независимого провайдера.
 - [benchmark/adjudications.yml](benchmark/adjudications.yml) — явные adjudications спорных labels; исходные labels сохраняются.
 - [../fixtures/aurora_ground_truth.yml](../fixtures/aurora_ground_truth.yml) — hand-authored ground truth второго провайдера.

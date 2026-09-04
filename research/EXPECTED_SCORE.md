@@ -1,5 +1,9 @@
 # Ожидаемый score hackathon
 
+> **ИСТОРИЧЕСКИЙ ПЛАН, НЕ ТЕКУЩИЙ РЕЗУЛЬТАТ.** Таблица ниже была прогнозом для
+> планирования. Она не заменяет реальные verification и benchmark reports в
+> [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
+
 ## Основание оценки
 
 `описание.docx` задаёт technical maximum 100 и industry maximum 20. Таблица

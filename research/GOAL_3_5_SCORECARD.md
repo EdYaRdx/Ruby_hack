@@ -1,5 +1,9 @@
 # GOAL 3.5: scorecard
 
+> **ИСТОРИЧЕСКИЙ SNAPSHOT GOAL 3.5.** Это зафиксированный результат отдельного
+> этапа. Текущие counts и aggregate metrics обновляются в
+> [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
+
 Дата: 2026-09-04
 
 ## Независимая semantic validation
