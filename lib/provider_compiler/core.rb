@@ -472,6 +472,7 @@ module ProviderCompiler
         "parameters" => Array(path_item["parameters"]) + Array(operation["parameters"]),
         "request_body" => operation["requestBody"],
         "responses" => operation.fetch("responses", {}),
+        "success_statuses" => operation.fetch("responses", {}).keys.map(&:to_s).select { |status| status.match?(/\A2\d\d\z/) }.sort,
         "security" => operation["security"],
         "callbacks" => operation["callbacks"],
         "raw" => operation

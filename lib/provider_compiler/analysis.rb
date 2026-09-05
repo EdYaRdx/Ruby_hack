@@ -27,11 +27,22 @@ module ProviderCompiler
           )],
           rationale: classification.fetch(:rationale, explicit ? "operationId/path/method provide a deterministic operation candidate" : "path/method provide a structural operation candidate")
         )
+        if %w[create_request fetch_status process_callback].include?(role) && Array(operation["success_statuses"]).empty?
+          decision = Decision.new(
+            id: decision.to_h.fetch("decision_id"),
+            outcome: "REVIEW_REQUIRED",
+            severity: "WARNING",
+            candidate: role,
+            evidence: [Evidence.new(source: "SPEC_FACT", locations: [operation_location(operation) + "/responses"], excerpt: "no documented 2xx response status")],
+            rationale: "mapped operation has no documented success HTTP response"
+          )
+        end
         {
           "canonical" => role == "extra_operation" || role == "extra_unmapped" ? nil : role,
           "operation_id" => operation["operation_id"],
           "method" => operation["method"],
           "path" => operation["path"],
+          "success_statuses" => Array(operation["success_statuses"]),
           "decision" => decision.to_h
         }
       end
@@ -88,7 +99,8 @@ module ProviderCompiler
 
     def status_signal?(operation, operation_id, path, text)
       response_status = operation["responses"].values.any? do |response|
-        response.dig("content", "application/json", "schema", "properties", "status")
+        properties = response.dig("content", "application/json", "schema", "properties") || {}
+        properties.keys.any? { |name| name.to_s.match?(/\A(?:status|state|phase)\z/i) }
       end
       operation_id.match?(/status|state/) || path.match?(/status|state/) || text.match?(/status|state/) || (method_get?(operation) && response_status)
     end
@@ -263,27 +275,39 @@ module ProviderCompiler
       schema = operation && operation.dig("request_body", "content", "application/json", "schema")
       schema ||= first_schema_with_property(facts.components, "amount") || {}
       properties = schema.fetch("properties", {})
-      nested_money_node = properties["money"]
-      nested_value = nested_money_node.is_a?(Hash) ? nested_money_node.dig("properties", "value") : nil
+      nested_money_name, nested_money_node = properties.find do |_name, node|
+        node.is_a?(Hash) && node["properties"].is_a?(Hash) && node["properties"].keys.any? { |name| name.to_s.match?(/\A(?:value|amount)\z/i) }
+      end
+      nested_value_name = nested_money_node && nested_money_node.fetch("properties", {}).keys.find { |name| name.to_s.match?(/\A(?:value|amount)\z/i) }
+      nested_value = nested_money_node && nested_value_name && nested_money_node.dig("properties", nested_value_name)
       nested_description = nested_money_node.is_a?(Hash) ? [nested_money_node["description"], nested_value && nested_value["description"]].compact.join(" ") : ""
       amount = properties["amount"] || (nested_value || {})
       amount_candidates = properties.keys.select { |name| name.to_s.match?(/amount|sum|total/) }
-      nested_money = nested_value && nested_money_node["description"].to_s.match?(/amount|money|sum|total|major|minor|currency/i)
+      # A nested value is not enough by itself to establish ownership of the
+      # canonical amount. Require semantic evidence on the container (or an
+      # explicit scale extension on the value). This keeps a mechanically
+      # nested `money.value` mutation in review while accepting providers that
+      # document the money object itself, such as Aurora and HeliosPay.
+      nested_money = nested_value && (
+        nested_money_node["description"].to_s.match?(/amount|money|sum|total|major|minor|currency|unit|cent|kopeck/i) ||
+        nested_value.key?("x-minor-unit-scale") || nested_value.key?("minor_unit_scale") || nested_value.key?("minor_unit_exponent")
+      )
       description = properties.key?("amount") ? amount["description"].to_s : nested_description
       described_unit = unit_from_description(description)
-      default_unit = @defaults.money["provider_unit"]
+      default_unit = @defaults.money["provider_unit"] || unit_from_subunit(@defaults.money["provider_subunit"])
       structurally_resolved = properties.key?("amount") || nested_money
       provider_unit = structurally_resolved ? (described_unit || default_unit || "UNKNOWN") : "UNKNOWN"
-      provider_subunit = @defaults.money["provider_subunit"] || (provider_unit == "minor" ? "minor_unit" : "UNKNOWN")
-      scale, scale_source = structurally_resolved ? resolve_scale(amount) : [nil, "UNKNOWN"]
+      provider_subunit = @defaults.money["provider_subunit"] || subunit_from_description(description) || (provider_unit == "minor" ? "minor_unit" : "UNKNOWN")
       host_unit = @profile.canonical_amount["unit"] || "UNKNOWN"
       host_currency = @profile.canonical_amount["currency"] || "UNKNOWN"
+      scale, scale_source = structurally_resolved ? resolve_scale(amount) : [nil, "UNKNOWN"]
+      scale ||= 1 if provider_unit == host_unit
       currency_property = properties["currency"] || (nested_money_node.is_a?(Hash) ? nested_money_node.dig("properties", "currency") : nil) || {}
       provider_currency = Array(currency_property["enum"]).first || "UNKNOWN"
       provider_evidence = []
       escaped_path = operation && operation["path"].to_s.gsub("~", "~0").gsub("/", "~1")
       amount_location = if operation
-                          field_pointer = properties.key?("amount") ? "amount" : "money/value"
+                          field_pointer = properties.key?("amount") ? "amount" : [nested_money_name, nested_value_name].compact.join("/")
                           "#/paths/#{escaped_path}/#{operation["method"].to_s.downcase}/requestBody/content/application~1json/schema/properties/#{field_pointer.gsub("/", "~1")}/description"
                         else
                           "#/components/schemas/*/properties/amount/description"
@@ -315,7 +339,7 @@ module ProviderCompiler
       )
       section = {
         "host" => { "field" => "operation.amount", "currency" => host_currency, "unit" => host_unit, "representation" => host_unit, "source" => host_evidence.to_h["source"], "evidence_source" => host_evidence.to_h["source"], "evidence" => [host_evidence.to_h] },
-        "provider" => { "field" => properties.key?("amount") ? "request.amount" : "request.money.value", "response_field" => response_money_field(facts), "currency" => provider_currency, "unit" => provider_unit, "representation" => provider_unit, "subunit" => provider_subunit, "unit_name" => provider_subunit, "scale" => scale, "scale_source" => scale_source, "source" => provider_evidence.map { |item| item.to_h["source"] }.uniq, "evidence_sources" => provider_evidence.map { |item| item.to_h["source"] }.uniq, "evidence" => provider_evidence.map(&:to_h), "field_candidates" => amount_candidates, "nested_money_candidate" => !nested_money.nil? },
+        "provider" => { "field" => properties.key?("amount") ? "request.amount" : "request.#{nested_money_name}.#{nested_value_name}", "response_field" => response_money_field(facts), "currency" => provider_currency, "unit" => provider_unit, "representation" => provider_unit, "subunit" => provider_subunit, "unit_name" => provider_subunit, "scale" => scale, "scale_source" => scale_source, "source" => provider_evidence.map { |item| item.to_h["source"] }.uniq, "evidence_sources" => provider_evidence.map { |item| item.to_h["source"] }.uniq, "evidence" => provider_evidence.map(&:to_h), "field_candidates" => amount_candidates, "nested_money_candidate" => !nested_money.nil? },
         "request_conversion" => request_conversion,
         "response_conversion" => response_conversion,
         "decision" => outcome
@@ -335,16 +359,10 @@ module ProviderCompiler
     end
 
     def response_money_field(facts)
-      return "response.amount" if facts.operations.any? do |operation|
-        operation["responses"].values.any? { |response| response.dig("content", "application/json", "schema", "properties", "amount") }
-      end
-
-      nested = facts.operations.any? do |operation|
-        operation["responses"].values.any? do |response|
-          response.dig("content", "application/json", "schema", "properties", "money", "properties", "value")
-        end
-      end
-      nested ? "response.money.value" : "response.amount"
+      operation = facts.operations.find { |item| item["method"] == "GET" && item["responses"].values.any? { |response| response.dig("content", "application/json", "schema") } }
+      schema = operation && operation["responses"].values.map { |response| response.dig("content", "application/json", "schema") }.compact.first
+      path = find_money_path(schema)
+      path ? "response.#{path}" : "response.amount"
     end
 
     def resolve_scale(amount)
@@ -380,6 +398,35 @@ module ProviderCompiler
       return "minor" if description.match?(/kopeck|копейк|minor/i)
       return "major" if description.match?(/major|руб(?:л|.|$)|ruble/i)
 
+      nil
+    end
+
+    def subunit_from_description(description)
+      return "kopecks" if description.match?(/kopeck|копейк/i)
+      return "cents" if description.match?(/cents?|цент/i)
+      return "mills" if description.match?(/mills?|милл/i)
+
+      nil
+    end
+
+    def unit_from_subunit(subunit)
+      return "minor" if subunit.to_s.match?(/kopeck|cent|mill|minor/i)
+      return "major" if subunit.to_s.match?(/major|ruble|руб/i)
+
+      nil
+    end
+
+    def find_money_path(schema, prefix = "")
+      return nil unless schema.is_a?(Hash)
+
+      properties = schema.fetch("properties", {})
+      return [prefix, "amount"].reject(&:empty?).join(".") if properties.key?("amount")
+      return [prefix, "value"].reject(&:empty?).join(".") if properties.key?("value") && properties.key?("currency")
+
+      properties.each do |name, property|
+        found = find_money_path(property, [prefix, name].reject(&:empty?).join("."))
+        return found if found
+      end
       nil
     end
 
@@ -458,8 +505,10 @@ module ProviderCompiler
     def status_enums(node, found = [])
       case node
       when Hash
-        status = node.dig("properties", "status", "enum")
-        found << Array(status) if status.is_a?(Array) && !status.empty?
+        %w[status state phase].each do |name|
+          status = node.dig("properties", name, "enum")
+          found << Array(status) if status.is_a?(Array) && !status.empty?
+        end
         node.each_value { |value| status_enums(value, found) }
       when Array
         node.each { |value| status_enums(value, found) }
@@ -489,8 +538,8 @@ module ProviderCompiler
       signature_required = signature_parameter && signature_parameter.fetch("required", false)
       description = [operation["description"], signature_parameter && signature_parameter["description"]].compact.join(" ")
       algorithm = description.match?(/HMAC-SHA256/i) ? "HMAC-SHA256" : nil
-      raw_body = @defaults.webhook["raw_body"]
-      encoding = @defaults.webhook["signature_encoding"]
+      raw_body = @defaults.webhook.key?("raw_body") ? @defaults.webhook["raw_body"] : (description.match?(/raw\s+body|сырое\s+тело/i) ? true : nil)
+      encoding = @defaults.webhook["signature_encoding"] || (description.match?(/\bhex(?:adecimal)?\b/i) ? "hex" : (description.match?(/\bbase64\b/i) ? "base64" : nil))
       events = event_enums(facts.components).first || []
       event_map = events.each_with_object({}) do |event, result|
         provider_status = event.to_s.split(".").last
@@ -634,7 +683,7 @@ module ProviderCompiler
       end
       schema = create_operation && create_operation.dig("request_body", "content", "application/json", "schema")
       mappings = Array(@defaults.data["field_mappings"])
-      mappings = inferred_mappings(schema, money) if mappings.empty?
+      mappings = inferred_mappings(schema, money, facts) if mappings.empty?
       mappings = mappings.map { |mapping| enrich(mapping, money, facts, schema) }
       complete = !mappings.empty? && mappings.all? { |mapping| mapping["decision"] == "ACCEPT" }
       decision = Decision.new(
@@ -650,15 +699,19 @@ module ProviderCompiler
 
     private
 
-    def inferred_mappings(schema, money)
+    def inferred_mappings(schema, money, facts)
       properties = schema.is_a?(Hash) ? schema.fetch("properties", {}) : {}
       required = schema.is_a?(Hash) ? Array(schema["required"]) : []
-      nested_money = properties["money"].is_a?(Hash) ? properties["money"].fetch("properties", {}) : {}
+      nested_name, nested_node = properties.find do |_name, node|
+        node.is_a?(Hash) && node["properties"].is_a?(Hash) && node["properties"].keys.any? { |name| name.to_s.match?(/\A(?:value|amount)\z/i) }
+      end
+      nested_money = nested_node.is_a?(Hash) ? nested_node.fetch("properties", {}) : {}
+      nested_value_name = nested_money.keys.find { |name| name.to_s.match?(/\A(?:value|amount)\z/i) }
       provider_fields = {
-        "amount" => money.dig("provider", "field")&.sub("request.", "") || (properties.key?("amount") ? "amount" : nil),
-        "currency" => properties.key?("currency") ? "currency" : (nested_money.key?("currency") ? "money.currency" : nil),
-        "external_id" => semantic_property(properties, /\A(?:external_id|external_reference|reference|request_id)\z/i),
-        "recipient" => semantic_property(properties, /\A(?:recipient|destination|beneficiary|payee)\z/i)
+        "amount" => money.dig("provider", "field")&.sub("request.", "") || (properties.key?("amount") ? "amount" : (nested_name && nested_value_name ? "#{nested_name}.#{nested_value_name}" : nil)),
+        "currency" => properties.key?("currency") ? "currency" : (nested_money.key?("currency") ? "#{nested_name}.currency" : nil),
+        "external_id" => semantic_property(properties, /\A(?:external_id|external_reference|client_reference|merchant_reference|reference|request_id)\z/i),
+        "recipient" => semantic_property(properties, /\A(?:recipient|destination|beneficiar|beneficiary|payee)\z/i)
       }
       mappings = provider_fields.filter_map do |field, provider_field|
         next if provider_field.nil?
@@ -678,12 +731,33 @@ module ProviderCompiler
         }
       end
       response_amount = money.dig("provider", "response_field") || "response.amount"
+      response_schema = response_schema(facts)
+      response_id = response_property_path(response_schema, /\A(?:id|.*_id)\z/i) || "id"
+      response_status = response_property_path(response_schema, /\A(?:status|state|phase)\z/i) || "status"
       mappings.concat([
-        { "canonical_path" => "operation.provider_operation_id", "provider_path" => "response.id", "direction" => "response", "transform" => "identity", "factor" => 1, "required" => false, "provenance" => "SPEC_FACT", "decision" => "ACCEPT" },
-        { "canonical_path" => "operation.status", "provider_path" => "response.status", "direction" => "response", "transform" => "status_map", "factor" => 1, "required" => false, "provenance" => "SPEC_FACT", "decision" => "ACCEPT" },
+        { "canonical_path" => "operation.provider_operation_id", "provider_path" => "response.#{response_id}", "direction" => "response", "transform" => "identity", "factor" => 1, "required" => false, "provenance" => "SPEC_FACT", "decision" => "ACCEPT" },
+        { "canonical_path" => "operation.status", "provider_path" => "response.#{response_status}", "direction" => "response", "transform" => "status_map", "factor" => 1, "required" => false, "provenance" => "SPEC_FACT", "decision" => "ACCEPT" },
         { "canonical_path" => "operation.amount", "provider_path" => response_amount, "direction" => "response", "transform" => money.dig("response_conversion", "operation"), "factor" => money.dig("response_conversion", "factor"), "required" => false, "provenance" => "SPEC_FACT", "decision" => "ACCEPT" }
       ])
       mappings
+    end
+
+    def response_schema(facts)
+      operation = facts.operations.find { |item| item["method"] == "GET" && item["responses"].values.any? { |response| response.dig("content", "application/json", "schema") } }
+      operation && operation["responses"].values.map { |response| response.dig("content", "application/json", "schema") }.compact.first
+    end
+
+    def response_property_path(schema, pattern, prefix = "")
+      return nil unless schema.is_a?(Hash)
+
+      schema.fetch("properties", {}).each do |name, property|
+        path = [prefix, name].reject(&:empty?).join(".")
+        return path if name.to_s.match?(pattern)
+
+        nested = response_property_path(property, pattern, path)
+        return nested if nested
+      end
+      nil
     end
 
     def enrich(mapping, money, facts, request_schema)
@@ -747,8 +821,9 @@ module ProviderCompiler
       schema = operation && operation.dig("request_body", "content", "application/json", "schema")
       constraints = []
       walk(schema, "request", constraints) if schema.is_a?(Hash)
+      provider_amount_path = money.dig("provider", "field") || "request.amount"
       constraints.each do |constraint|
-        next unless constraint["path"] == "request.amount" && constraint.key?("minimum")
+        next unless constraint["path"] == provider_amount_path && constraint.key?("minimum")
 
         factor = money.dig("response_conversion", "factor_decimal") || money.dig("response_conversion", "factor")
         converted = factor ? BigDecimal(constraint["minimum"].to_s) * BigDecimal(factor.to_s) : nil
@@ -796,12 +871,15 @@ module ProviderCompiler
       entries = facts.operations.flat_map do |operation|
         operation["responses"].map do |status, response|
           error_response = status.to_s.to_i >= 400
-          schema_codes = error_response ? error_codes(response).uniq : []
-          codes = (schema_codes + example_codes(response)).uniq
+          schema_codes = []
+          codes = example_codes(response).uniq
+          category = category_for_status(status.to_s)
           {
             "operation_id" => operation["operation_id"],
             "http_status" => status.to_s,
             "provider_codes" => codes.map { |code| code_entry(code, status.to_s, schema_codes.include?(code), operation["method"]) },
+            "canonical_category" => category,
+            "retryable" => status.to_s == "429",
             "description" => response["description"],
             "retry_after_header" => status.to_s == "429" ? "Retry-After" : nil,
             "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"]
@@ -824,23 +902,36 @@ module ProviderCompiler
     def code_entry(code, status, known, method)
       numeric = status.to_i
       category, retryable, action = if numeric == 429
-                                      ["rate_limit", true, method.to_s.upcase == "POST" ? "retry_after_with_same_idempotency_key" : "retry_after"]
+                                      ["rate_limit_exceeded", true, method.to_s.upcase == "POST" ? "retry_after_with_same_idempotency_key" : "retry_after"]
                                     elsif numeric == 401
-                                      ["authentication", false, "refresh_credentials_or_review"]
+                                      ["unauthorized", false, "refresh_credentials_or_review"]
                                     elsif numeric == 402
-                                      ["provider_balance", false, "review_provider_balance"]
+                                      ["insufficient_balance", false, "review_provider_balance"]
                                     elsif numeric == 409
                                       ["conflict", false, "inspect_existing_operation"]
                                     elsif numeric == 404
                                       ["not_found", false, "review_identifier"]
                                     elsif numeric >= 500
-                                      ["provider_server", false, method.to_s.upcase == "GET" ? "review_safe_read_retry" : "manual_retry_review"]
+                                      ["internal_error", false, method.to_s.upcase == "GET" ? "review_safe_read_retry" : "manual_retry_review"]
                                     elsif numeric >= 400
-                                      ["validation_or_request", false, "correct_request"]
+                                      ["validation_error", false, "correct_request"]
                                     else
                                       ["success", false, "none"]
                                     end
       { "code" => code, "known_to_schema" => known, "category" => category, "retryable" => retryable, "action" => action, "unknown_code_policy" => known ? "mapped" : "preserve_and_review" }
+    end
+
+    def category_for_status(status)
+      numeric = status.to_i
+      return "rate_limit_exceeded" if numeric == 429
+      return "unauthorized" if numeric == 401
+      return "insufficient_balance" if numeric == 402
+      return "conflict" if numeric == 409
+      return "not_found" if numeric == 404
+      return "internal_error" if numeric >= 500
+      return "validation_error" if numeric >= 400
+
+      "unknown_provider_error"
     end
 
     def example_codes(response)

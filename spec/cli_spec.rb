@@ -16,6 +16,19 @@ RSpec.describe "provider_compiler CLI" do
     original.nil? ? ENV.delete("PROVIDER_SPEC") : ENV["PROVIDER_SPEC"] = original
   end
 
+  it "uses empty defaults for an explicit spec unless --defaults is supplied" do
+    options = ProviderCompiler::CLI.default_options
+    parser = ProviderCompiler::CLI.option_parser(options)
+    parser.parse!(["--spec", "fixtures/aurora_transfer_api.yaml"])
+    expect(options.fetch(:defaults)).to eq("fixtures/empty_case_defaults.yml")
+    expect(options.fetch(:defaults_origin)).to eq("none")
+
+    explicit = ProviderCompiler::CLI.default_options
+    ProviderCompiler::CLI.option_parser(explicit).parse!(["--spec", "fixtures/aurora_transfer_api.yaml", "--defaults", "fixtures/aurora_case_defaults.yml"])
+    expect(explicit.fetch(:defaults)).to eq("fixtures/aurora_case_defaults.yml")
+    expect(explicit.fetch(:defaults_origin)).to eq("fixtures/aurora_case_defaults.yml")
+  end
+
   it "runs analyze/generate and verify through one core pipeline" do
     Dir.mktmpdir("provider-cli") do |directory|
       stdout, stderr, status = Open3.capture3(RbConfig.ruby, SpecSupport::BIN_PATH, "generate", "--spec", SpecSupport::SPEC_PATH, "--profile", SpecSupport::PROFILE_PATH, "--defaults", SpecSupport::DEFAULTS_PATH, "--output", directory)

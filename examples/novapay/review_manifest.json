@@ -404,7 +404,7 @@
           "transform": "multiply",
           "factor": 100,
           "required": true,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         },
         {
@@ -414,7 +414,7 @@
           "transform": "identity",
           "factor": 1,
           "required": true,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         },
         {
@@ -424,7 +424,7 @@
           "transform": "identity",
           "factor": 1,
           "required": true,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         },
         {
@@ -434,7 +434,7 @@
           "transform": "identity",
           "factor": 1,
           "required": true,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         },
         {
@@ -444,7 +444,7 @@
           "transform": "identity",
           "factor": 1,
           "required": false,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         },
         {
@@ -454,7 +454,7 @@
           "transform": "status_map",
           "factor": 1,
           "required": false,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         },
         {
@@ -464,13 +464,13 @@
           "transform": "divide",
           "factor": 0.01,
           "required": false,
-          "provenance": "CASE_DEFAULT",
+          "provenance": "SPEC_FACT",
           "decision": "ACCEPT"
         }
       ],
       "evidence": [
         {
-          "source": "CASE_DEFAULT",
+          "source": "SPEC_FACT",
           "locations": [
             "#/paths/*/requestBody",
             "#/components/schemas/*/properties"
@@ -611,6 +611,8 @@
           "operation_id": "createPayout",
           "http_status": "201",
           "provider_codes": [],
+          "canonical_category": "unknown_provider_error",
+          "retryable": false,
           "description": "Выплата создана",
           "retry_after_header": null,
           "evidence_sources": [
@@ -621,64 +623,9 @@
         {
           "operation_id": "createPayout",
           "http_status": "400",
-          "provider_codes": [
-            {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            }
-          ],
+          "provider_codes": [],
+          "canonical_category": "validation_error",
+          "retryable": false,
           "description": "Некорректный запрос",
           "retry_after_header": null,
           "evidence_sources": [
@@ -691,70 +638,16 @@
           "http_status": "401",
           "provider_codes": [
             {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
               "code": "unauthorized",
               "known_to_schema": false,
-              "category": "authentication",
+              "category": "unauthorized",
               "retryable": false,
               "action": "refresh_credentials_or_review",
               "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "unauthorized",
+          "retryable": false,
           "description": "Невалидный API-ключ",
           "retry_after_header": null,
           "evidence_sources": [
@@ -767,62 +660,16 @@
           "http_status": "402",
           "provider_codes": [
             {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "provider_balance",
-              "retryable": false,
-              "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
-            },
-            {
               "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "provider_balance",
+              "known_to_schema": false,
+              "category": "insufficient_balance",
               "retryable": false,
               "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "provider_balance",
-              "retryable": false,
-              "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "provider_balance",
-              "retryable": false,
-              "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "provider_balance",
-              "retryable": false,
-              "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "provider_balance",
-              "retryable": false,
-              "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "provider_balance",
-              "retryable": false,
-              "action": "review_provider_balance",
-              "unknown_code_policy": "mapped"
+              "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "insufficient_balance",
+          "retryable": false,
           "description": "Недостаточно средств на балансе провайдера",
           "retry_after_header": null,
           "evidence_sources": [
@@ -833,64 +680,9 @@
         {
           "operation_id": "createPayout",
           "http_status": "409",
-          "provider_codes": [
-            {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            }
-          ],
+          "provider_codes": [],
+          "canonical_category": "conflict",
+          "retryable": false,
           "description": "Дубликат по idempotency key",
           "retry_after_header": null,
           "evidence_sources": [
@@ -904,61 +696,15 @@
           "provider_codes": [
             {
               "code": "validation_error",
-              "known_to_schema": true,
-              "category": "validation_or_request",
+              "known_to_schema": false,
+              "category": "validation_error",
               "retryable": false,
               "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "validation_or_request",
-              "retryable": false,
-              "action": "correct_request",
-              "unknown_code_policy": "mapped"
+              "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "validation_error",
+          "retryable": false,
           "description": "Ошибка валидации",
           "retry_after_header": null,
           "evidence_sources": [
@@ -971,62 +717,16 @@
           "http_status": "429",
           "provider_codes": [
             {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "rate_limit",
-              "retryable": true,
-              "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "rate_limit",
-              "retryable": true,
-              "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "rate_limit",
-              "retryable": true,
-              "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "rate_limit",
-              "retryable": true,
-              "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "rate_limit",
-              "retryable": true,
-              "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
-            },
-            {
               "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "rate_limit",
+              "known_to_schema": false,
+              "category": "rate_limit_exceeded",
               "retryable": true,
               "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "rate_limit",
-              "retryable": true,
-              "action": "retry_after_with_same_idempotency_key",
-              "unknown_code_policy": "mapped"
+              "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "rate_limit_exceeded",
+          "retryable": true,
           "description": "Превышен лимит запросов",
           "retry_after_header": "Retry-After",
           "evidence_sources": [
@@ -1037,64 +737,9 @@
         {
           "operation_id": "createPayout",
           "http_status": "500",
-          "provider_codes": [
-            {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "provider_server",
-              "retryable": false,
-              "action": "manual_retry_review",
-              "unknown_code_policy": "mapped"
-            }
-          ],
+          "provider_codes": [],
+          "canonical_category": "internal_error",
+          "retryable": false,
           "description": "Внутренняя ошибка провайдера",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1106,6 +751,8 @@
           "operation_id": "getPayoutStatus",
           "http_status": "200",
           "provider_codes": [],
+          "canonical_category": "unknown_provider_error",
+          "retryable": false,
           "description": "Статус выплаты",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1118,70 +765,16 @@
           "http_status": "401",
           "provider_codes": [
             {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "authentication",
-              "retryable": false,
-              "action": "refresh_credentials_or_review",
-              "unknown_code_policy": "mapped"
-            },
-            {
               "code": "unauthorized",
               "known_to_schema": false,
-              "category": "authentication",
+              "category": "unauthorized",
               "retryable": false,
               "action": "refresh_credentials_or_review",
               "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "unauthorized",
+          "retryable": false,
           "description": "Невалидный API-ключ",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1194,62 +787,6 @@
           "http_status": "404",
           "provider_codes": [
             {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "not_found",
-              "retryable": false,
-              "action": "review_identifier",
-              "unknown_code_policy": "mapped"
-            },
-            {
               "code": "not_found",
               "known_to_schema": false,
               "category": "not_found",
@@ -1258,6 +795,8 @@
               "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "not_found",
+          "retryable": false,
           "description": "Выплата не найдена",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1269,6 +808,8 @@
           "operation_id": "cancelPayout",
           "http_status": "200",
           "provider_codes": [],
+          "canonical_category": "unknown_provider_error",
+          "retryable": false,
           "description": "Выплата отменена",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1281,62 +822,6 @@
           "http_status": "409",
           "provider_codes": [
             {
-              "code": "validation_error",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "insufficient_balance",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "recipient_not_found",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "bank_unavailable",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "amount_limit_exceeded",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "rate_limit_exceeded",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
-              "code": "internal_error",
-              "known_to_schema": true,
-              "category": "conflict",
-              "retryable": false,
-              "action": "inspect_existing_operation",
-              "unknown_code_policy": "mapped"
-            },
-            {
               "code": "invalid_status",
               "known_to_schema": false,
               "category": "conflict",
@@ -1345,6 +830,8 @@
               "unknown_code_policy": "preserve_and_review"
             }
           ],
+          "canonical_category": "conflict",
+          "retryable": false,
           "description": "Невозможно отменить в текущем статусе",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1356,6 +843,8 @@
           "operation_id": "payoutWebhook",
           "http_status": "200",
           "provider_codes": [],
+          "canonical_category": "unknown_provider_error",
+          "retryable": false,
           "description": "Webhook принят",
           "retry_after_header": null,
           "evidence_sources": [
@@ -1367,6 +856,8 @@
           "operation_id": "getBalance",
           "http_status": "200",
           "provider_codes": [],
+          "canonical_category": "unknown_provider_error",
+          "retryable": false,
           "description": "Текущий баланс",
           "retry_after_header": null,
           "evidence_sources": [

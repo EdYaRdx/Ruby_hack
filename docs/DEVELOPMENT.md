@@ -72,3 +72,14 @@ ruby bin/update_docs
 Команды выше работают в PowerShell из корня репозитория. Если `ruby` или
 `bundle` не найдены, установите RubyInstaller с MSYS2 toolchain и откройте новый
 терминал; отдельное Python virtual environment для проекта не требуется.
+For arbitrary specifications, prefer explicit spec-only commands first:
+
+```powershell
+ruby bin/provider_compiler inspect --spec path/to/provider.yaml
+ruby bin/provider_compiler analyze --spec path/to/provider.yaml --out tmp/spec-only
+```
+
+Add `--defaults path/to/provider_defaults.yml` only when provider-specific
+business knowledge is intentionally supplied. The benchmark lanes are run
+independently with `research/benchmark/spec_only.rb` and
+`research/benchmark/third_provider.rb`.

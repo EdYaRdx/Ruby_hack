@@ -1,5 +1,5 @@
 profile_version: 1
-name: aurora_payments_v1
+name: heliospay_payments_v1
 class_name: Provider::BaseService
 service_name_pattern: Provider::<Name>Service
 required_methods:
@@ -14,7 +14,7 @@ canonical_operations:
   - callback
 canonical_amount:
   field: operation.amount
-  currency: USD
+  currency: EUR
   unit: major
 callback_actions:
   approved: approve_operation

@@ -10,6 +10,8 @@ ROOT = File.expand_path("..", __dir__)
 TMP = File.join(ROOT, "tmp", "benchmark")
 BENCHMARK_JSON = File.join(TMP, "results.json")
 AURORA_JSON = File.join(TMP, "second_provider.json")
+SPEC_ONLY_JSON = File.join(ROOT, "research", "spec_only_novapay_report.json")
+THIRD_PROVIDER_JSON = File.join(TMP, "third_provider.json")
 RSPEC_JSON = File.join(TMP, "rspec.json")
 
 def run_ruby(environment, *arguments)
@@ -24,11 +26,22 @@ end
 FileUtils.mkdir_p(TMP)
 run_ruby({ "BENCHMARK_OUTPUT" => BENCHMARK_JSON }, "research/benchmark/run.rb")
 run_ruby({ "SECOND_PROVIDER_OUTPUT" => AURORA_JSON }, "research/benchmark/second_provider.rb")
+run_ruby({ "SPEC_ONLY_OUTPUT" => SPEC_ONLY_JSON }, "research/benchmark/spec_only.rb")
+run_ruby({ "THIRD_PROVIDER_OUTPUT" => THIRD_PROVIDER_JSON }, "research/benchmark/third_provider.rb")
 run_ruby({}, "-rbundler/setup", "-S", "rspec", "--format", "json", "--out", RSPEC_JSON)
 
 benchmark = JSON.parse(File.read(BENCHMARK_JSON, encoding: "UTF-8"))
 aurora = JSON.parse(File.read(AURORA_JSON, encoding: "UTF-8"))
+spec_only = JSON.parse(File.read(SPEC_ONLY_JSON, encoding: "UTF-8"))
+third_provider = JSON.parse(File.read(THIRD_PROVIDER_JSON, encoding: "UTF-8"))
 rspec = JSON.parse(File.read(RSPEC_JSON, encoding: "UTF-8"))
+
+# RSpec's JSON formatter includes wall-clock timing, which is useful during a
+# run but makes this updater appear to change its output on every invocation.
+# Keep the report as a deterministic status snapshot instead.
+rspec.fetch("examples", []).each { |example| example.delete("run_time") }
+rspec.fetch("summary", {}).delete("duration")
+File.write(RSPEC_JSON, JSON.pretty_generate(rspec) + "\n", encoding: "UTF-8")
 
 aggregate = benchmark.fetch("aggregate")
 aurora_aggregate = aurora.fetch("aggregate")
@@ -36,6 +49,9 @@ rspec_summary = rspec.fetch("summary")
 aurora_vectors = aurora_aggregate.fetch("resolved").fetch("behavioral_vectors").fetch("vectors")
 aurora_vectors_total = aurora_vectors.length
 aurora_vectors_passed = aurora_vectors.count { |vector| vector.fetch("passed") }
+spec_only_aggregate = spec_only.fetch("aggregate")
+third_aggregate = third_provider.fetch("aggregate")
+third_resolved = third_aggregate.fetch("resolved")
 example_files = Dir[File.join(ROOT, "examples", "novapay", "*")].select { |path| File.file?(path) }.map { |path| File.basename(path) }.sort
 
 def percent(value)
@@ -61,6 +77,8 @@ status_block = <<~MARKDOWN
   - automatic_accept_rate: #{percent(aggregate["automatic_accept_rate"])}; review_required_rate: #{percent(aggregate["review_required_rate"])}; unknown_rate: #{percent(aggregate["unknown_rate"])}.
   - semantic_accept_accuracy: #{percent(aggregate["semantic_accept_accuracy"])}; critical_false_accept_count: #{aggregate.fetch("critical_false_accept_count")}.
   - Aurora: levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic_accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}.
+  - NovaPay spec-only lane: #{spec_only_aggregate.fetch("cases_passed")}/#{spec_only_aggregate.fetch("cases_total")} safe; automatic_accept_rate: #{percent(spec_only_aggregate["automatic_accept_rate"])}; critical_false_accepts: #{spec_only_aggregate.fetch("critical_false_accept_count")}.
+  - HeliosPay: levels #{third_aggregate.fetch("levels_passed")}/#{third_aggregate.fetch("levels_total")}; resolved behavioral vectors #{third_resolved.dig("behavioral_vectors", "passed_count")}/#{third_resolved.dig("behavioral_vectors", "count")}.
 
   Для обновления блока запустите `ruby bin/update_docs`.
 MARKDOWN
@@ -87,6 +105,8 @@ benchmark_block = <<~MARKDOWN
   - semantic_accept_accuracy: #{percent(aggregate["semantic_accept_accuracy"])}.
   - Operations / money / statuses / auth / webhook / idempotency / field mappings: #{%w[operation_semantic_accuracy money_semantic_accuracy status_semantic_accuracy auth_semantic_accuracy webhook_semantic_accuracy idempotency_semantic_accuracy field_mapping_semantic_accuracy].map { |key| percent(aggregate[key]) }.join(" / ")}.
   - critical_false_accept_count: #{aggregate.fetch("critical_false_accept_count")}.
+  - NovaPay spec-only lane: #{spec_only_aggregate.fetch("cases_passed")}/#{spec_only_aggregate.fetch("cases_total")}; automatic_accept_rate: #{percent(spec_only_aggregate["automatic_accept_rate"])}; safe_decision_coverage: #{percent(spec_only_aggregate["safe_decision_coverage"])}; critical false ACCEPTs: #{spec_only_aggregate.fetch("critical_false_accept_count")}.
+  - HeliosPay: levels #{third_aggregate.fetch("levels_passed")}/#{third_aggregate.fetch("levels_total")}; resolved behavioral vectors #{third_resolved.dig("behavioral_vectors", "passed_count")}/#{third_resolved.dig("behavioral_vectors", "count")}; critical false ACCEPTs: #{third_aggregate.fetch("critical_false_accept_count")}.
   - Generation: успешно #{aggregate.fetch("generation_pass_count")}/#{aggregate.fetch("generation_attempt_count")} попыток; generated Ruby syntax pass rate: #{percent(aggregate["generated_syntax_pass_rate"])}.
   - Второй provider Aurora: semantic levels #{aurora_aggregate.fetch("levels_passed")}/#{aurora_aggregate.fetch("levels_total")}, behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}; semantic accuracy: #{percent(aurora_aggregate["semantic_accuracy"])}; critical false ACCEPTs: #{aurora_aggregate.fetch("critical_false_accept_count")}.
 

@@ -26,15 +26,15 @@ conditional recipient fields и host-side minimum amount до отправки.
 HTTP errors возвращаются без blind retries; POST retries после rate limit
 должны повторно использовать тот же idempotency key.
 
-- HTTP 400: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error
-- HTTP 401: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error, unauthorized
-- HTTP 402: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error
-- HTTP 409: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error
-- HTTP 422: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error
-- HTTP 429: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error (соблюдать Retry-After)
-- HTTP 500: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error
-- HTTP 404: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error, not_found
-- HTTP 409: validation_error, insufficient_balance, recipient_not_found, bank_unavailable, amount_limit_exceeded, rate_limit_exceeded, internal_error, invalid_status
+- HTTP 400: validation_error
+- HTTP 401: unauthorized → unauthorized
+- HTTP 402: insufficient_balance → insufficient_balance
+- HTTP 409: conflict
+- HTTP 422: validation_error → validation_error
+- HTTP 429: rate_limit_exceeded → rate_limit_exceeded (сохранять Retry-After)
+- HTTP 500: internal_error
+- HTTP 404: not_found → not_found
+- HTTP 409: invalid_status → conflict
 
 Webhook processing использует fail-closed поведение, если raw body,
 signature, secret или known event outcome отсутствуют либо некорректны.

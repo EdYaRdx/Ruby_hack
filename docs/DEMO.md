@@ -116,3 +116,7 @@ ruby bin/provider_compiler verify --out tmp/demo-generated
 `inspect` показывает summary Review Manifest, `generate` создаёт ту же
 проверяемую проекцию, а `verify` проверяет Ruby syntax и contract-smoke harness.
 Для другого входа укажите явно `--spec`, `--profile` и `--defaults`.
+The NovaPay card is an explicit reference-case demo and visibly uses its case
+profile. A normal uploaded OpenAPI document is analyzed with empty provider
+defaults. To demonstrate the generic path, use the Aurora or HeliosPay
+fixtures; their resolved demos are separate explicit actions.

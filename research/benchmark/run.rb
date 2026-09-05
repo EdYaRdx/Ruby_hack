@@ -111,7 +111,7 @@ module RealMutationBenchmark
       "failure_class" => semantic_validation.fetch("passed") ? nil : classify_failure(effective_expected, actual, semantic_validation)
     }
   rescue ProviderCompiler::Error, ProviderCompiler::ValidationError, Psych::Exception, Errno::ENOENT => e
-    error = { "class" => e.class.name, "message" => e.message }
+    error = { "class" => e.class.name, "message" => e.message.gsub(case_dir, "case") }
     semantic_validation = SemanticBenchmark::Comparator.new.compare(
       expected_decision: effective_expected,
       expected_case: semantic_case,
@@ -138,6 +138,9 @@ module RealMutationBenchmark
       output_dir = File.join(case_dir, "generated")
       ProviderCompiler::DeterministicGenerator.new.generate(blueprint, manifest, output_dir, examples: examples)
       verification = ProviderCompiler::Verification.new.verify(output_dir)
+      verification["syntax"] = Array(verification["syntax"]).map do |entry|
+        entry.merge("path" => File.join("generated", File.basename(entry.fetch("path"))))
+      end
       { "status" => verification.fetch("passed") ? "passed" : "failed", "verification" => verification }
     rescue ProviderCompiler::Error, ProviderCompiler::ValidationError, Errno::ENOENT => e
       { "status" => "failed", "error" => { "class" => e.class.name, "message" => e.message } }

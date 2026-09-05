@@ -67,6 +67,8 @@ RSpec. Это воспроизводимые ignored artifacts, а не вруч
 - semantic_accept_accuracy: 100.0%.
 - Operations / money / statuses / auth / webhook / idempotency / field mappings: 100.0% / 100.0% / 100.0% / 100.0% / 100.0% / 100.0% / 100.0%.
 - critical_false_accept_count: 0.
+- NovaPay spec-only lane: 7/7; automatic_accept_rate: 0.0%; safe_decision_coverage: 100.0%; critical false ACCEPTs: 0.
+- HeliosPay: levels 2/2; resolved behavioral vectors 4/4; critical false ACCEPTs: 0.
 - Generation: успешно 18/18 попыток; generated Ruby syntax pass rate: 100.0%.
 - Второй provider Aurora: semantic levels 3/3, behavioral vectors 4/4; semantic accuracy: 100.0%; critical false ACCEPTs: 0.
 
@@ -79,3 +81,12 @@ Legacy `automatic_coverage`: 100.0%. Значение оставлено для 
 тем, совпадают ли accepted Blueprint с независимой семантикой и не превращается
 ли нерешённая critical information в скрытое generated value. Поэтому benchmark
 раздельно показывает correctness, safety и generation.
+The 37-case NovaPay reference benchmark and the spec-only lane are separate
+measurements. The spec-only lane runs with empty provider defaults and reports
+`automatic_accept_rate`, `safe_decision_coverage`, `review_required_rate`,
+`unknown_rate`, `decision_accuracy`, and critical false ACCEPTs. It must not be
+merged into a single universal-accuracy number.
+
+The independent third-provider lane is HeliosPay. Its hand-authored ground
+truth is stored before the run and includes 202 success handling, nested money,
+query auth, extra operations, runtime errors, and webhook vectors.

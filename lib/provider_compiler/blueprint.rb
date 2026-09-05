@@ -44,7 +44,7 @@ module ProviderCompiler
       operation_items = sections.fetch(:operations)
       canonical = operation_items.reject { |item| item["canonical"].nil? || item["canonical"] == "extra_operation" || item["canonical"] == "extra_unmapped" }
       extras = operation_items.select { |item| item["canonical"].nil? || %w[extra_operation extra_unmapped].include?(item["canonical"]) }.map do |item|
-        { "operation_id" => item["operation_id"], "method" => item["method"], "path" => item["path"], "kind" => "EXTRA_OPERATION", "preserved" => true, "blocking" => false, "canonical_binding" => "none_unless_profile_declares_#{item["operation_id"].to_s.sub(/\Aget/i, "").downcase}" }
+        { "operation_id" => item["operation_id"], "method" => item["method"], "path" => item["path"], "success_statuses" => Array(item["success_statuses"]), "kind" => "EXTRA_OPERATION", "preserved" => true, "blocking" => false, "canonical_binding" => "none_unless_profile_declares_#{item["operation_id"].to_s.sub(/\Aget/i, "").downcase}" }
       end
       all_decisions = bundle.decision_hashes
       overall = if all_decisions.any? { |item| item["outcome"] == "UNKNOWN" }
@@ -57,14 +57,14 @@ module ProviderCompiler
       provider_name = facts.info.fetch("title", "Provider").to_s.split.first
       endpoints = facts.operations.map do |operation|
         mapping = operation_items.find { |item| item["operation_id"] == operation["operation_id"] && item["path"] == operation["path"] }
-        { "operation_id" => operation["operation_id"], "method" => operation["method"], "path" => operation["path"], "canonical" => mapping && mapping["canonical"], "decision" => mapping && mapping.dig("decision", "outcome") }
+        { "operation_id" => operation["operation_id"], "method" => operation["method"], "path" => operation["path"], "success_statuses" => Array(operation["success_statuses"]), "canonical" => mapping && mapping["canonical"], "decision" => mapping && mapping.dig("decision", "outcome") }
       end
       {
         "schema_version" => 1,
         "source" => facts.source.to_h,
         "provider" => { "name" => provider_name, "slug" => Util.slug(provider_name), "version" => facts.info["version"] },
         "servers" => facts.servers.map { |server| { "url" => server["url"], "environment" => server["description"].to_s.downcase.include?("sandbox") ? "sandbox" : "production" } },
-        "base_service_profile" => { "name" => profile.name, "version" => profile.profile_version, "class_name" => profile.class_name, "required_methods" => profile.required_methods, "request_method_semantics" => profile.data["request_method_semantics"], "canonical_operations" => profile.canonical_operations, "money" => profile.money, "callback_actions" => profile.callback_actions },
+        "base_service_profile" => { "name" => profile.name, "version" => profile.profile_version, "class_name" => profile.class_name, "required_methods" => profile.required_methods, "request_method_semantics" => profile.data["request_method_semantics"], "canonical_operations" => profile.canonical_operations, "money" => profile.money, "callback_actions" => profile.callback_actions, "check_conditions" => profile.check_conditions, "failure_contract" => profile.failure_contract },
         "auth" => sections.fetch(:auth),
         "operations" => canonical,
         "endpoints" => endpoints,

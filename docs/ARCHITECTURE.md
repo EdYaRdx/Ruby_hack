@@ -102,3 +102,16 @@ example. Для нового semantic rule сначала добавьте evide
 Подробные safety invariants и история исследования находятся в
 [`research/ARCHITECTURE_INVARIANTS.md`](../research/ARCHITECTURE_INVARIANTS.md)
 и [`research/README.md`](../research/README.md).
+## Goal 5 input contract
+
+OpenAPI is the primary source for provider facts and documented semantics.
+`CaseDefaults` are optional, explicit provider overrides/fallback knowledge and
+must not be inferred from filename, fingerprint, or generic analyzer code. An
+explicit `--spec` without `--defaults` uses `fixtures/empty_case_defaults.yml`.
+Spec-only analysis therefore exposes genuine REVIEW/UNKNOWN decisions instead
+of silently importing NovaPay semantics.
+
+The existing Facts IR -> Review Manifest -> Provider Blueprint pipeline is
+unchanged. Success HTTP codes are carried from OpenAPI into Blueprint and the
+generator; runtime error categories, Retry-After handling and fixture
+provenance are projections of the resolved Blueprint.

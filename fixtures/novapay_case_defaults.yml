@@ -1,66 +1,7 @@
 provider: NovaPay
 money:
-  provider_unit: minor
   provider_subunit: kopecks
   scale: 100
-  source: CASE_DEFAULT
-field_mappings:
-  - canonical_path: operation.amount
-    provider_path: request.amount
-    direction: request
-    transform: multiply
-    factor: 100
-    required: true
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
-  - canonical_path: operation.currency
-    provider_path: request.currency
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
-  - canonical_path: operation.external_id
-    provider_path: request.external_id
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
-  - canonical_path: operation.recipient
-    provider_path: request.recipient
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
-  - canonical_path: operation.provider_operation_id
-    provider_path: response.id
-    direction: response
-    transform: identity
-    factor: 1
-    required: false
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
-  - canonical_path: operation.status
-    provider_path: response.status
-    direction: response
-    transform: status_map
-    factor: 1
-    required: false
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
-  - canonical_path: operation.amount
-    provider_path: response.amount
-    direction: response
-    transform: divide
-    factor: 0.01
-    required: false
-    provenance: CASE_DEFAULT
-    decision: ACCEPT
 statuses:
   pending: in_progress
   processing: in_progress

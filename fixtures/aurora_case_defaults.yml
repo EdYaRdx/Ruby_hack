@@ -1,8 +1,6 @@
 provider: Aurora Transfers
 money:
-  provider_unit: major
   provider_subunit: dollars
-  scale: 1
   source: PROVIDER_OVERRIDE
 statuses:
   queued: in_progress
@@ -13,63 +11,6 @@ webhook:
   raw_body: true
   signature_encoding: hex
   source: PROVIDER_OVERRIDE
-field_mappings:
-  - canonical_path: operation.amount
-    provider_path: request.money.value
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
-  - canonical_path: operation.currency
-    provider_path: request.money.currency
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
-  - canonical_path: operation.external_id
-    provider_path: request.external_reference
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
-  - canonical_path: operation.recipient
-    provider_path: request.destination
-    direction: request
-    transform: identity
-    factor: 1
-    required: true
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
-  - canonical_path: operation.provider_operation_id
-    provider_path: response.id
-    direction: response
-    transform: identity
-    factor: 1
-    required: false
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
-  - canonical_path: operation.status
-    provider_path: response.status
-    direction: response
-    transform: status_map
-    factor: 1
-    required: false
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
-  - canonical_path: operation.amount
-    provider_path: response.money.value
-    direction: response
-    transform: identity
-    factor: 1
-    required: false
-    provenance: PROVIDER_OVERRIDE
-    decision: ACCEPT
 examples:
   create_request:
     operation:

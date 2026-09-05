@@ -37,6 +37,20 @@ module ProviderCompiler
         "profile" => File.join(ROOT, "profiles", "aurora_payments_v1.yml"),
         "defaults" => File.join(ROOT, "fixtures", "empty_case_defaults.yml"),
         "filename" => "aurora_transfer_api.yaml"
+      },
+      "aurora_resolved" => {
+        "label" => "Aurora (resolved)",
+        "spec" => File.join(ROOT, "fixtures", "aurora_transfer_api.yaml"),
+        "profile" => File.join(ROOT, "profiles", "aurora_payments_v1.yml"),
+        "defaults" => File.join(ROOT, "fixtures", "aurora_case_defaults.yml"),
+        "filename" => "aurora_transfer_api.yaml"
+      },
+      "heliospay" => {
+        "label" => "HeliosPay",
+        "spec" => File.join(ROOT, "fixtures", "heliospay_transfer_api.yaml"),
+        "profile" => File.join(ROOT, "profiles", "heliospay_payments_v1.yml"),
+        "defaults" => File.join(ROOT, "fixtures", "heliospay_case_defaults.yml"),
+        "filename" => "heliospay_transfer_api.yaml"
       }
     }.freeze
 
@@ -67,6 +81,7 @@ module ProviderCompiler
       def analyze!
         @pipeline = Pipeline.new(spec_path: spec_path, profile_path: profile_path, defaults_path: defaults_path, defaults_data: @defaults_data)
         @preview_results.clear
+        @fixture_data = nil
         @verification = nil
         @generated = false
         @runtime_loaded = false
@@ -121,7 +136,7 @@ module ProviderCompiler
 
         pipeline.validate_blueprint!
         FileUtils.rm_rf(generated_dir) if File.exist?(generated_dir)
-        DeterministicGenerator.new.generate(blueprint, manifest, generated_dir, examples: defaults.examples)
+        DeterministicGenerator.new.generate(blueprint, manifest, generated_dir, examples: defaults.examples, spec_document: pipeline.source_document.resolved)
         @verification = Verification.new.verify(generated_dir)
         @generated = true
         self
@@ -164,6 +179,10 @@ module ProviderCompiler
                  else raise Error, "unsupported preview kind"
                  end
         @preview_results[kind.to_s] = result
+      end
+
+      def preview_fixtures
+        fixture_data
       end
 
       def cleanup
@@ -263,7 +282,7 @@ module ProviderCompiler
         return if @runtime_loaded
 
         FileUtils.mkdir_p(runtime_dir)
-        DeterministicGenerator.new.generate(blueprint, manifest, runtime_dir, examples: defaults.examples)
+        DeterministicGenerator.new.generate(blueprint, manifest, runtime_dir, examples: defaults.examples, spec_document: pipeline.source_document.resolved)
         ensure_runtime_base_service
         class_name = "#{Util.camel(blueprint.dig("provider", "name"))}Service"
         provider = Object.const_get(:Provider)
@@ -279,18 +298,19 @@ module ProviderCompiler
       end
 
       def preview_request(params)
-        operation = {
-          "amount" => params.fetch("amount", "1500.50"),
-          "currency" => params.fetch("currency", blueprint.dig("money", "host", "currency")),
-          "external_id" => params.fetch("external_id", "demo-001"),
-          "idempotency_key" => "demo-idempotency-key",
-          "recipient" => {
-            "type" => params.fetch("recipient_type", "sbp"),
-            "phone" => params.fetch("recipient_phone", "79001234567"),
-            "bank_code" => params.fetch("recipient_bank_code", "044525225"),
-            "card_number" => params.fetch("recipient_card_number", "")
-          }
-        }
+        operation = Util.deep_dup(fixture_data.dig("create_request", "operation") || {})
+        operation["amount"] = params.fetch("amount", operation.fetch("amount", "1500.50"))
+        operation["currency"] = params.fetch("currency", operation.fetch("currency", blueprint.dig("money", "host", "currency")))
+        operation["external_id"] = params.fetch("external_id", operation.fetch("external_id", "preview-operation"))
+        operation["idempotency_key"] ||= "preview-idempotency-key"
+        recipient = operation["recipient"] = Util.deep_dup(operation.fetch("recipient", {}))
+        recipient["type"] ||= params.fetch("recipient_type", "bank")
+        recipient["kind"] ||= params.fetch("recipient_kind", recipient["type"])
+        recipient["phone"] ||= params["recipient_phone"] if params["recipient_phone"]
+        recipient["bank_code"] ||= params["recipient_bank_code"] if params["recipient_bank_code"]
+        recipient["account"] ||= params["recipient_account"] if params["recipient_account"]
+        recipient["routing_number"] ||= params["recipient_routing_number"] if params["recipient_routing_number"]
+        recipient["card_number"] ||= params["recipient_card_number"] if params["recipient_card_number"]
         request = runtime_service.build_create_request(operation)
         {
           "host_input" => operation,
@@ -300,19 +320,49 @@ module ProviderCompiler
       end
 
       def preview_response
-        provider_body = { "id" => "np-demo-001", "status" => "completed", "amount" => 150_050, "currency" => "RUB" }
+        provider_body = Util.deep_dup(fixture_data.dig("fetch_status", "response") || {})
+        provider_body = { "id" => "preview-provider-operation", "status" => "pending" } if provider_body.empty?
+        amount_mapping = Array(blueprint["field_mappings"]).find { |mapping| mapping["canonical_path"] == "operation.amount" && mapping["direction"] == "response" }
+        if amount_mapping
+          conversion = blueprint.dig("money", "request_conversion") || {}
+          host_amount = BigDecimal("1500.50")
+          provider_amount = host_amount * BigDecimal((conversion["factor_decimal"] || conversion["factor"] || 1).to_s)
+          provider_amount = provider_amount.frac.zero? ? provider_amount.to_i : provider_amount.to_f
+          set_fixture_path(provider_body, amount_mapping["provider_path"].sub("response.", ""), provider_amount)
+        end
+        provider_id_mapping = Array(blueprint["field_mappings"]).find { |mapping| mapping["canonical_path"] == "operation.provider_operation_id" && mapping["direction"] == "response" }
+        provider_id = provider_id_mapping && read_fixture_path(provider_body, provider_id_mapping["provider_path"].sub("response.", ""))
+        provider_id ||= read_fixture_path(provider_body, "id") || "preview-provider-operation"
+        success_status = Array(blueprint.dig("endpoints").find { |endpoint| endpoint["canonical"] == "fetch_status" }&.fetch("success_statuses", [])).first || "200"
         client = Object.new
-        client.define_singleton_method(:get) { |_url, _headers| { "status" => 200, "body" => provider_body } }
-        result = runtime_service(client: client).fetch_status("provider_operation_id" => "np-demo-001")
-        { "provider_response" => { "http_status" => 200, "body" => provider_body }, "host_result" => result }
+        client.define_singleton_method(:request) { |_method, _url, _headers, _body, _query| { "http_status" => success_status.to_i, "body" => provider_body } }
+        result = runtime_service(client: client).fetch_status("provider_operation_id" => provider_id)
+        { "provider_response" => { "http_status" => success_status.to_i, "body" => provider_body }, "host_result" => result }
       end
 
       def preview_webhook
-        body = JSON.generate("event" => "payout.completed", "payout_id" => "np-demo-001", "external_id" => "demo-001", "status" => "completed")
+        callback = Util.deep_dup(fixture_data.dig("process_callback", "body") || {})
+        callback = { "event" => blueprint.dig("webhook", "events")&.keys&.first || "preview.completed", "id" => "preview-provider-operation", "status" => "pending" } if callback.empty?
+        body = JSON.generate(callback)
         secret = "demo-webhook-secret"
         signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("SHA256"), secret, body)
         result = runtime_service(webhook_secret: secret).process_callback(raw_body: body, signature: signature)
-        { "event" => "payout.completed", "signature_model" => blueprint.fetch("webhook").fetch("signature"), "result" => result }
+        { "event" => callback["event"], "signature_model" => blueprint.fetch("webhook").fetch("signature"), "result" => result }
+      end
+
+      def fixture_data
+        @fixture_data ||= FixtureSynthesizer.new(blueprint, spec_document: pipeline.source_document.resolved, fallback_examples: defaults.examples).build
+      end
+
+      def read_fixture_path(object, path)
+        path.to_s.split(".").reduce(object) { |current, key| current.is_a?(Hash) ? (current[key] || current[key.to_sym]) : nil }
+      end
+
+      def set_fixture_path(object, path, value)
+        keys = path.to_s.split(".")
+        leaf = keys.pop
+        target = keys.reduce(object) { |current, key| current[key] ||= {} }
+        target[leaf] = value
       end
 
       def ensure_runtime_base_service
@@ -324,12 +374,18 @@ module ProviderCompiler
         return if provider.const_defined?(:BaseService, false)
 
         base_service = Class.new do
+          def check_conditions(_operation, _request_method)
+            success
+          end
+
           def success(value = true)
             { "ok" => true, "value" => value }
           end
 
-          def failure(message)
-            { "ok" => false, "error" => message }
+          def failure(status = nil, code = nil, message = nil)
+            return { "ok" => false, "error" => status } if code.nil? && message.nil?
+
+            { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }
           end
 
           def approve_operation(operation)
@@ -354,12 +410,13 @@ module ProviderCompiler
         raise ValidationError, ["only YAML, YML and JSON uploads are supported"] unless ALLOWED_EXTENSIONS.include?(extension)
         raise ValidationError, ["uploaded specification is too large (limit: #{MAX_UPLOAD_BYTES} bytes)"] if content.to_s.bytesize > MAX_UPLOAD_BYTES
 
-        case_pack = case_pack_for(content)
-        config = case_pack ? DEMOS.fetch(case_pack) : {
-          "profile" => File.join(ROOT, "profiles", "space_payments_v1.yml"),
-          "defaults" => File.join(ROOT, "fixtures", "empty_case_defaults.yml")
-        }
-        create_workspace(filename: filename, content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"), case_pack: case_pack)
+        create_workspace(
+          filename: filename,
+          content: content,
+          profile_path: File.join(ROOT, "profiles", "space_payments_v1.yml"),
+          defaults_path: File.join(ROOT, "fixtures", "empty_case_defaults.yml"),
+          case_pack: nil
+        )
       end
 
       def create_demo(name)
@@ -394,12 +451,6 @@ module ProviderCompiler
         raise
       end
 
-      def case_pack_for(content)
-        sha = Digest::SHA256.hexdigest(content.to_s).upcase
-        return "novapay" if sha == "415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551"
-
-        nil
-      end
     end
 
     class Application

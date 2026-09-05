@@ -15,15 +15,21 @@ module Provider
     STATUS_PARAMETER = "payout_id".freeze
     WEBHOOK_ID_FIELD = "payout_id".freeze
     CALLBACK_ACTIONS = {"approved" => "approve_operation", "in_progress" => nil, "rejected" => "reject_operation"}.freeze
-    ENDPOINTS = {"cancelPayout" => {"canonical" => nil, "method" => "POST", "path" => "/payouts/{payout_id}/cancel"}, "createPayout" => {"canonical" => "create_request", "method" => "POST", "path" => "/payouts"}, "getBalance" => {"canonical" => nil, "method" => "GET", "path" => "/balance"}, "getPayoutStatus" => {"canonical" => "fetch_status", "method" => "GET", "path" => "/payouts/{payout_id}"}, "payoutWebhook" => {"canonical" => "process_callback", "method" => "POST", "path" => "/webhooks/payout"}}.freeze
-    FIELD_MAPPINGS = [{"canonical_path" => "operation.amount", "decision" => "ACCEPT", "direction" => "request", "factor" => 100, "provenance" => "CASE_DEFAULT", "provider_path" => "request.amount", "required" => true, "transform" => "multiply"}, {"canonical_path" => "operation.currency", "decision" => "ACCEPT", "direction" => "request", "factor" => 1, "provenance" => "CASE_DEFAULT", "provider_path" => "request.currency", "required" => true, "transform" => "identity"}, {"canonical_path" => "operation.external_id", "decision" => "ACCEPT", "direction" => "request", "factor" => 1, "provenance" => "CASE_DEFAULT", "provider_path" => "request.external_id", "required" => true, "transform" => "identity"}, {"canonical_path" => "operation.recipient", "decision" => "ACCEPT", "direction" => "request", "factor" => 1, "provenance" => "CASE_DEFAULT", "provider_path" => "request.recipient", "required" => true, "transform" => "identity"}, {"canonical_path" => "operation.provider_operation_id", "decision" => "ACCEPT", "direction" => "response", "factor" => 1, "provenance" => "CASE_DEFAULT", "provider_path" => "response.id", "required" => false, "transform" => "identity"}, {"canonical_path" => "operation.status", "decision" => "ACCEPT", "direction" => "response", "factor" => 1, "provenance" => "CASE_DEFAULT", "provider_path" => "response.status", "required" => false, "transform" => "status_map"}, {"canonical_path" => "operation.amount", "decision" => "ACCEPT", "direction" => "response", "factor" => 0.01, "provenance" => "CASE_DEFAULT", "provider_path" => "response.amount", "required" => false, "transform" => "divide"}].freeze
+    ENDPOINTS = {"cancelPayout" => {"canonical" => nil, "method" => "POST", "path" => "/payouts/{payout_id}/cancel", "success_statuses" => ["200"]}, "createPayout" => {"canonical" => "create_request", "method" => "POST", "path" => "/payouts", "success_statuses" => ["201"]}, "getBalance" => {"canonical" => nil, "method" => "GET", "path" => "/balance", "success_statuses" => ["200"]}, "getPayoutStatus" => {"canonical" => "fetch_status", "method" => "GET", "path" => "/payouts/{payout_id}", "success_statuses" => ["200"]}, "payoutWebhook" => {"canonical" => "process_callback", "method" => "POST", "path" => "/webhooks/payout", "success_statuses" => ["200"]}}.freeze
+    FIELD_MAPPINGS = [{"canonical_path" => "operation.amount", "decision" => "ACCEPT", "direction" => "request", "factor" => 100, "provenance" => "SPEC_FACT", "provider_path" => "request.amount", "required" => true, "transform" => "multiply"}, {"canonical_path" => "operation.currency", "decision" => "ACCEPT", "direction" => "request", "factor" => 1, "provenance" => "SPEC_FACT", "provider_path" => "request.currency", "required" => true, "transform" => "identity"}, {"canonical_path" => "operation.external_id", "decision" => "ACCEPT", "direction" => "request", "factor" => 1, "provenance" => "SPEC_FACT", "provider_path" => "request.external_id", "required" => true, "transform" => "identity"}, {"canonical_path" => "operation.recipient", "decision" => "ACCEPT", "direction" => "request", "factor" => 1, "provenance" => "SPEC_FACT", "provider_path" => "request.recipient", "required" => true, "transform" => "identity"}, {"canonical_path" => "operation.provider_operation_id", "decision" => "ACCEPT", "direction" => "response", "factor" => 1, "provenance" => "SPEC_FACT", "provider_path" => "response.id", "required" => false, "transform" => "identity"}, {"canonical_path" => "operation.status", "decision" => "ACCEPT", "direction" => "response", "factor" => 1, "provenance" => "SPEC_FACT", "provider_path" => "response.status", "required" => false, "transform" => "status_map"}, {"canonical_path" => "operation.amount", "decision" => "ACCEPT", "direction" => "response", "factor" => 0.01, "provenance" => "SPEC_FACT", "provider_path" => "response.amount", "required" => false, "transform" => "divide"}].freeze
     STATUS_MAP = {"cancelled" => "rejected", "completed" => "approved", "failed" => "rejected", "pending" => "in_progress", "processing" => "in_progress"}.freeze
+    ERROR_MODEL = [{"canonical_category" => "unknown_provider_error", "description" => "Выплата создана", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "201", "operation_id" => "createPayout", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "validation_error", "description" => "Некорректный запрос", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "400", "operation_id" => "createPayout", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "unauthorized", "description" => "Невалидный API-ключ", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "401", "operation_id" => "createPayout", "provider_codes" => [{"action" => "refresh_credentials_or_review", "category" => "unauthorized", "code" => "unauthorized", "known_to_schema" => false, "retryable" => false, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "insufficient_balance", "description" => "Недостаточно средств на балансе провайдера", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "402", "operation_id" => "createPayout", "provider_codes" => [{"action" => "review_provider_balance", "category" => "insufficient_balance", "code" => "insufficient_balance", "known_to_schema" => false, "retryable" => false, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "conflict", "description" => "Дубликат по idempotency key", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "409", "operation_id" => "createPayout", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "validation_error", "description" => "Ошибка валидации", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "422", "operation_id" => "createPayout", "provider_codes" => [{"action" => "correct_request", "category" => "validation_error", "code" => "validation_error", "known_to_schema" => false, "retryable" => false, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "rate_limit_exceeded", "description" => "Превышен лимит запросов", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "429", "operation_id" => "createPayout", "provider_codes" => [{"action" => "retry_after_with_same_idempotency_key", "category" => "rate_limit_exceeded", "code" => "rate_limit_exceeded", "known_to_schema" => false, "retryable" => true, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => "Retry-After", "retryable" => true}, {"canonical_category" => "internal_error", "description" => "Внутренняя ошибка провайдера", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "500", "operation_id" => "createPayout", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "unknown_provider_error", "description" => "Статус выплаты", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "200", "operation_id" => "getPayoutStatus", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "unauthorized", "description" => "Невалидный API-ключ", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "401", "operation_id" => "getPayoutStatus", "provider_codes" => [{"action" => "refresh_credentials_or_review", "category" => "unauthorized", "code" => "unauthorized", "known_to_schema" => false, "retryable" => false, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "not_found", "description" => "Выплата не найдена", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "404", "operation_id" => "getPayoutStatus", "provider_codes" => [{"action" => "review_identifier", "category" => "not_found", "code" => "not_found", "known_to_schema" => false, "retryable" => false, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "unknown_provider_error", "description" => "Выплата отменена", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "200", "operation_id" => "cancelPayout", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "conflict", "description" => "Невозможно отменить в текущем статусе", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "409", "operation_id" => "cancelPayout", "provider_codes" => [{"action" => "inspect_existing_operation", "category" => "conflict", "code" => "invalid_status", "known_to_schema" => false, "retryable" => false, "unknown_code_policy" => "preserve_and_review"}], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "unknown_provider_error", "description" => "Webhook принят", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "200", "operation_id" => "payoutWebhook", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}, {"canonical_category" => "unknown_provider_error", "description" => "Текущий баланс", "evidence_sources" => ["SPEC_FACT", "SPEC_EXAMPLE"], "http_status" => "200", "operation_id" => "getBalance", "provider_codes" => [], "retry_after_header" => nil, "retryable" => false}].freeze
     EXTRA_OPERATIONS = {"cancelPayout" => {"method" => "POST", "path" => "/payouts/{payout_id}/cancel"}, "getBalance" => {"method" => "GET", "path" => "/balance"}}.freeze
     MONEY = {"decision" => "ACCEPT", "host" => {"currency" => "RUB", "evidence" => [{"excerpt" => "operation.amount is major RUB", "locations" => ["profile#/canonical_amount"], "note" => nil, "source" => "BASE_SERVICE_PROFILE"}], "evidence_source" => "BASE_SERVICE_PROFILE", "field" => "operation.amount", "representation" => "major", "source" => "BASE_SERVICE_PROFILE", "unit" => "major"}, "provider" => {"currency" => "RUB", "evidence" => [{"excerpt" => "Сумма в копейках", "locations" => ["#/paths/~1payouts/post/requestBody/content/application~1json/schema/properties/amount/description"], "note" => nil, "source" => "SPEC_DESCRIPTION"}, {"excerpt" => "provider amount unit and subunit", "locations" => ["organizer_case_qa.money"], "note" => nil, "source" => "CASE_DEFAULT"}], "evidence_sources" => ["SPEC_DESCRIPTION", "CASE_DEFAULT"], "field" => "request.amount", "field_candidates" => ["amount"], "nested_money_candidate" => false, "representation" => "minor", "response_field" => "response.amount", "scale" => 100, "scale_source" => "CASE_DEFAULT", "source" => ["SPEC_DESCRIPTION", "CASE_DEFAULT"], "subunit" => "kopecks", "unit" => "minor", "unit_name" => "kopecks"}, "request_conversion" => {"direction" => "major_to_minor", "factor" => 100, "factor_decimal" => "100", "operation" => "multiply", "scale" => 100, "status" => "resolved"}, "response_conversion" => {"direction" => "minor_to_major", "factor" => 0.01, "factor_decimal" => "0.01", "operation" => "divide", "scale" => 100, "status" => "resolved"}}.freeze
     CONSTRAINTS = [{"host_minimum" => 1000, "minimum" => 100000, "path" => "request.amount", "provenance" => "SPEC_FACT", "required" => true, "type" => "integer"}, {"enum" => ["RUB"], "path" => "request.currency", "provenance" => "SPEC_FACT", "required" => true, "type" => "string"}, {"maxLength" => 64, "path" => "request.external_id", "provenance" => "SPEC_FACT", "required" => true, "type" => "string"}, {"path" => "request.recipient", "provenance" => "SPEC_FACT", "required" => true, "type" => "object"}, {"enum" => ["sbp", "card"], "path" => "request.recipient.type", "provenance" => "SPEC_FACT", "required" => true, "type" => "string"}, {"path" => "request.recipient.phone", "pattern" => "^7\\d{10}$", "provenance" => "SPEC_FACT", "required" => true, "type" => "string"}, {"path" => "request.recipient.bank_code", "provenance" => "SPEC_FACT", "required" => false, "type" => "string"}, {"path" => "request.recipient.bank_name", "provenance" => "SPEC_FACT", "required" => false, "type" => "string"}, {"path" => "request.recipient.card_number", "provenance" => "SPEC_FACT", "required" => false, "type" => "string"}].freeze
     WEBHOOK = {"decision" => "ACCEPT", "endpoint" => "POST /webhooks/payout", "events" => {"payout.cancelled" => "rejected", "payout.completed" => "approved", "payout.failed" => "rejected", "payout.processing" => "in_progress"}, "identifier_field" => "payout_id", "raw_body_required" => true, "signature" => {"algorithm" => "HMAC-SHA256", "encoding" => "hex", "header" => "X-NovaPay-Signature", "input" => "raw_body", "required" => true}}.freeze
     IDEMPOTENCY = {"adapter_policy" => {"provenance" => "ADAPTER_POLICY", "send_header" => "if_available"}, "header" => "Idempotency-Key", "retry_policy" => {"name" => "preserve_same_key", "provenance" => "ADAPTER_POLICY"}, "spec_evidence_source" => "SPEC_FACT", "spec_required" => false}.freeze
     CONDITIONALS = [{"required" => ["bank_code"], "type" => "sbp"}, {"required" => ["card_number"], "type" => "card"}].freeze
+    CREATE_SUCCESS_STATUSES = ["201"].freeze
+    STATUS_SUCCESS_STATUSES = ["200"].freeze
+    CALL_SUPER_CONDITIONS = true
+    VALIDATION_FAILURE_STATUS = 422
+    VALIDATION_FAILURE_CODE = "validation_error"
 
     def initialize(api_key:, webhook_secret: nil, client: nil)
       @api_key = api_key
@@ -35,9 +41,14 @@ module Provider
     def check_conditions(operation, request_method)
       return success if request_method.to_s != "create"
 
+      if CALL_SUPER_CONDITIONS
+        base_result = super(operation, request_method)
+        return base_result if base_result.is_a?(Hash) && base_result["ok"] == false
+      end
+
       errors = validate_constraints(operation)
       errors.concat(validate_conditionals(operation))
-      errors.empty? ? success : failure(errors.join("; "))
+      errors.empty? ? success : failure(VALIDATION_FAILURE_STATUS, VALIDATION_FAILURE_CODE, errors.join("; "))
     end
 
     def build_create_request(operation, request_method = "create")
@@ -63,7 +74,7 @@ module Provider
       request = build_create_request(operation, request_method)
       return request unless @client
 
-      handle_response(dispatch(request), expected_success: ["201", "200"])
+      handle_response(dispatch(request), expected_success: CREATE_SUCCESS_STATUSES)
     end
 
     def fetch_status(operation)
@@ -74,7 +85,7 @@ module Provider
       request = { "method" => STATUS_METHOD, "path" => path, "url" => "#{BASE_URL}#{path}", "headers" => headers, "query" => query }
       return request unless @client
 
-      handle_response(dispatch(request), expected_success: ["200"])
+      handle_response(dispatch(request), expected_success: STATUS_SUCCESS_STATUSES)
     end
 
     def process_callback(payload)
@@ -228,16 +239,24 @@ module Provider
     def handle_response(response, expected_success:)
       body_present = response.is_a?(Hash) && (response.key?("body") || response.key?(:body))
       http_status = read(response, :http_status) || read(response, :status_code) || (body_present ? read(response, :status) : nil)
-      body = body_present ? read(response, :body) : response
+      body = if body_present
+               read(response, :body)
+             elsif http_status && response.is_a?(Hash) && (response.keys.map(&:to_s) - %w[http_status status_code status headers]).empty?
+               nil
+             else
+               response
+             end
       if http_status && !expected_success.map(&:to_s).include?(http_status.to_s)
         return provider_error(response, body, http_status)
       end
 
+      return { "ok" => true, "http_status" => http_status.to_s, "response" => nil } if body.nil? && http_status
       return failure("provider response body is not an object") unless body.is_a?(Hash)
       mapped = map_provider_response(body)
       provider_status = mapped["provider_status"].to_s
       canonical_status = STATUS_MAP.fetch(provider_status, "unknown")
       result = { "ok" => true, "provider_status" => provider_status, "status" => canonical_status, "response" => body }
+      result["http_status"] = http_status.to_s if http_status
       mapped.each { |key, value| result[key] = value unless %w[provider_status status].include?(key) }
       result["error"] = read(body, :error) if read(body, :error)
       result["ok"] = false if canonical_status == "unknown"
@@ -307,7 +326,16 @@ module Provider
 
     def provider_error(response, body, http_status)
       error = body.is_a?(Hash) ? (read(body, :error) || body) : {}
-      { "ok" => false, "http_status" => http_status.to_s, "error" => error, "retry_after" => read(response, :headers).is_a?(Hash) ? read(response, :headers)["Retry-After"] : nil }
+      provider_code = if error.is_a?(Hash)
+                        read(error, :code) || read(read(error, :error), :code)
+                      end
+      status_entry = ERROR_MODEL.find { |item| item["http_status"].to_s == http_status.to_s }
+      entry = Array(status_entry && status_entry["provider_codes"]).find { |item| provider_code.nil? || item["code"].to_s == provider_code.to_s }
+      headers = read(response, :headers)
+      retry_after = if headers.is_a?(Hash)
+                      headers["Retry-After"] || headers["retry-after"] || headers["RETRY-AFTER"]
+                    end
+      { "ok" => false, "http_status" => http_status.to_s, "error" => error, "error_code" => provider_code, "error_category" => entry ? entry["category"] : (status_entry && status_entry["canonical_category"]) || "unknown_provider_error", "retryable" => entry ? entry["retryable"] : !!(status_entry && status_entry["retryable"]), "action" => entry ? entry["action"] : (status_entry && status_entry["retryable"] ? "retry_after" : "preserve_and_review"), "retry_after" => retry_after }
     end
 
     def parse_json(raw_body)

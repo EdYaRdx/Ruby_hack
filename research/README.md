@@ -97,3 +97,10 @@ hand-authored semantic subsets из
 NovaPay fixture: это воспроизводимый mutation corpus, а не произвольное
 покрытие providers. Semantic и behavioral validation Aurora проводится отдельно
 и описана в `SECOND_PROVIDER_VALIDATION.md`.
+## Goal 5 evidence
+
+- [`GOAL_5_RESULT.md`](GOAL_5_RESULT.md) — final spec-only hardening and generator report.
+- [`spec_only_novapay_report.json`](spec_only_novapay_report.json) — NovaPay with empty defaults.
+- [`benchmark/spec_only.rb`](benchmark/spec_only.rb) — independent spec-only mutation lane.
+- [`benchmark/third_provider.rb`](benchmark/third_provider.rb) — blind HeliosPay validation.
+- [`../fixtures/heliospay_ground_truth.yml`](../fixtures/heliospay_ground_truth.yml) — hand-authored third-provider ground truth.

@@ -110,10 +110,10 @@ module ProviderCompiler
         extra_endpoints = endpoints.select { |endpoint| endpoint["canonical"].nil? }
         unresolved = workspace.unresolved_decisions
         headline_status = unresolved.empty? ? "READY" : "REVIEW REQUIRED"
-        recognition = if workspace.case_pack == "novapay"
-                        '<div class="case-recognition"><strong>NovaPay</strong><span>✓ Распознан reference case Hack.Genesis по fingerprint</span><small>Используется профиль кейса NovaPay для подтверждённых business semantics.</small></div>'
+        recognition = if workspace.case_pack
+                        '<div class="case-recognition"><strong>Reference case mode</strong><span>✓ Используется явный профиль reference case</span><small>Provider-specific case profile включён только через explicit demo action.</small></div>'
                       else
-                        '<div class="case-recognition neutral"><strong>Provider case</strong><span>Провайдерский case pack не найден</span><small>Решения строятся только по доступным evidence и explicit profile.</small></div>'
+                        '<div class="case-recognition neutral"><strong>Generic spec-only mode</strong><span>Provider defaults: none</span><small>Решения строятся по OpenAPI evidence и BaseServiceProfile; отсутствующие business semantics требуют Review.</small></div>'
                       end
         content = <<~HTML
           <div class="page-heading split-heading">
@@ -656,7 +656,14 @@ module ProviderCompiler
       end
 
       def request_preview(workspace, result)
-        operation = result && result["host_input"] || { "amount" => "1500.50", "currency" => "RUB", "external_id" => "demo-001", "recipient" => { "type" => "sbp", "phone" => "79001234567", "bank_code" => "044525225" } }
+        operation = result && result["host_input"]
+        unless operation
+          operation = ProviderCompiler::Util.deep_dup(workspace.preview_fixtures.dig("create_request", "operation") || {})
+          operation["amount"] ||= "100.00"
+          operation["currency"] ||= workspace.blueprint.dig("money", "host", "currency") || "XXX"
+          operation["external_id"] ||= "preview-operation"
+          operation["recipient"] ||= { "type" => "recipient" }
+        end
         request = result && result["provider_request"]
         money = workspace.blueprint.fetch("money")
         conversion = result && result["conversion"] || money.fetch("request_conversion")

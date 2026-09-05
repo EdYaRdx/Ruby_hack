@@ -1,0 +1,252 @@
+schema_version: 1
+provider: HeliosPay Funds API
+spec: heliospay_transfer_api.yaml
+profile: heliospay_payments_v1.yml
+canonical_operations:
+  create_request:
+    operation_id: submitFundMove
+    method: POST
+    path: /funds
+    success_statuses: [202]
+  fetch_status:
+    operation_id: lookUpFund
+    method: GET
+    path: /funds/{fund_id}
+    success_statuses: [200]
+  process_callback:
+    operation_id: fundEventReceiver
+    method: POST
+    path: /callbacks/fund-events
+    success_statuses: [202]
+extra_operations:
+  - operation_id: readAccountLimits
+    method: GET
+    path: /account/limits
+    kind: EXTRA_OPERATION
+    preserved: true
+    blocking: false
+auth:
+  kind: api_key
+  transport: query
+  name: access_token
+money:
+  host:
+    field: operation.amount
+    currency: EUR
+    unit: major
+  provider:
+    field: request.payment.amount
+    response_field: response.settlement.amount
+    currency: EUR
+    unit: minor
+    subunit: cents
+    scale: 100
+  request_conversion:
+    direction: major_to_minor
+    operation: multiply
+    factor: 100
+  response_conversion:
+    direction: minor_to_major
+    operation: divide
+    factor_decimal: '0.01'
+field_mappings:
+  - operation.amount -> request.payment.amount
+  - operation.currency -> request.payment.currency
+  - operation.external_id -> request.client_reference
+  - operation.recipient -> request.beneficiary
+  - operation.provider_operation_id <- response.fund_id
+  - operation.status <- response.phase
+  - operation.amount <- response.settlement.amount
+statuses:
+  initiated: in_progress
+  settled: approved
+  reversed: rejected
+webhook:
+  endpoint: POST /callbacks/fund-events
+  signature_header: X-Helios-Signature
+  algorithm: HMAC-SHA256
+  input: raw_body
+  encoding: hex
+  events:
+    fund.initiated: in_progress
+    fund.settled: approved
+    fund.reversed: rejected
+idempotency:
+  header: Helios-Request-Token
+  required: false
+errors:
+  400: invalid_fund -> validation_error
+  409: duplicate_reference -> conflict
+  429: throttled -> rate_limit_exceeded
+  500: unknown/raw -> internal_error
+resolution_levels:
+  spec_only:
+    expected_decision: REVIEW_REQUIRED
+    semantic_subset: &spec_only_semantics
+      operations:
+        create_request:
+          operation_id: submitFundMove
+          method: POST
+          path: /funds
+          success_statuses: ["202"]
+        fetch_status:
+          operation_id: lookUpFund
+          method: GET
+          path: /funds/{fund_id}
+          success_statuses: ["200"]
+        process_callback:
+          operation_id: fundEventReceiver
+          method: POST
+          path: /callbacks/fund-events
+          success_statuses: ["202"]
+      extra_operations:
+        - operation_id: readAccountLimits
+          method: GET
+          path: /account/limits
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+      auth:
+        strategy:
+          kind: api_key
+          transport: query
+          name: access_token
+      money:
+        decision: ACCEPT
+        host:
+          field: operation.amount
+          currency: EUR
+          unit: major
+        provider:
+          field: request.payment.amount
+          response_field: response.settlement.amount
+          currency: EUR
+          unit: minor
+          subunit: cents
+          scale: 100
+          scale_source: SPEC_FACT
+        request_conversion:
+          direction: major_to_minor
+          operation: multiply
+          factor: 100
+        response_conversion:
+          direction: minor_to_major
+          operation: divide
+          factor_decimal: '0.01'
+      statuses:
+        initiated: UNKNOWN
+        settled: UNKNOWN
+        reversed: UNKNOWN
+      webhook:
+        endpoint: POST /callbacks/fund-events
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-Helios-Signature
+          input: raw_body
+          encoding: hex
+        decision: REVIEW_REQUIRED
+      idempotency:
+        header: Helios-Request-Token
+        spec_required: false
+      field_mappings:
+        - canonical_path: operation.amount
+          provider_path: request.payment.amount
+          direction: request
+          transform: multiply
+          factor: 100
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+  resolved:
+    expected_decision: ACCEPT
+    semantic_subset:
+      operations:
+        create_request:
+          operation_id: submitFundMove
+          method: POST
+          path: /funds
+          success_statuses: ["202"]
+        fetch_status:
+          operation_id: lookUpFund
+          method: GET
+          path: /funds/{fund_id}
+          success_statuses: ["200"]
+        process_callback:
+          operation_id: fundEventReceiver
+          method: POST
+          path: /callbacks/fund-events
+          success_statuses: ["202"]
+      extra_operations:
+        - operation_id: readAccountLimits
+          method: GET
+          path: /account/limits
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+      auth:
+        strategy:
+          kind: api_key
+          transport: query
+          name: access_token
+      money:
+        host:
+          field: operation.amount
+          currency: EUR
+          unit: major
+        provider:
+          field: request.payment.amount
+          response_field: response.settlement.amount
+          currency: EUR
+          unit: minor
+          subunit: cents
+          scale: 100
+        request_conversion:
+          status: resolved
+          direction: major_to_minor
+          operation: multiply
+          factor: 100
+        response_conversion:
+          status: resolved
+          direction: minor_to_major
+          operation: divide
+          factor_decimal: '0.01'
+      field_mappings:
+        - canonical_path: operation.amount
+          provider_path: request.payment.amount
+          direction: request
+          transform: multiply
+          factor: 100
+        - canonical_path: operation.provider_operation_id
+          provider_path: response.fund_id
+          direction: response
+        - canonical_path: operation.status
+          provider_path: response.phase
+          direction: response
+        - canonical_path: operation.amount
+          provider_path: response.settlement.amount
+          direction: response
+          transform: divide
+          factor: 0.01
+      statuses:
+        initiated: in_progress
+        settled: approved
+        reversed: rejected
+      webhook:
+        endpoint: POST /callbacks/fund-events
+        signature:
+          algorithm: HMAC-SHA256
+          header: X-Helios-Signature
+          input: raw_body
+          encoding: hex
+        events:
+          fund.initiated: in_progress
+          fund.settled: approved
+          fund.reversed: rejected
+      idempotency:
+        header: Helios-Request-Token
+        spec_required: false

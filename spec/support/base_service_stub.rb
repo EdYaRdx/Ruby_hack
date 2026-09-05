@@ -2,12 +2,18 @@
 
 module Provider
   class BaseService
+    def check_conditions(_operation, _request_method)
+      success
+    end
+
     def success(value = true)
       { "ok" => true, "value" => value }
     end
 
-    def failure(message)
-      { "ok" => false, "error" => message }
+    def failure(status = nil, code = nil, message = nil)
+      return { "ok" => false, "error" => status } if code.nil? && message.nil?
+
+      { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }
     end
 
     def approve_operation(operation)

@@ -29,3 +29,9 @@ helpers:
   - failure
   - approve_operation
   - reject_operation
+check_conditions:
+  call_super: true
+failure_contract:
+  arguments: [status, code, message]
+  validation_status: 422
+  validation_code: validation_error

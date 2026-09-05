@@ -49,6 +49,14 @@ module ProviderCompiler
       data.fetch("callback_actions", {})
     end
 
+    def check_conditions
+      data.fetch("check_conditions", {})
+    end
+
+    def failure_contract
+      data.fetch("failure_contract", {})
+    end
+
     def class_name
       data.fetch("class_name", "Provider::BaseService")
     end

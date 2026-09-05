@@ -1,0 +1,16 @@
+provider: HeliosPay
+statuses:
+  initiated: in_progress
+  settled: approved
+  reversed: rejected
+examples:
+  create_request:
+    operation:
+      amount: 12.50
+      currency: EUR
+      external_id: helios-op-001
+      idempotency_key: helios-token-001
+      recipient:
+        kind: bank
+        account: DE02120300000000202051
+        bic: BYLADEM1001

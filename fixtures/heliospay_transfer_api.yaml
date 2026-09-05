@@ -1,0 +1,244 @@
+openapi: 3.0.3
+info:
+  title: HeliosPay Funds API
+  version: 3.2.0
+  description: Funds movement API for HeliosPay.
+servers:
+  - url: https://sandbox.heliospay.example/api
+    description: Sandbox
+  - url: https://api.heliospay.example/api
+    description: Production
+paths:
+  /funds:
+    post:
+      summary: Submit a fund movement
+      description: Starts a fund movement into a beneficiary account.
+      operationId: submitFundMove
+      security:
+        - AccessToken: []
+      parameters:
+        - $ref: '#/components/parameters/HeliosRequestToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFundRequest'
+            examples:
+              bank_fund:
+                value:
+                  payment:
+                    amount: 1250
+                    currency: EUR
+                  beneficiary:
+                    kind: bank
+                    account: DE02120300000000202051
+                    bic: BYLADEM1001
+                  client_reference: helios-op-001
+      responses:
+        '202':
+          description: Fund movement accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundResponse'
+        '400':
+          description: Invalid fund movement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeliosErrorResponse'
+              example:
+                error:
+                  code: invalid_fund
+                  message: invalid request
+        '409':
+          description: Client reference already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeliosErrorResponse'
+              example:
+                error:
+                  code: duplicate_reference
+                  message: duplicate client reference
+        '429':
+          description: Too many fund movements
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeliosErrorResponse'
+              example:
+                error:
+                  code: throttled
+                  message: retry later
+        '500':
+          description: HeliosPay internal failure
+  /funds/{fund_id}:
+    get:
+      summary: Look up a fund movement
+      operationId: lookUpFund
+      security:
+        - AccessToken: []
+      parameters:
+        - name: fund_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current fund movement state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundResponse'
+        '404':
+          description: Fund movement not found
+  /callbacks/fund-events:
+    post:
+      summary: Fund movement event callback
+      description: HeliosPay signs the raw body with HMAC-SHA256 and encodes the signature as hex.
+      operationId: fundEventReceiver
+      security: []
+      parameters:
+        - name: X-Helios-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of the raw body, encoded as hex.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FundEvent'
+            examples:
+              settled:
+                value:
+                  event: fund.settled
+                  fund_id: hf_001
+                  phase: settled
+                  client_reference: helios-op-001
+      responses:
+        '202':
+          description: Event accepted
+  /account/limits:
+    get:
+      summary: Read account limits
+      operationId: readAccountLimits
+      security:
+        - AccessToken: []
+      responses:
+        '200':
+          description: Current account limits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  daily:
+                    type: integer
+                  currency:
+                    type: string
+                    enum: [EUR]
+components:
+  securitySchemes:
+    AccessToken:
+      type: apiKey
+      in: query
+      name: access_token
+  parameters:
+    HeliosRequestToken:
+      name: Helios-Request-Token
+      in: header
+      required: false
+      description: Optional token used to prevent duplicate fund movements.
+      schema:
+        type: string
+  schemas:
+    CreateFundRequest:
+      type: object
+      required: [payment, beneficiary, client_reference]
+      properties:
+        payment:
+          type: object
+          description: Payment amount is represented in minor cents.
+          required: [amount, currency]
+          properties:
+            amount:
+              type: integer
+              description: Amount in minor cents, one hundred cents per EUR.
+              x-minor-unit-scale: 100
+              minimum: 100
+              example: 1250
+            currency:
+              type: string
+              enum: [EUR]
+        beneficiary:
+          type: object
+          required: [kind, account]
+          properties:
+            kind:
+              type: string
+              enum: [bank, card]
+            account:
+              type: string
+            bic:
+              type: string
+              description: Required when beneficiary.kind=bank.
+            card_token:
+              type: string
+              description: Required when beneficiary.kind=card.
+        client_reference:
+          type: string
+          maxLength: 80
+    FundResponse:
+      type: object
+      properties:
+        fund_id:
+          type: string
+          example: hf_001
+        phase:
+          type: string
+          enum: [initiated, settled, reversed]
+        settlement:
+          type: object
+          properties:
+            amount:
+              type: integer
+              example: 1250
+            currency:
+              type: string
+              enum: [EUR]
+        client_reference:
+          type: string
+    FundEvent:
+      type: object
+      required: [event, fund_id, phase]
+      properties:
+        event:
+          type: string
+          enum: [fund.initiated, fund.settled, fund.reversed]
+        fund_id:
+          type: string
+        phase:
+          type: string
+          enum: [initiated, settled, reversed]
+        client_reference:
+          type: string
+    HeliosErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string

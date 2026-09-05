@@ -1,0 +1,145 @@
+schema_version: 1
+purpose: Hand-authored expectations for the NovaPay spec-only lane. Every case runs with empty provider defaults.
+cases:
+  S01:
+    mutation: baseline
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      operations:
+        create_request:
+          method: POST
+          path: /payouts
+          success_statuses: ["201"]
+      money:
+        decision: REVIEW_REQUIRED
+        provider:
+          field: request.amount
+          unit: minor
+          subunit: kopecks
+          scale: null
+        request_conversion:
+          status: unresolved
+      auth:
+        strategy:
+          kind: api_key
+          transport: header
+          name: X-API-Key
+      idempotency:
+        header: Idempotency-Key
+        spec_required: false
+      extra_operations:
+        - path: /balance
+          kind: EXTRA_OPERATION
+          preserved: true
+          blocking: false
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved: [money.request_conversion, money.response_conversion]
+  S02:
+    mutation: explicit_scale
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      operations:
+        create_request:
+          method: POST
+          path: /payouts
+          success_statuses: ["201"]
+      money:
+        decision: ACCEPT
+        provider:
+          unit: minor
+          scale: 100
+          scale_source: SPEC_FACT
+        request_conversion:
+          direction: major_to_minor
+          operation: multiply
+          factor: 100
+      statuses:
+        completed: UNKNOWN
+      webhook:
+        decision: REVIEW_REQUIRED
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+  S03:
+    mutation: rename_amount
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      money:
+        decision: REVIEW_REQUIRED
+        provider:
+          unit: UNKNOWN
+          scale: null
+        request_conversion:
+          status: unresolved
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+      forbid_resolved: [money.request_conversion, money.response_conversion]
+  S04:
+    mutation: major_description
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      money:
+        decision: ACCEPT
+        provider:
+          unit: major
+        request_conversion:
+          direction: same_unit
+          operation: identity
+          factor: 1
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING
+  S05:
+    mutation: success_202
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      operations:
+        create_request:
+          method: POST
+          path: /payouts
+          success_statuses: ["202"]
+    safety:
+      required_decisions:
+        - id: money:amount-units
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+  S06:
+    mutation: missing_webhook_algorithm
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      webhook:
+        decision: REVIEW_REQUIRED
+        signature:
+          algorithm: UNKNOWN
+          encoding: UNKNOWN
+          header: X-NovaPay-Signature
+    safety:
+      required_decisions:
+        - id: webhook:signature
+          outcome: REVIEW_REQUIRED
+          severity: BLOCKING
+  S07:
+    mutation: status_synonym
+    expected_decision: REVIEW_REQUIRED
+    semantics:
+      statuses:
+        settled: UNKNOWN
+    safety:
+      required_decisions:
+        - id: status:provider-map
+          outcome: REVIEW_REQUIRED
+          severity: WARNING

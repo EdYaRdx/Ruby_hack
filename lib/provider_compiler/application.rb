@@ -27,6 +27,10 @@ module ProviderCompiler
       options = default_options
       parser = option_parser(options)
       parser.parse!(argv)
+      if options[:spec_explicit] && !options[:defaults_explicit]
+        options[:defaults] = options.fetch(:empty_defaults)
+        options[:defaults_origin] = "none"
+      end
       case command
       when "analyze", "inspect", "generate", "verify"
         if command == "verify"
@@ -36,16 +40,23 @@ module ProviderCompiler
         end
         pipeline = Pipeline.new(spec_path: options.fetch(:spec), profile_path: options.fetch(:profile), defaults_path: options.fetch(:defaults), adapter_policy: options.fetch(:idempotency_policy))
         if command == "inspect"
-          puts JSON.pretty_generate(pipeline.manifest.to_h.fetch("summary"))
+          puts JSON.pretty_generate(
+            "summary" => pipeline.manifest.to_h.fetch("summary"),
+            "inputs" => {
+              "spec" => options.fetch(:spec),
+              "profile" => options.fetch(:profile),
+              "provider_defaults" => options[:defaults_origin] == "none" ? "none" : options.fetch(:defaults)
+            }
+          )
           return 0
         end
         if command == "analyze"
-          DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, options.fetch(:out), examples: pipeline.defaults.examples)
+          DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, options.fetch(:out), examples: pipeline.defaults.examples, spec_document: pipeline.source_document.resolved)
           puts JSON.pretty_generate(pipeline.manifest.to_h.fetch("summary"))
           return 0
         end
         pipeline.validate_blueprint!
-        DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, options.fetch(:out), examples: pipeline.defaults.examples)
+        DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, options.fetch(:out), examples: pipeline.defaults.examples, spec_document: pipeline.source_document.resolved)
         puts "Generated #{options.fetch(:out)}"
         0
       else
@@ -60,11 +71,16 @@ module ProviderCompiler
     def self.default_options
       reference_spec = File.exist?("fixtures/novapay_provider_api.yaml") ? "fixtures/novapay_provider_api.yaml" : (Dir.glob("fixtures/*_provider_api.yaml").sort.first || "provider_api.yaml")
       reference_defaults = File.exist?("fixtures/novapay_case_defaults.yml") ? "fixtures/novapay_case_defaults.yml" : (Dir.glob("fixtures/*_case_defaults.yml").sort.first || "case_defaults.yml")
+      empty_defaults = File.exist?("fixtures/empty_case_defaults.yml") ? "fixtures/empty_case_defaults.yml" : reference_defaults
       configured_spec = ENV["PROVIDER_SPEC"].to_s.strip
       {
         spec: configured_spec.empty? ? reference_spec : configured_spec,
         profile: "profiles/space_payments_v1.yml",
         defaults: reference_defaults,
+        empty_defaults: empty_defaults,
+        spec_explicit: false,
+        defaults_explicit: false,
+        defaults_origin: configured_spec.empty? ? "reference" : "none",
         out: "tmp/generated",
         idempotency_policy: "if_available"
       }
@@ -73,9 +89,16 @@ module ProviderCompiler
     def self.option_parser(options)
       OptionParser.new do |parser|
         parser.banner = "Usage: provider_compiler COMMAND [options]"
-        parser.on("--spec PATH", "OpenAPI YAML/JSON") { |value| options[:spec] = value }
+        parser.on("--spec PATH", "OpenAPI YAML/JSON") do |value|
+          options[:spec] = value
+          options[:spec_explicit] = true
+          unless options[:defaults_explicit]
+            options[:defaults] = options.fetch(:empty_defaults)
+            options[:defaults_origin] = "none"
+          end
+        end
         parser.on("--profile PATH", "BaseServiceProfile YAML") { |value| options[:profile] = value }
-        parser.on("--defaults PATH", "case defaults YAML") { |value| options[:defaults] = value }
+        parser.on("--defaults PATH", "case defaults YAML") { |value| options[:defaults] = value; options[:defaults_explicit] = true; options[:defaults_origin] = value }
         parser.on("--out DIR", "output directory") { |value| options[:out] = value }
         parser.on("--output DIR", "output directory (alias for --out)") { |value| options[:out] = value }
         parser.on("--always-send-idempotency", "adapter policy; does not change spec_required") { options[:idempotency_policy] = "always" }

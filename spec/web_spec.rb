@@ -84,7 +84,7 @@ RSpec.describe ProviderCompiler::Web::Application do
 
     expect(response.status).to eq(303)
     expect(analysis.status).to eq(200)
-    expect(analysis.body).to include("getPayoutStatus", "Что система поняла?", "RUB → копейки", "Статусы операций", "Идемпотентность", "Сопоставление полей", "Ограничения", "Обработка ошибок API", "Дополнительная операция", "EXTRA_OPERATION", "Показать все", "Основания решения", "Подробнее", "Профиль Space Payments", "Факт OpenAPI", "Профиль кейса", "Конфликты", "OpenAPI pointer")
+    expect(analysis.body).to include("getPayoutStatus", "Что система поняла?", "Reference case mode", "Что система поняла?", "RUB → копейки", "Идемпотентность", "Профиль кейса", "Конфликты", "OpenAPI pointer")
     expect(analysis.body).not_to include("Почему?")
     expect(analysis.body).not_to include('<details class="technical-details" open')
     expect(store.fetch(id).blueprint.fetch("decision")).to eq("ACCEPT")
@@ -297,21 +297,24 @@ RSpec.describe ProviderCompiler::Web::Application do
     id = workspace_id(response)
 
     expect(response.status).to eq(303)
-    expect(store.fetch(id).blueprint.fetch("decision")).to eq("ACCEPT")
-    expect(store.fetch(id).case_pack).to eq("novapay")
+    expect(store.fetch(id).blueprint.fetch("decision")).to eq("REVIEW_REQUIRED")
+    expect(store.fetch(id).case_pack).to be_nil
+    expect(File.basename(store.fetch(id).defaults_path)).to eq("empty_case_defaults.yml")
     expect { store.create_upload(filename: "provider_api.txt", content: source) }.to raise_error(ProviderCompiler::ValidationError)
   end
 
-  it "selects the official NovaPay case pack by content identity, not filename" do
+  it "keeps official NovaPay upload generic and reserves case defaults for explicit demo" do
     source = File.binread(File.join(ProviderCompiler::Web::ROOT, "fixtures", "novapay_provider_api.yaml"))
     demo = store.create_demo("novapay")
     upload = store.create_upload(filename: "foo.yaml", content: source)
 
-    expect(upload.case_pack).to eq("novapay")
-    expect(File.basename(upload.defaults_path)).to eq("novapay_case_defaults.yml")
-    expect(upload.manifest.to_h.fetch("summary")).to include("accepted" => 14, "review_required" => 0, "blocking" => 0)
-    expect(upload.blueprint).to eq(demo.blueprint)
-    expect(upload.manifest.to_h).to eq(demo.manifest.to_h)
+    expect(demo.case_pack).to eq("novapay")
+    expect(File.basename(demo.defaults_path)).to eq("novapay_case_defaults.yml")
+    expect(upload.case_pack).to be_nil
+    expect(File.basename(upload.defaults_path)).to eq("empty_case_defaults.yml")
+    expect(upload.manifest.to_h.fetch("summary")).not_to include("review_required" => 0, "blocking" => 0)
+    expect(upload.blueprint).not_to eq(demo.blueprint)
+    expect(upload.manifest.to_h).not_to eq(demo.manifest.to_h)
     expect(upload.blueprint.dig("source", "root_document_sha256")).to eq("415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551")
   end
 

@@ -175,6 +175,29 @@ currency semantics, система не выбирает молча `×100` ил
 
 ## CLI
 
+### Input precedence and spec-only mode
+
+OpenAPI is the primary semantic source. `CaseDefaults` are optional,
+explicitly supplied provider overrides or fallback business knowledge; they are
+not selected from an uploaded filename or fingerprint.
+
+```powershell
+# arbitrary provider: empty provider defaults
+ruby bin/provider_compiler inspect --spec path/to/provider.yaml
+
+# explicit provider-specific knowledge
+ruby bin/provider_compiler inspect --spec path/to/provider.yaml `
+  --defaults path/to/provider_defaults.yml
+```
+
+The `inspect` output reports `spec`, host profile and `provider_defaults` so the
+knowledge sources are visible. The built-in NovaPay reference command remains
+an explicit demo/reference mode, not the generic upload path.
+
+The generated fixture priority is `SPEC_EXAMPLE` > schema example/default/enum
+> deterministic schema sample > `CaseDefaults` fallback. Every generated
+`fixtures.json` records provenance and stays byte-deterministic.
+
 Требуется Ruby >= 3.0. Текущий checkout проверен на Ruby 4.0.6 и Bundler 2.5.22.
 
 ```powershell
@@ -341,11 +364,13 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущая проверка (сгенерировано автоматически)**
 
-- RSpec: 63 examples, failures: 0.
+- RSpec: 72 examples, failures: 0.
 - Mutation benchmark NovaPay: безопасно пройдено 37/37; decision_accuracy: 100.0%; safe_decision_coverage: 100.0%.
 - automatic_accept_rate: 48.6%; review_required_rate: 40.5%; unknown_rate: 10.8%.
 - semantic_accept_accuracy: 100.0%; critical_false_accept_count: 0.
 - Aurora: levels 3/3, behavioral vectors 4/4; semantic_accuracy: 100.0%.
+- NovaPay spec-only lane: 7/7 safe; automatic_accept_rate: 0.0%; critical_false_accepts: 0.
+- HeliosPay: levels 2/2; resolved behavioral vectors 4/4.
 
 Для обновления блока запустите `ruby bin/update_docs`.
 <!-- END GENERATED: PROJECT_STATUS -->

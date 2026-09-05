@@ -1,0 +1,88 @@
+schema_version: 1
+provider: HeliosPay Funds API
+vectors:
+  host_create_input:
+    kind: create_request
+    credentials:
+      api_key: helios-test-key
+    input:
+      amount: 12.50
+      currency: EUR
+      external_id: helios-op-001
+      idempotency_key: helios-token-001
+      recipient:
+        kind: bank
+        account: DE02120300000000202051
+        bic: BYLADEM1001
+    expected:
+      method: POST
+      path: /funds
+      url: https://sandbox.heliospay.example/api/funds
+      headers:
+        Helios-Request-Token: helios-token-001
+      query:
+        access_token: helios-test-key
+      body:
+        payment:
+          amount: 1250
+          currency: EUR
+        client_reference: helios-op-001
+        beneficiary:
+          kind: bank
+          account: DE02120300000000202051
+          bic: BYLADEM1001
+  provider_status_response:
+    kind: fetch_status
+    credentials:
+      api_key: helios-test-key
+    input:
+      provider_operation_id: hf-123
+    provider_response:
+      http_status: 200
+      body:
+        fund_id: hf-123
+        phase: settled
+        settlement:
+          amount: 1250
+          currency: EUR
+    expected:
+      ok: true
+      http_status: "200"
+      provider_status: settled
+      status: approved
+      provider_operation_id: hf-123
+      amount: 12.50
+  settled_webhook:
+    kind: webhook
+    credentials:
+      webhook_secret: helios-webhook-secret
+    input:
+      raw_body: '{"event":"fund.settled","fund_id":"hf-123","phase":"settled","client_reference":"helios-op-001"}'
+      event: fund.settled
+      status: settled
+      fund_id: hf-123
+    expected:
+      ok: true
+      provider_status: settled
+      status: approved
+      event: fund.settled
+      provider_operation_id: hf-123
+      action: approve_operation
+      terminal: true
+  reversed_webhook:
+    kind: webhook
+    credentials:
+      webhook_secret: helios-webhook-secret
+    input:
+      raw_body: '{"event":"fund.reversed","fund_id":"hf-456","phase":"reversed","client_reference":"helios-op-002"}'
+      event: fund.reversed
+      status: reversed
+      fund_id: hf-456
+    expected:
+      ok: true
+      provider_status: reversed
+      status: rejected
+      event: fund.reversed
+      provider_operation_id: hf-456
+      action: reject_operation
+      terminal: true

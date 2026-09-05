@@ -1,0 +1,853 @@
+{
+  "schema_version": 1,
+  "benchmark": "novapay_spec_only_mutations",
+  "defaults": "fixtures/empty_case_defaults.yml",
+  "source": "fixtures/novapay_provider_api.yaml",
+  "ground_truth": "research/benchmark/spec_only_mutations.yml",
+  "methodology": "hand-authored mutation -> empty-defaults pipeline -> independent semantic comparator",
+  "cases": [
+    {
+      "case_id": "S01",
+      "mutation": "baseline",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 3,
+        "review_required": 4,
+        "accepted": 10
+      },
+      "money_decision": "REVIEW_REQUIRED",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "operations": true,
+          "money": true,
+          "auth": true,
+          "idempotency": true,
+          "extra_operations": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.operations.create_request.method",
+            "passed": true,
+            "expected": "POST",
+            "actual": "POST"
+          },
+          {
+            "name": "semantic.operations.create_request.path",
+            "passed": true,
+            "expected": "/payouts",
+            "actual": "/payouts"
+          },
+          {
+            "name": "semantic.operations.create_request.success_statuses",
+            "passed": true,
+            "expected": [
+              "201"
+            ],
+            "actual": [
+              "201"
+            ]
+          },
+          {
+            "name": "semantic.money.decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.money.provider.field",
+            "passed": true,
+            "expected": "request.amount",
+            "actual": "request.amount"
+          },
+          {
+            "name": "semantic.money.provider.unit",
+            "passed": true,
+            "expected": "minor",
+            "actual": "minor"
+          },
+          {
+            "name": "semantic.money.provider.subunit",
+            "passed": true,
+            "expected": "kopecks",
+            "actual": "kopecks"
+          },
+          {
+            "name": "semantic.money.provider.scale",
+            "passed": true,
+            "expected": null,
+            "actual": null
+          },
+          {
+            "name": "semantic.money.request_conversion.status",
+            "passed": true,
+            "expected": "unresolved",
+            "actual": "unresolved"
+          },
+          {
+            "name": "semantic.auth.strategy.kind",
+            "passed": true,
+            "expected": "api_key",
+            "actual": "api_key"
+          },
+          {
+            "name": "semantic.auth.strategy.transport",
+            "passed": true,
+            "expected": "header",
+            "actual": "header"
+          },
+          {
+            "name": "semantic.auth.strategy.name",
+            "passed": true,
+            "expected": "X-API-Key",
+            "actual": "X-API-Key"
+          },
+          {
+            "name": "semantic.idempotency.header",
+            "passed": true,
+            "expected": "Idempotency-Key",
+            "actual": "Idempotency-Key"
+          },
+          {
+            "name": "semantic.idempotency.spec_required",
+            "passed": true,
+            "expected": false,
+            "actual": false
+          },
+          {
+            "name": "semantic.extra_operations./balance.path",
+            "passed": true,
+            "expected": "/balance",
+            "actual": "/balance"
+          },
+          {
+            "name": "semantic.extra_operations./balance.kind",
+            "passed": true,
+            "expected": "EXTRA_OPERATION",
+            "actual": "EXTRA_OPERATION"
+          },
+          {
+            "name": "semantic.extra_operations./balance.preserved",
+            "passed": true,
+            "expected": true,
+            "actual": true
+          },
+          {
+            "name": "semantic.extra_operations./balance.blocking",
+            "passed": true,
+            "expected": false,
+            "actual": false
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.money:amount-units",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            }
+          },
+          {
+            "name": "safety.forbid_resolved.money.request_conversion",
+            "passed": true,
+            "expected": "unresolved/unknown",
+            "actual": {
+              "status": "unresolved",
+              "direction": "unknown",
+              "operation": "unresolved",
+              "factor": null,
+              "factor_decimal": null,
+              "scale": null
+            }
+          },
+          {
+            "name": "safety.forbid_resolved.money.response_conversion",
+            "passed": true,
+            "expected": "unresolved/unknown",
+            "actual": {
+              "status": "unresolved",
+              "direction": "unknown",
+              "operation": "unresolved",
+              "factor": null,
+              "factor_decimal": null,
+              "scale": null
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    },
+    {
+      "case_id": "S02",
+      "mutation": "explicit_scale",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 1,
+        "review_required": 2,
+        "accepted": 12
+      },
+      "money_decision": "ACCEPT",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "operations": true,
+          "money": true,
+          "statuses": true,
+          "webhook": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.operations.create_request.method",
+            "passed": true,
+            "expected": "POST",
+            "actual": "POST"
+          },
+          {
+            "name": "semantic.operations.create_request.path",
+            "passed": true,
+            "expected": "/payouts",
+            "actual": "/payouts"
+          },
+          {
+            "name": "semantic.operations.create_request.success_statuses",
+            "passed": true,
+            "expected": [
+              "201"
+            ],
+            "actual": [
+              "201"
+            ]
+          },
+          {
+            "name": "semantic.money.decision",
+            "passed": true,
+            "expected": "ACCEPT",
+            "actual": "ACCEPT"
+          },
+          {
+            "name": "semantic.money.provider.unit",
+            "passed": true,
+            "expected": "minor",
+            "actual": "minor"
+          },
+          {
+            "name": "semantic.money.provider.scale",
+            "passed": true,
+            "expected": 100,
+            "actual": 100
+          },
+          {
+            "name": "semantic.money.provider.scale_source",
+            "passed": true,
+            "expected": "SPEC_FACT",
+            "actual": "SPEC_FACT"
+          },
+          {
+            "name": "semantic.money.request_conversion.direction",
+            "passed": true,
+            "expected": "major_to_minor",
+            "actual": "major_to_minor"
+          },
+          {
+            "name": "semantic.money.request_conversion.operation",
+            "passed": true,
+            "expected": "multiply",
+            "actual": "multiply"
+          },
+          {
+            "name": "semantic.money.request_conversion.factor",
+            "passed": true,
+            "expected": 100,
+            "actual": 100
+          },
+          {
+            "name": "semantic.statuses.completed",
+            "passed": true,
+            "expected": "UNKNOWN",
+            "actual": "UNKNOWN"
+          },
+          {
+            "name": "semantic.webhook.decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.status:provider-map",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "WARNING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "WARNING"
+            }
+          },
+          {
+            "name": "safety.required_decision.webhook:signature",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    },
+    {
+      "case_id": "S03",
+      "mutation": "rename_amount",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 3,
+        "review_required": 4,
+        "accepted": 10
+      },
+      "money_decision": "REVIEW_REQUIRED",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "money": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.money.decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.money.provider.unit",
+            "passed": true,
+            "expected": "UNKNOWN",
+            "actual": "UNKNOWN"
+          },
+          {
+            "name": "semantic.money.provider.scale",
+            "passed": true,
+            "expected": null,
+            "actual": null
+          },
+          {
+            "name": "semantic.money.request_conversion.status",
+            "passed": true,
+            "expected": "unresolved",
+            "actual": "unresolved"
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.money:amount-units",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            }
+          },
+          {
+            "name": "safety.forbid_resolved.money.request_conversion",
+            "passed": true,
+            "expected": "unresolved/unknown",
+            "actual": {
+              "status": "unresolved",
+              "direction": "unknown",
+              "operation": "unresolved",
+              "factor": null,
+              "factor_decimal": null,
+              "scale": null
+            }
+          },
+          {
+            "name": "safety.forbid_resolved.money.response_conversion",
+            "passed": true,
+            "expected": "unresolved/unknown",
+            "actual": {
+              "status": "unresolved",
+              "direction": "unknown",
+              "operation": "unresolved",
+              "factor": null,
+              "factor_decimal": null,
+              "scale": null
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    },
+    {
+      "case_id": "S04",
+      "mutation": "major_description",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 1,
+        "review_required": 2,
+        "accepted": 12
+      },
+      "money_decision": "ACCEPT",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "money": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.money.decision",
+            "passed": true,
+            "expected": "ACCEPT",
+            "actual": "ACCEPT"
+          },
+          {
+            "name": "semantic.money.provider.unit",
+            "passed": true,
+            "expected": "major",
+            "actual": "major"
+          },
+          {
+            "name": "semantic.money.request_conversion.direction",
+            "passed": true,
+            "expected": "same_unit",
+            "actual": "same_unit"
+          },
+          {
+            "name": "semantic.money.request_conversion.operation",
+            "passed": true,
+            "expected": "identity",
+            "actual": "identity"
+          },
+          {
+            "name": "semantic.money.request_conversion.factor",
+            "passed": true,
+            "expected": 1,
+            "actual": 1
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.status:provider-map",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "WARNING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "WARNING"
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    },
+    {
+      "case_id": "S05",
+      "mutation": "success_202",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 3,
+        "review_required": 4,
+        "accepted": 10
+      },
+      "money_decision": "REVIEW_REQUIRED",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "operations": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.operations.create_request.method",
+            "passed": true,
+            "expected": "POST",
+            "actual": "POST"
+          },
+          {
+            "name": "semantic.operations.create_request.path",
+            "passed": true,
+            "expected": "/payouts",
+            "actual": "/payouts"
+          },
+          {
+            "name": "semantic.operations.create_request.success_statuses",
+            "passed": true,
+            "expected": [
+              "202"
+            ],
+            "actual": [
+              "202"
+            ]
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.money:amount-units",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    },
+    {
+      "case_id": "S06",
+      "mutation": "missing_webhook_algorithm",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 3,
+        "review_required": 4,
+        "accepted": 10
+      },
+      "money_decision": "REVIEW_REQUIRED",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "webhook": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.webhook.decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.webhook.signature.algorithm",
+            "passed": true,
+            "expected": "UNKNOWN",
+            "actual": "UNKNOWN"
+          },
+          {
+            "name": "semantic.webhook.signature.encoding",
+            "passed": true,
+            "expected": "UNKNOWN",
+            "actual": "UNKNOWN"
+          },
+          {
+            "name": "semantic.webhook.signature.header",
+            "passed": true,
+            "expected": "X-NovaPay-Signature",
+            "actual": "X-NovaPay-Signature"
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.webhook:signature",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "BLOCKING"
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    },
+    {
+      "case_id": "S07",
+      "mutation": "status_synonym",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "summary": {
+        "decisions": 14,
+        "blocking": 3,
+        "review_required": 4,
+        "accepted": 10
+      },
+      "money_decision": "REVIEW_REQUIRED",
+      "webhook_decision": "REVIEW_REQUIRED",
+      "validation": {
+        "passed": true,
+        "decision_pass": true,
+        "semantic_pass": true,
+        "safety_pass": true,
+        "generation_runtime_pass": true,
+        "semantic_areas": {
+          "statuses": true
+        },
+        "checks": [
+          {
+            "name": "decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "semantic.statuses.settled",
+            "passed": true,
+            "expected": "UNKNOWN",
+            "actual": "UNKNOWN"
+          },
+          {
+            "name": "safety.review_decision",
+            "passed": true,
+            "expected": "REVIEW_REQUIRED",
+            "actual": "REVIEW_REQUIRED"
+          },
+          {
+            "name": "safety.required_decision.status:provider-map",
+            "passed": true,
+            "expected": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "WARNING"
+            },
+            "actual": {
+              "outcome": "REVIEW_REQUIRED",
+              "severity": "WARNING"
+            }
+          },
+          {
+            "name": "safety.review_generation_blocked",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null
+          },
+          {
+            "name": "generation.runtime",
+            "passed": true,
+            "expected": "not_attempted",
+            "actual": null,
+            "note": "ACCEPT requires generated verification; abstentions must not generate"
+          }
+        ],
+        "failed_checks": []
+      },
+      "passed": true
+    }
+  ],
+  "aggregate": {
+    "cases_total": 7,
+    "cases_passed": 7,
+    "cases_failed": 0,
+    "decision_accuracy": 100.0,
+    "safe_decision_coverage": 100.0,
+    "automatic_accept_rate": 0.0,
+    "accept_count": 0,
+    "review_required_count": 7,
+    "unknown_count": 0,
+    "blocking_count": 17,
+    "review_required_rate": 100.0,
+    "unknown_rate": 0.0,
+    "semantic_accept_accuracy": null,
+    "critical_false_accept_count": 0,
+    "critical_false_accept_cases": [],
+    "formula": {
+      "automatic_accept_rate": "ACCEPT decisions / total cases",
+      "safe_decision_coverage": "independently passed cases / total cases",
+      "decision_accuracy": "decision comparator passes / total cases",
+      "critical_false_accepts": "ACCEPT where hand-authored expected decision is not ACCEPT"
+    }
+  }
+}

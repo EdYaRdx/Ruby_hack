@@ -129,7 +129,7 @@ module SecondProviderBenchmark
       pipeline.validate_blueprint!
       output_dir = File.join(ROOT, "tmp", "benchmark", "aurora-#{level}")
       examples = ProviderCompiler::CaseDefaults.load(defaults_path).examples
-      ProviderCompiler::DeterministicGenerator.new.generate(blueprint, pipeline.manifest, output_dir, examples: examples)
+      ProviderCompiler::DeterministicGenerator.new.generate(blueprint, pipeline.manifest, output_dir, examples: examples, spec_document: pipeline.source_document.resolved)
       verification = ProviderCompiler::Verification.new.verify(output_dir)
       { "status" => verification.fetch("passed") ? "passed" : "failed", "production_ready" => blueprint.fetch("decision") == "ACCEPT", "verification" => verification, "profile_loaded" => !profile.nil?, "output_dir" => output_dir }
     rescue ProviderCompiler::Error, ProviderCompiler::ValidationError, Errno::ENOENT => e
@@ -188,12 +188,18 @@ module SecondProviderBenchmark
                         Object.const_set(:Provider, Module.new)
                       end
     module_provider.const_set(:BaseService, Class.new do
+      def check_conditions(_operation, _request_method)
+        success
+      end
+
       def success(value = true)
         { "ok" => true, "value" => value }
       end
 
-      def failure(message)
-        { "ok" => false, "error" => message }
+      def failure(status = nil, code = nil, message = nil)
+        return { "ok" => false, "error" => status } if code.nil? && message.nil?
+
+        { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }
       end
 
       def approve_operation(operation)

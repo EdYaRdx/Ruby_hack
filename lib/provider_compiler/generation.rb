@@ -11,7 +11,7 @@ module ProviderCompiler
       provider = @blueprint.fetch("provider").fetch("name")
       class_name = "#{Util.camel(provider)}Service"
       endpoints = @blueprint.fetch("endpoints").each_with_object({}) do |endpoint, result|
-        result[endpoint.fetch("operation_id").to_s] = { "method" => endpoint.fetch("method"), "path" => endpoint.fetch("path"), "canonical" => endpoint["canonical"] }
+        result[endpoint.fetch("operation_id").to_s] = { "method" => endpoint.fetch("method"), "path" => endpoint.fetch("path"), "canonical" => endpoint["canonical"], "success_statuses" => Array(endpoint["success_statuses"]) }
       end
       status_map = @blueprint.fetch("statuses").each_with_object({}) { |item, result| result[item.fetch("provider_value")] = item.fetch("canonical_value") }
       extras = @blueprint.fetch("extra_operations").each_with_object({}) { |item, result| result[item.fetch("operation_id").to_s] = { "method" => item.fetch("method"), "path" => item.fetch("path") } }
@@ -33,6 +33,10 @@ module ProviderCompiler
       base_url_env = "#{Util.slug(provider).upcase}_BASE_URL"
       status_parameter = endpoint_path("fetch_status").to_s[/\{([^}]+)\}/, 1] || "id"
       webhook_id_field = @blueprint.dig("webhook", "identifier_field") || "id"
+      create_success_statuses = success_statuses("create_request")
+      status_success_statuses = success_statuses("fetch_status")
+      profile = @blueprint.fetch("base_service_profile")
+      failure_contract = profile.fetch("failure_contract", {})
       erb = ERB.new(TEMPLATE, trim_mode: "-")
       erb.result_with_hash(
         provider: provider,
@@ -40,6 +44,7 @@ module ProviderCompiler
         endpoints: ruby_literal(endpoints),
         field_mappings: ruby_literal(@blueprint.fetch("field_mappings")),
         status_map: ruby_literal(status_map),
+        errors: ruby_literal(@blueprint.fetch("errors")),
         extras: ruby_literal(extras),
         money: ruby_literal(@blueprint.fetch("money")),
         webhook: ruby_literal(@blueprint.fetch("webhook")),
@@ -52,10 +57,15 @@ module ProviderCompiler
         status_parameter: status_parameter,
         webhook_id_field: webhook_id_field,
         callback_actions: ruby_literal(@blueprint.dig("base_service_profile", "callback_actions") || {}),
+        call_super_conditions: profile.dig("check_conditions", "call_super") == true,
+        validation_failure_status: ruby_literal(failure_contract.fetch("validation_status", 422)),
+        validation_failure_code: ruby_literal(failure_contract.fetch("validation_code", "validation_error")),
         create_method: endpoint_method("create_request"),
         status_method: endpoint_method("fetch_status"),
         create_path: endpoint_path("create_request"),
-        status_path: endpoint_path("fetch_status")
+        status_path: endpoint_path("fetch_status"),
+        create_success_statuses: ruby_literal(create_success_statuses),
+        status_success_statuses: ruby_literal(status_success_statuses)
       )
     end
 
@@ -69,6 +79,14 @@ module ProviderCompiler
     def endpoint_method(role)
       endpoint = @blueprint.fetch("endpoints").find { |item| item["canonical"] == role }
       endpoint ? endpoint.fetch("method") : (raise Error, "resolved Blueprint has no #{role} endpoint")
+    end
+
+    def success_statuses(role)
+      endpoint = @blueprint.fetch("endpoints").find { |item| item["canonical"] == role }
+      statuses = Array(endpoint && endpoint["success_statuses"]).map(&:to_s).reject(&:empty?)
+      raise Error, "resolved Blueprint has no documented success status for #{role}" if statuses.empty?
+
+      statuses
     end
 
     def ruby_literal(value)
@@ -107,12 +125,18 @@ module ProviderCompiler
           ENDPOINTS = <%= endpoints %>.freeze
           FIELD_MAPPINGS = <%= field_mappings %>.freeze
           STATUS_MAP = <%= status_map %>.freeze
+          ERROR_MODEL = <%= errors %>.freeze
           EXTRA_OPERATIONS = <%= extras %>.freeze
           MONEY = <%= money %>.freeze
           CONSTRAINTS = <%= constraints %>.freeze
           WEBHOOK = <%= webhook %>.freeze
           IDEMPOTENCY = <%= idempotency %>.freeze
           CONDITIONALS = <%= conditions %>.freeze
+          CREATE_SUCCESS_STATUSES = <%= create_success_statuses %>.freeze
+          STATUS_SUCCESS_STATUSES = <%= status_success_statuses %>.freeze
+          CALL_SUPER_CONDITIONS = <%= call_super_conditions.inspect %>
+          VALIDATION_FAILURE_STATUS = <%= validation_failure_status %>
+          VALIDATION_FAILURE_CODE = <%= validation_failure_code %>
 
           def initialize(api_key:, webhook_secret: nil, client: nil)
             @api_key = api_key
@@ -124,9 +148,14 @@ module ProviderCompiler
           def check_conditions(operation, request_method)
             return success if request_method.to_s != "create"
 
+            if CALL_SUPER_CONDITIONS
+              base_result = super(operation, request_method)
+              return base_result if base_result.is_a?(Hash) && base_result["ok"] == false
+            end
+
             errors = validate_constraints(operation)
             errors.concat(validate_conditionals(operation))
-            errors.empty? ? success : failure(errors.join("; "))
+            errors.empty? ? success : failure(VALIDATION_FAILURE_STATUS, VALIDATION_FAILURE_CODE, errors.join("; "))
           end
 
           def build_create_request(operation, request_method = "create")
@@ -152,7 +181,7 @@ module ProviderCompiler
             request = build_create_request(operation, request_method)
             return request unless @client
 
-            handle_response(dispatch(request), expected_success: ["201", "200"])
+            handle_response(dispatch(request), expected_success: CREATE_SUCCESS_STATUSES)
           end
 
           def fetch_status(operation)
@@ -163,7 +192,7 @@ module ProviderCompiler
             request = { "method" => STATUS_METHOD, "path" => path, "url" => "#{BASE_URL}#{path}", "headers" => headers, "query" => query }
             return request unless @client
 
-            handle_response(dispatch(request), expected_success: ["200"])
+            handle_response(dispatch(request), expected_success: STATUS_SUCCESS_STATUSES)
           end
 
           def process_callback(payload)
@@ -317,16 +346,24 @@ module ProviderCompiler
           def handle_response(response, expected_success:)
             body_present = response.is_a?(Hash) && (response.key?("body") || response.key?(:body))
             http_status = read(response, :http_status) || read(response, :status_code) || (body_present ? read(response, :status) : nil)
-            body = body_present ? read(response, :body) : response
+            body = if body_present
+                     read(response, :body)
+                   elsif http_status && response.is_a?(Hash) && (response.keys.map(&:to_s) - %w[http_status status_code status headers]).empty?
+                     nil
+                   else
+                     response
+                   end
             if http_status && !expected_success.map(&:to_s).include?(http_status.to_s)
               return provider_error(response, body, http_status)
             end
 
+            return { "ok" => true, "http_status" => http_status.to_s, "response" => nil } if body.nil? && http_status
             return failure("provider response body is not an object") unless body.is_a?(Hash)
             mapped = map_provider_response(body)
             provider_status = mapped["provider_status"].to_s
             canonical_status = STATUS_MAP.fetch(provider_status, "unknown")
             result = { "ok" => true, "provider_status" => provider_status, "status" => canonical_status, "response" => body }
+            result["http_status"] = http_status.to_s if http_status
             mapped.each { |key, value| result[key] = value unless %w[provider_status status].include?(key) }
             result["error"] = read(body, :error) if read(body, :error)
             result["ok"] = false if canonical_status == "unknown"
@@ -396,7 +433,16 @@ module ProviderCompiler
 
           def provider_error(response, body, http_status)
             error = body.is_a?(Hash) ? (read(body, :error) || body) : {}
-            { "ok" => false, "http_status" => http_status.to_s, "error" => error, "retry_after" => read(response, :headers).is_a?(Hash) ? read(response, :headers)["Retry-After"] : nil }
+            provider_code = if error.is_a?(Hash)
+                              read(error, :code) || read(read(error, :error), :code)
+                            end
+            status_entry = ERROR_MODEL.find { |item| item["http_status"].to_s == http_status.to_s }
+            entry = Array(status_entry && status_entry["provider_codes"]).find { |item| provider_code.nil? || item["code"].to_s == provider_code.to_s }
+            headers = read(response, :headers)
+            retry_after = if headers.is_a?(Hash)
+                            headers["Retry-After"] || headers["retry-after"] || headers["RETRY-AFTER"]
+                          end
+            { "ok" => false, "http_status" => http_status.to_s, "error" => error, "error_code" => provider_code, "error_category" => entry ? entry["category"] : (status_entry && status_entry["canonical_category"]) || "unknown_provider_error", "retryable" => entry ? entry["retryable"] : !!(status_entry && status_entry["retryable"]), "action" => entry ? entry["action"] : (status_entry && status_entry["retryable"] ? "retry_after" : "preserve_and_review"), "retry_after" => retry_after }
           end
 
           def parse_json(raw_body)
@@ -425,16 +471,231 @@ module ProviderCompiler
     RUBY
   end
 
+  class FixtureSynthesizer
+    def initialize(blueprint, spec_document: nil, fallback_examples: {})
+      @blueprint = blueprint
+      @spec_document = spec_document || {}
+      @fallback = Util.deep_dup(fallback_examples || {})
+    end
+
+    def build
+      result = Util.deep_dup(@fallback)
+      provenance = {}
+      create_operation = provider_operation("create_request")
+      status_operation = provider_operation("fetch_status")
+      webhook_operation = provider_operation("process_callback")
+
+      request_body = request_example(create_operation)
+      if request_body
+        host_operation = host_operation_from_provider(request_body)
+        result["create_request"] = merge_missing({ "operation" => host_operation }, result["create_request"] || {})
+        provenance["create_request"] = request_source(create_operation)
+      end
+
+      response_body = response_example(status_operation)
+      if response_body
+        result["fetch_status"] = merge_missing({ "response" => response_body }, result["fetch_status"] || {})
+        provenance["fetch_status"] = response_source(status_operation)
+      end
+
+      callback_body = request_example(webhook_operation)
+      if callback_body
+        result["webhook"] = merge_missing({ "body" => callback_body }, result["webhook"] || {})
+        result["process_callback"] = merge_missing({ "body" => callback_body }, result["process_callback"] || {})
+        provenance["process_callback"] = request_source(webhook_operation)
+      end
+
+      result["fixture_provenance"] = provenance unless provenance.empty?
+      result
+    end
+
+    private
+
+    def provider_operation(role)
+      endpoint = Array(@blueprint["endpoints"]).find { |item| item["canonical"] == role }
+      return nil unless endpoint
+
+      path = @spec_document.dig("paths", endpoint["path"])
+      path && path[endpoint["method"].to_s.downcase]
+    end
+
+    def request_example(operation)
+      return nil unless operation.is_a?(Hash)
+
+      media = operation.dig("requestBody", "content", "application/json") || {}
+      explicit = media.dig("examples")
+      return explicit.values.first["value"] if explicit.is_a?(Hash) && explicit.values.first.is_a?(Hash) && explicit.values.first.key?("value")
+      return media["example"] if media.key?("example")
+
+      schema_example(media["schema"])
+    end
+
+    def response_example(operation)
+      return nil unless operation.is_a?(Hash)
+
+      statuses = Array(@blueprint.dig("endpoints").find { |item| item["canonical"] == "fetch_status" }&.fetch("success_statuses", []))
+      response = statuses.map { |status| operation.dig("responses", status) }.compact.first
+      response ||= operation.fetch("responses", {}).values.find { |item| item.is_a?(Hash) && item.dig("content", "application/json") }
+      return nil unless response.is_a?(Hash)
+
+      media = response.dig("content", "application/json") || {}
+      explicit = media.dig("examples")
+      return explicit.values.first["value"] if explicit.is_a?(Hash) && explicit.values.first.is_a?(Hash) && explicit.values.first.key?("value")
+      return media["example"] if media.key?("example")
+
+      preferred_status(schema_example(media["schema"]))
+    end
+
+    def request_source(operation)
+      media = operation&.dig("requestBody", "content", "application/json") || {}
+      return "SPEC_EXAMPLE" if media["example"] || media["examples"]
+
+      schema_source(media["schema"])
+    end
+
+    def response_source(operation)
+      statuses = Array(@blueprint.dig("endpoints").find { |item| item["canonical"] == "fetch_status" }&.fetch("success_statuses", []))
+      response = statuses.map { |status| operation&.dig("responses", status) }.compact.first
+      response ||= operation&.fetch("responses", {})&.values&.find { |item| item.is_a?(Hash) && item.dig("content", "application/json") }
+      media = response&.dig("content", "application/json") || {}
+      return "SPEC_EXAMPLE" if media["example"] || media["examples"]
+
+      schema_source(media["schema"])
+    end
+
+    def schema_source(schema)
+      return "SCHEMA_EXAMPLE" if schema_contains?(schema, "example") || schema_contains?(schema, "examples")
+      return "SCHEMA_DEFAULT" if schema_contains?(schema, "default")
+      return "ENUM" if schema_contains?(schema, "enum")
+
+      "DETERMINISTIC_SCHEMA_SAMPLE"
+    end
+
+    def schema_contains?(schema, key)
+      case schema
+      when Hash
+        return true if schema.key?(key)
+
+        schema.any? { |_name, value| schema_contains?(value, key) }
+      when Array
+        schema.any? { |value| schema_contains?(value, key) }
+      else
+        false
+      end
+    end
+
+    def preferred_status(value)
+      return value unless value.is_a?(Hash)
+
+      approved = Array(@blueprint["statuses"]).find { |item| item["canonical_value"] == "approved" }&.fetch("provider_value", nil)
+      return value unless approved
+
+      replace_status(value, approved)
+    end
+
+    def replace_status(value, provider_value)
+      value.each_with_object({}) do |(key, item), result|
+        result[key] = if key.to_s.match?(/\A(?:status|state|phase)\z/i)
+                        provider_value
+                      elsif item.is_a?(Hash)
+                        replace_status(item, provider_value)
+                      elsif item.is_a?(Array)
+                        item.map { |entry| entry.is_a?(Hash) ? replace_status(entry, provider_value) : entry }
+                      else
+                        item
+                      end
+      end
+    end
+
+    def host_operation_from_provider(provider_body)
+      operation = {}
+      Array(@blueprint["field_mappings"]).select { |mapping| mapping["direction"].to_s == "request" }.each do |mapping|
+        provider_path = mapping.fetch("provider_path").sub("request.", "")
+        value = read_path(provider_body, provider_path)
+        next if value.nil?
+
+        value = provider_to_host_amount(value) if mapping["canonical_path"] == "operation.amount"
+        set_path(operation, mapping.fetch("canonical_path").sub("operation.", ""), value)
+      end
+      operation
+    end
+
+    def provider_to_host_amount(value)
+      conversion = @blueprint.dig("money", "response_conversion") || {}
+      factor = conversion["factor_decimal"] || conversion["factor"] || 1
+      amount = BigDecimal(value.to_s) * BigDecimal(factor.to_s)
+      amount.frac.zero? ? amount.to_i : amount.to_f
+    end
+
+    def schema_example(schema)
+      return nil unless schema.is_a?(Hash)
+      return schema["example"] if schema.key?("example")
+      return schema["examples"].first if schema["examples"].is_a?(Array) && !schema["examples"].empty?
+      return schema["default"] if schema.key?("default")
+      return schema["enum"].first if schema["enum"].is_a?(Array) && !schema["enum"].empty?
+
+      type = schema["type"].to_s
+      case type
+      when "object"
+        schema.fetch("properties", {}).each_with_object({}) do |(name, property), result|
+          value = schema_example(property)
+          result[name] = value unless value.nil?
+        end
+      when "array"
+        [schema_example(schema["items"])]
+      when "integer"
+        schema.fetch("minimum", 1)
+      when "number"
+        schema.fetch("minimum", 1)
+      when "boolean"
+        false
+      when "string"
+        return "12.50" if schema["pattern"].to_s.match?(/\d.*\./) || schema["description"].to_s.match?(/amount|money|major|minor|currency|сумм|денег/i)
+
+        case schema["format"]
+        when "uuid" then "00000000-0000-4000-8000-000000000001"
+        when "date-time" then "2026-01-01T00:00:00Z"
+        when "email" then "preview@example.test"
+        else "preview-value"
+        end
+      end
+    end
+
+    def merge_missing(primary, fallback)
+      return primary unless fallback.is_a?(Hash)
+
+      fallback.each_with_object(Util.deep_dup(primary)) do |(key, value), result|
+        if result[key].is_a?(Hash) && value.is_a?(Hash)
+          result[key] = merge_missing(result[key], value)
+        else
+          result[key] = Util.deep_dup(value) unless result.key?(key)
+        end
+      end
+    end
+
+    def read_path(object, path)
+      path.to_s.split(".").reduce(object) { |current, key| current.is_a?(Hash) ? (current[key] || current[key.to_sym]) : nil }
+    end
+
+    def set_path(object, path, value)
+      keys = path.to_s.split(".")
+      leaf = keys.pop
+      target = keys.reduce(object) { |current, key| current[key] ||= {} }
+      target[leaf] = value
+    end
+  end
+
   class DeterministicGenerator
-    def generate(blueprint, manifest, output_dir, examples: {})
+    def generate(blueprint, manifest, output_dir, examples: {}, spec_document: nil)
       FileUtils.mkdir_p(output_dir)
+      fixture_data = fixtures(blueprint, examples, spec_document: spec_document)
       files = {
         "provider_blueprint.json" => JSON.pretty_generate(blueprint) + "\n",
         "review_manifest.json" => JSON.pretty_generate(manifest.to_h) + "\n",
         "service.rb" => RubyProjection.new(blueprint).render,
-        "fixtures.json" => JSON.pretty_generate(fixtures(blueprint, examples)) + "\n",
+        "fixtures.json" => JSON.pretty_generate(fixture_data) + "\n",
         "INTEGRATION.md" => integration_doc(blueprint),
-        "contract_smoke.rb" => smoke_harness(blueprint, examples)
+        "contract_smoke.rb" => smoke_harness(blueprint, fixture_data)
       }
       files.each { |name, content| File.write(File.join(output_dir, name), content, mode: "w", encoding: "UTF-8") }
       files.keys.map { |name| File.join(output_dir, name) }
@@ -442,8 +703,8 @@ module ProviderCompiler
 
     private
 
-    def fixtures(blueprint, examples)
-      result = Util.deep_dup(examples)
+    def fixtures(blueprint, examples, spec_document: nil)
+      result = FixtureSynthesizer.new(blueprint, spec_document: spec_document, fallback_examples: examples).build
       result["extra_operations"] = blueprint.fetch("extra_operations")
       result["blueprint_expectations"] = {
         "source_fingerprint" => blueprint.dig("source", "spec_fingerprint"),
@@ -459,7 +720,11 @@ module ProviderCompiler
 
     def integration_doc(blueprint)
       endpoint_lines = blueprint.fetch("endpoints").map { |endpoint| "- `#{endpoint["method"]} #{endpoint["path"]}` - #{endpoint["operation_id"]}#{endpoint["canonical"] ? " -> #{endpoint["canonical"]}" : " - EXTRA_OPERATION"}" }.join("\n")
-      error_lines = blueprint.fetch("errors").select { |item| item["http_status"].to_i >= 400 }.map { |item| "- HTTP #{item["http_status"]}: #{item["provider_codes"].map { |code| code["code"] }.uniq.join(", ")}#{item["retry_after_header"] ? " (соблюдать #{item["retry_after_header"]})" : ""}" }.uniq.join("\n")
+      error_lines = blueprint.fetch("errors").select { |item| item["http_status"].to_i >= 400 }.map do |item|
+        codes = Array(item["provider_codes"]).map { |code| "#{code["code"]} → #{code["category"]}" }.uniq
+        label = codes.empty? ? item["canonical_category"] : codes.join(", ")
+        "- HTTP #{item["http_status"]}: #{label}#{item["retry_after_header"] ? " (сохранять #{item["retry_after_header"]})" : ""}"
+      end.uniq.join("\n")
       <<~DOC
         # Интеграция #{blueprint.dig("provider", "name")}
 
@@ -519,8 +784,9 @@ module ProviderCompiler
 
         module Provider
           class BaseService
+            def check_conditions(_operation, _request_method); success; end
             def success(value = true); { "ok" => true, "value" => value }; end
-            def failure(message); { "ok" => false, "error" => message }; end
+            def failure(status = nil, code = nil, message = nil); code.nil? && message.nil? ? { "ok" => false, "error" => status } : { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }; end
             def approve_operation(operation); { "ok" => true, "action" => "approve_operation", "operation" => operation }; end
             def reject_operation(operation); { "ok" => true, "action" => "reject_operation", "operation" => operation }; end
           end
