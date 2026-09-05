@@ -110,25 +110,25 @@ end
 production = report.fetch("production_only")
 with_tests = report.fetch("production_plus_tests")
 block = <<~MARKDOWN
-  **Methodology**
+  **Методика**
 
-  Participant-written source LOC only. Blank lines and comment-only lines are excluded. Generated examples, fixtures/data, documentation, dependencies, `vendor/`, and `tmp/` are excluded. Web UI JavaScript/CSS is participant-written source and remains in the denominator.
+  Считаются только написанные участниками строки исходного кода. Пустые строки и строки только с комментариями исключены. Сгенерированные примеры, fixtures/data, документация, зависимости, `vendor/` и `tmp/` исключены. JavaScript/CSS Web UI считаются исходным кодом участников и остаются в знаменателе.
 
-  **Production source only**
+  **Только production-код**
 
   - Ruby: #{production.dig("ruby", "loc")} LOC
-  - Other participant-written source: #{production.dig("other_participant_source", "loc")} LOC
-  - Total: #{production.fetch("total_source_loc")} LOC
-  - Ruby share: #{format("%.1f", production.fetch("ruby_share_percent"))}%
+  - Другой исходный код участников: #{production.dig("other_participant_source", "loc")} LOC
+  - Всего: #{production.fetch("total_source_loc")} LOC
+  - Доля Ruby: #{format("%.1f", production.fetch("ruby_share_percent"))}%
 
-  **Production + tests**
+  **Production-код + тесты**
 
   - Ruby: #{with_tests.dig("ruby", "loc")} LOC
-  - Other participant-written source: #{with_tests.dig("other_participant_source", "loc")} LOC
-  - Total: #{with_tests.fetch("total_source_loc")} LOC
-  - Ruby share: #{format("%.1f", with_tests.fetch("ruby_share_percent"))}%
+  - Другой исходный код участников: #{with_tests.dig("other_participant_source", "loc")} LOC
+  - Всего: #{with_tests.fetch("total_source_loc")} LOC
+  - Доля Ruby: #{format("%.1f", with_tests.fetch("ruby_share_percent"))}%
 
-  Both measurements exceed the `>50%` requirement. The machine-readable file is [`research/ruby_share_audit.json`](../research/ruby_share_audit.json). Re-run `ruby bin/audit_ruby_share` after source changes.
+  Оба измерения превышают требование `>50%`. Машиночитаемый файл — [`research/ruby_share_audit.json`](../research/ruby_share_audit.json). После изменений исходного кода повторно выполните `ruby bin/audit_ruby_share`.
 MARKDOWN
 replace_generated_block(COMPLIANCE_PATH, "RUBY_SHARE_AUDIT", block)
 

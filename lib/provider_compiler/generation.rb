@@ -731,32 +731,32 @@ module ProviderCompiler
         Сгенерировано из Provider Blueprint v#{blueprint.fetch("schema_version")}.
 
         - Sandbox URL: #{blueprint.fetch("servers").find { |server| server["environment"] == "sandbox" }&.fetch("url", "unknown")}
-        - Runtime base URL: `#{Util.slug(blueprint.dig("provider", "name")).upcase}_BASE_URL` (по умолчанию используется sandbox URL)
+        - Базовый URL runtime: `#{Util.slug(blueprint.dig("provider", "name")).upcase}_BASE_URL` (по умолчанию используется sandbox URL)
         - Аутентификация: #{blueprint.dig("auth", "selected") || "unknown"}
         - Сумма: #{blueprint.dig("money", "host", "representation")} #{blueprint.dig("money", "host", "currency")} -> #{blueprint.dig("money", "provider", "unit_name")}; scale #{blueprint.dig("money", "provider", "scale")}; request factor #{blueprint.dig("money", "request_conversion", "factor")}
-        - Обязательность Idempotency по spec: #{blueprint.dig("idempotency", "spec_required")}
+        - Обязательность Idempotency по спецификации: #{blueprint.dig("idempotency", "spec_required")}
         - Подпись webhook: #{blueprint.dig("webhook", "signature", "algorithm")} / #{blueprint.dig("webhook", "signature", "encoding")}
         - Действия callback: #{blueprint.dig("base_service_profile", "callback_actions") || "не разрешены; terminal events завершаются безопасным отказом"}
         - Дополнительные operations: #{blueprint.fetch("extra_operations").map { |item| item["path"] }.join(", ")}
 
-        ## Endpoints
+        ## Endpoint-ы
 
         #{endpoint_lines}
 
         ## Проверка request и ошибки
 
-        Сгенерированный adapter проверяет required fields, enums, patterns, lengths,
+        Сгенерированный адаптер проверяет обязательные поля, enums, patterns, lengths,
         conditional recipient fields и host-side minimum amount до отправки.
-        HTTP errors возвращаются без blind retries; POST retries после rate limit
+        HTTP-ошибки возвращаются без blind retries; POST retries после rate limit
         должны повторно использовать тот же idempotency key.
 
         #{error_lines}
 
-        Webhook processing использует fail-closed поведение, если raw body,
+        Обработка webhook использует fail-closed поведение, если raw body,
         signature, secret или known event outcome отсутствуют либо некорректны.
 
         Сгенерированный Ruby является проекцией resolved Blueprint. Перед production
-        use проверьте review decisions и host BaseService contract.
+        use проверьте решения review и контракт host BaseService.
       DOC
     end
 

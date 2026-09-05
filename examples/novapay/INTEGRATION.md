@@ -11,7 +11,7 @@
 - Действия callback: {"approved" => "approve_operation", "rejected" => "reject_operation", "in_progress" => nil}
 - Дополнительные operations: /payouts/{payout_id}/cancel, /balance
 
-## Endpoints
+## Endpoint-ы
 
 - `POST /payouts` - createPayout -> create_request
 - `GET /payouts/{payout_id}` - getPayoutStatus -> fetch_status
