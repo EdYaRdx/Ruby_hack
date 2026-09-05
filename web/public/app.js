@@ -3,6 +3,15 @@
   const fileInput = document.querySelector('#spec-file');
 
   if (dropzone && fileInput) {
+    const fileName = dropzone.querySelector('strong');
+    const helper = dropzone.querySelector('span:not(.eyebrow):not(.button)');
+    const announceFile = (file) => {
+      if (!file) return;
+      if (fileName) fileName.textContent = file.name;
+      if (helper) helper.textContent = 'Файл выбран · нажмите «Анализировать спецификацию»';
+      dropzone.classList.add('has-file');
+    };
+
     ['dragenter', 'dragover'].forEach((eventName) => {
       dropzone.addEventListener(eventName, (event) => {
         event.preventDefault();
@@ -20,13 +29,13 @@
     dropzone.addEventListener('drop', (event) => {
       if (event.dataTransfer.files.length > 0) {
         fileInput.files = event.dataTransfer.files;
-        dropzone.querySelector('strong').textContent = event.dataTransfer.files[0].name;
+        announceFile(event.dataTransfer.files[0]);
       }
     });
 
     fileInput.addEventListener('change', () => {
       if (fileInput.files.length > 0) {
-        dropzone.querySelector('strong').textContent = fileInput.files[0].name;
+        announceFile(fileInput.files[0]);
       }
     });
   }
@@ -35,7 +44,11 @@
     button.addEventListener('click', async () => {
       const target = document.getElementById(button.dataset.copyTarget);
       if (!target || !navigator.clipboard) return;
-      await navigator.clipboard.writeText(target.textContent);
+      try {
+        await navigator.clipboard.writeText(target.textContent);
+      } catch (_error) {
+        return;
+      }
       const original = button.textContent;
       button.textContent = 'Скопировано';
       window.setTimeout(() => { button.textContent = original; }, 1200);

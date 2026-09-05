@@ -73,8 +73,61 @@ RSpec.describe ProviderCompiler::Web::Application do
     response = call("GET", "/")
 
     expect(response.status).to eq(200)
-    expect(response.body).to include("Рабочая панель интеграций", "Анализировать спецификацию", "1. Спецификация", "5. Генерация")
+    expect(response.body).to include("Рабочая панель интеграций", "Анализировать спецификацию", "1. Спецификация", "5. Генерация", "Только OpenAPI", "эталонный resolved сценарий", "Дополнительные provider-specific правила не подмешиваются автоматически.")
     expect(response.body).not_to include("Analyze specification", "Load NovaPay example")
+  end
+
+  it "keeps NovaPay spec-only and resolved demos visibly distinct" do
+    response = call("GET", "/")
+
+    expect(response.body).to include("NovaPay — только OpenAPI", "Запустить spec-only", "NovaPay — эталонный resolved сценарий", "Открыть resolved пример")
+
+    spec_only = call("POST", "/demo", body: "demo=novapay_spec_only")
+    resolved = call("POST", "/demo", body: "demo=novapay")
+
+    expect(store.fetch(workspace_id(spec_only)).case_pack).to be_nil
+    expect(store.fetch(workspace_id(spec_only)).blueprint.fetch("decision")).to eq("REVIEW_REQUIRED")
+    expect(store.fetch(workspace_id(resolved)).case_pack).to eq("novapay")
+    expect(store.fetch(workspace_id(resolved)).blueprint.fetch("decision")).to eq("ACCEPT")
+  end
+
+  it "keeps money, status and webhook proposals distinct from user choices" do
+    response = call("POST", "/demo", body: "demo=novapay_spec_only")
+    id = workspace_id(response)
+
+    money_review = call("GET", "/workspace/#{id}/review").body
+    expect(money_review).to include("Предложение системы: provider unit: minor")
+    expect(money_review).not_to include('value="minor" selected', 'value="100"')
+
+    call("POST", "/workspace/#{id}/review", body: "decision_id=money%3Aamount-units&provider_unit=minor&provider_subunit=kopecks&scale=100")
+    status_review = call("GET", "/workspace/#{id}/review").body
+    expect(status_review).to include("Предложение: in_progress", "Предложение: approved")
+    expect(status_review).not_to include('value="in_progress" selected', 'value="approved" selected')
+
+    status_values = URI.encode_www_form(
+      "decision_id" => "status:provider-map",
+      "status_0_provider" => "pending", "status_0_value" => "in_progress",
+      "status_1_provider" => "processing", "status_1_value" => "in_progress",
+      "status_2_provider" => "completed", "status_2_value" => "approved",
+      "status_3_provider" => "failed", "status_3_value" => "rejected",
+      "status_4_provider" => "cancelled", "status_4_value" => "rejected"
+    )
+    call("POST", "/workspace/#{id}/review", body: status_values)
+
+    field_values = URI.encode_www_form(
+      "decision_id" => "fields:create-request",
+      "field_0_canonical" => "operation.amount", "field_0_path" => "request.amount",
+      "field_0_direction" => "request", "field_0_transform" => "money_to_provider",
+      "field_0_factor" => "100", "field_0_required" => "true",
+      "field_6_canonical" => "operation.amount", "field_6_path" => "response.amount",
+      "field_6_direction" => "response", "field_6_transform" => "provider_to_money",
+      "field_6_factor" => "0.01", "field_6_required" => "false"
+    )
+    call("POST", "/workspace/#{id}/review", body: field_values)
+
+    webhook_review = call("GET", "/workspace/#{id}/review").body
+    expect(webhook_review).to include("Предложение системы: encoding не определён", "Выберите encoding")
+    expect(webhook_review).not_to include('value="hex" selected', 'value="base64" selected')
   end
 
   it "runs the NovaPay demo through analysis and exposes evidence" do
@@ -84,8 +137,8 @@ RSpec.describe ProviderCompiler::Web::Application do
 
     expect(response.status).to eq(303)
     expect(analysis.status).to eq(200)
-    expect(analysis.body).to include("getPayoutStatus", "Что система поняла?", "Reference case mode", "Что система поняла?", "RUB → копейки", "Идемпотентность", "Профиль кейса", "Конфликты", "OpenAPI pointer")
-    expect(analysis.body).not_to include("Почему?")
+    expect(analysis.body).to include("getPayoutStatus", "Анализ OpenAPI завершён", "Что система определила", "Эталонный resolved сценарий", "Идемпотентность", "Профиль кейса", "Конфликты", "OpenAPI pointer")
+    expect(analysis.body).not_to include("Reference case mode", "Почему?")
     expect(analysis.body).not_to include('<details class="technical-details" open')
     expect(store.fetch(id).blueprint.fetch("decision")).to eq("ACCEPT")
   end
@@ -100,11 +153,12 @@ RSpec.describe ProviderCompiler::Web::Application do
     generate = call("GET", "/workspace/#{id}/generate")
     blocked_post = call("POST", "/workspace/#{id}/generate")
 
-    expect(review.body).to include("Требуется проверка", "Что известно?", "Что нужно подтвердить?", "Предлагаемый вариант", "Почему это важно?", "Основания предложения", "Технические подробности", "Подтвердить решение", "В каких единицах провайдер принимает сумму?")
+    expect(review.body).to include("Требуется подтвердить", "1 · ИЗВЕСТНО", "2 · ПРЕДЛОЖЕНИЕ СИСТЕМЫ", "3 · ВАШ ВЫБОР", "ПОЧЕМУ ЭТО ВАЖНО", "Основания предложения", "Технические подробности", "Подтвердить решение", "В каких единицах провайдер принимает сумму?")
+    expect(review.body).not_to include('value="minor" selected', 'value="100"')
     expect(review.body).not_to include("Почему?")
     expect(review.body).not_to include('<details class="technical-details" open')
     expect(review.body).not_to include(">Generation blocked<", ">Confirm<", ">Edit<")
-    expect(generate.body).to include("Генерация ожидает проверки", "Открыть проверку")
+    expect(generate.body).to include("Генерация недоступна", "Перейти к проверке")
     expect(blocked_post.status).to eq(422)
     expect(blocked_post.body).to include("Генерация недоступна", "Технические подробности")
     expect(store.fetch(id).generated?).to be(false)

@@ -24,6 +24,14 @@ module ProviderCompiler
         "defaults" => File.join(ROOT, "fixtures", "novapay_case_defaults.yml"),
         "filename" => "provider_api.yaml"
       },
+      "novapay_spec_only" => {
+        "label" => "NovaPay (только OpenAPI)",
+        "spec" => File.join(ROOT, "fixtures", "novapay_provider_api.yaml"),
+        "profile" => File.join(ROOT, "profiles", "space_payments_v1.yml"),
+        "defaults" => File.join(ROOT, "fixtures", "empty_case_defaults.yml"),
+        "filename" => "provider_api.yaml",
+        "case_pack" => nil
+      },
       "ambiguous" => {
         "label" => "Ambiguous",
         "spec" => File.join(ROOT, "fixtures", "ambiguous_money_provider_api.yaml"),
@@ -422,7 +430,7 @@ module ProviderCompiler
       def create_demo(name)
         config = DEMOS.fetch(name.to_s) { raise Error, "unknown demo" }
         content = File.binread(config.fetch("spec"))
-        create_workspace(filename: config.fetch("filename"), content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"), case_pack: name.to_s)
+        create_workspace(filename: config.fetch("filename"), content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"), case_pack: config.fetch("case_pack", name.to_s))
       end
 
       def fetch(id)
