@@ -17,7 +17,7 @@ research, benchmark corpus и исторические записи решени
 `PROVIDER_BLUEPRINT_V1.md`, `RULE_PRECEDENCE.md`, `ARCHITECTURE_INVARIANTS.md`,
 `ARCHITECTURE_RED_TEAM.md`, `REAL_MUTATION_BENCHMARK.md`,
 `SEMANTIC_BENCHMARK_VALIDATION.md`, `SECOND_PROVIDER_VALIDATION.md` и
-`GOAL_4_4_RESULT.md` содержат
+`GOAL_4_4_RESULT.md`, `GOAL_4_5_RESULT.md` содержат
 актуальные technical evidence. Их aggregate-метрики всё равно публикуются
 канонически через [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
 
@@ -37,6 +37,7 @@ research, benchmark corpus и исторические записи решени
 - [GOAL_3_5_SCORECARD.md](GOAL_3_5_SCORECARD.md) — scorecard и итоговый verdict GOAL 3.5.
 - [REAL_MUTATION_BENCHMARK.md](REAL_MUTATION_BENCHMARK.md) — реальный mutation run из 37 кейсов, baseline/final metrics, taxonomy ошибок и safety gate.
 - [SECOND_PROVIDER_VALIDATION.md](SECOND_PROVIDER_VALIDATION.md) — независимый провайдер Aurora Transfers, pure-generic и resolved levels.
+- [GOAL_4_5_RESULT.md](GOAL_4_5_RESULT.md) — explainability UX polish, Review happy path и regression evidence.
 - [GOAL_3_SCORECARD.md](GOAL_3_SCORECARD.md) — scorecard и итоговый verdict GOAL 3.
 - [benchmark/run.rb](benchmark/run.rb) — mutation runner текущего Ruby compiler; возвращает ненулевой код при critical false ACCEPT.
 - [benchmark/second_provider.rb](benchmark/second_provider.rb) — runner независимого провайдера.

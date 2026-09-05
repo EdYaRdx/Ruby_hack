@@ -129,7 +129,11 @@ button:disabled { cursor: not-allowed; }
 .operation-id { color: var(--muted); font-size: 11px; }
 .binding { font-size: 12px; }
 .binding.muted { color: var(--muted); font-weight: 600; }
-.operation-row a { color: var(--accent); font-size: 11px; font-weight: 600; }
+.operation-details { grid-column: 1 / -1; justify-self: end; color: var(--accent); font-size: 11px; font-weight: 600; }
+.operation-details summary { cursor: pointer; }
+.operation-detail-body { grid-column: 1 / -1; padding: 10px 0 14px 68px; color: var(--muted); font-size: 12px; }
+.operation-detail-body > strong { color: var(--text); display: block; margin: 3px 0; }
+.operation-detail-body > p { margin: 3px 0 8px; }
 .method-pill { justify-content: center; min-height: 28px; padding: 4px 0; width: 54px; }
 .method-post { background: var(--blue-soft); color: var(--blue); }
 .method-get { background: var(--green-soft); color: var(--green); }
@@ -138,7 +142,7 @@ button:disabled { cursor: not-allowed; }
 .fact-block { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 17px 0 0; }
 .fact-block strong { font-size: 14px; line-height: 20px; }
 .fact-block > span:not(.label) { color: var(--muted); font-size: 12px; }
-.fact-with-action a { position: absolute; right: 0; top: 28px; color: var(--accent); font-size: 11px; font-weight: 600; }
+.fact-with-action .explainability { margin-top: 8px; }
 .divider { height: 1px; margin: 16px 0 0; background: var(--border); }
 
 .status-card, .evidence-card { min-height: 260px; margin-top: 0; }
@@ -162,10 +166,10 @@ button:disabled { cursor: not-allowed; }
 
 .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
 .detail-card { padding: 0; }
-.detail-card summary { min-height: 58px; padding: 17px 19px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; }
-.detail-card summary::-webkit-details-marker { display: none; }
-.detail-body { padding: 0 19px 18px; }
-.detail-body > a { display: inline-block; margin-top: 10px; color: var(--accent); font-weight: 600; font-size: 12px; }
+.detail-card > .card-heading { padding: 17px 19px 0; }
+.detail-card .card-heading { align-items: center; }
+.detail-card .card-heading > div { min-width: 0; }
+.detail-card > .explainability { margin: 16px 19px 18px; }
 .code-block { width: 100%; max-width: 100%; max-height: 360px; margin: 10px 0 0; padding: 14px; overflow-x: auto; overflow-y: auto; border-radius: 8px; background: var(--code); color: #e5e7eb; font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; overflow-wrap: normal; }
 .muted, .empty-hint { color: var(--muted); }
 
@@ -252,6 +256,30 @@ button:disabled { cursor: not-allowed; }
 .technical-details { margin-top: 12px; }
 .technical-details summary { color: var(--muted); cursor: pointer; font-size: 11px; }
 
+.explainability { margin-top: 12px; }
+.explainability-trigger { width: max-content; max-width: 100%; display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: 1px solid #c9d5f2; border-radius: 7px; background: var(--blue-soft); color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 700; list-style: none; }
+.explainability-trigger::-webkit-details-marker { display: none; }
+.explainability-trigger:focus-visible, .operation-details summary:focus-visible { outline: 3px solid #c9d5f2; outline-offset: 2px; }
+.explainability-icon { font-size: 14px; line-height: 14px; }
+.explainability-panel { margin-top: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; background: #fcfcfd; color: var(--text); }
+.explainability-result { display: flex; flex-direction: column; gap: 3px; }
+.explainability-result strong { font-size: 14px; }
+.explainability-human { max-width: 760px; margin: 10px 0 14px; color: var(--muted); font-size: 12px; line-height: 18px; }
+.explainability-evidence, .explainability-sources, .explainability-conflicts { margin-top: 12px; }
+.human-evidence-row { margin-top: 8px; padding: 9px 10px; border-radius: 7px; background: #f4f6fb; }
+.human-evidence-row > div { display: flex; align-items: baseline; gap: 8px; }
+.human-evidence-row strong { font-size: 11px; }
+.human-evidence-row code, .explainability-source code { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.human-evidence-row p { margin: 4px 0 0; color: var(--muted); font-size: 11px; white-space: pre-line; }
+.explainability-source-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+.explainability-source { display: inline-flex; align-items: baseline; gap: 5px; padding: 4px 7px; border-radius: 5px; background: var(--blue-soft); }
+.explainability-source > span { color: var(--blue); font-size: 11px; }
+.explainability-conflicts { display: flex; gap: 8px; align-items: baseline; color: var(--muted); font-size: 11px; }
+.explainability-conflicts .label { color: var(--text); }
+.explainability.compact .explainability-panel { max-width: 680px; }
+.technical-meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 10px; margin-bottom: 8px; color: var(--muted); font-size: 11px; }
+.technical-meta code { overflow-wrap: anywhere; color: var(--text); font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
 @media (max-width: 1100px) {
   .content { padding: 32px 28px 70px; }
   .analysis-grid { grid-template-columns: 1fr; }
@@ -275,7 +303,8 @@ button:disabled { cursor: not-allowed; }
   .provider-request-card { grid-column: auto; }
   .operation-row { grid-template-columns: 54px minmax(0, 1fr) 35px; gap: 8px; }
   .operation-row .operation-id, .operation-row .binding { grid-column: 2; }
-  .operation-row a { grid-column: 3; grid-row: 1 / span 2; }
+  .operation-row .operation-details { grid-column: 1 / -1; justify-self: stretch; }
+  .operation-detail-body { padding-left: 0; }
   .review-summary-grid, .review-columns, .verification-grid { grid-template-columns: 1fr; }
   .preview-grid .card { min-height: auto; }
   .readiness-card { min-height: auto; }

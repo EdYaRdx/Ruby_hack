@@ -84,7 +84,9 @@ RSpec.describe ProviderCompiler::Web::Application do
 
     expect(response.status).to eq(303)
     expect(analysis.status).to eq(200)
-    expect(analysis.body).to include("getPayoutStatus", "Что система поняла?", "RUB → копейки", "Статусы операций", "Идемпотентность", "Сопоставление полей", "Ограничения", "Обработка ошибок API", "Дополнительная операция", "EXTRA_OPERATION", "Показать все")
+    expect(analysis.body).to include("getPayoutStatus", "Что система поняла?", "RUB → копейки", "Статусы операций", "Идемпотентность", "Сопоставление полей", "Ограничения", "Обработка ошибок API", "Дополнительная операция", "EXTRA_OPERATION", "Показать все", "Основания решения", "Подробнее", "Профиль Space Payments", "Факт OpenAPI", "Профиль кейса", "Конфликты", "OpenAPI pointer")
+    expect(analysis.body).not_to include("Почему?")
+    expect(analysis.body).not_to include('<details class="technical-details" open')
     expect(store.fetch(id).blueprint.fetch("decision")).to eq("ACCEPT")
   end
 
@@ -92,11 +94,15 @@ RSpec.describe ProviderCompiler::Web::Application do
     response = call("POST", "/demo", body: "demo=ambiguous")
     id = workspace_id(response)
     review = call("GET", "/workspace/#{id}/review")
-    expect(call("GET", "/workspace/#{id}/analysis").body).not_to include(">UNKNOWN<")
+    analysis_body = call("GET", "/workspace/#{id}/analysis").body
+    expect(analysis_body).to include("Основания решения", "Технические подробности")
+    expect(analysis_body).not_to include('<details class="technical-details" open')
     generate = call("GET", "/workspace/#{id}/generate")
     blocked_post = call("POST", "/workspace/#{id}/generate")
 
-    expect(review.body).to include("Требуется проверка", "Что известно?", "Что нужно подтвердить?", "Предлагаемый вариант", "Почему это важно?", "Технические подробности", "Подтвердить решение", "В каких единицах провайдер принимает сумму?")
+    expect(review.body).to include("Требуется проверка", "Что известно?", "Что нужно подтвердить?", "Предлагаемый вариант", "Почему это важно?", "Основания предложения", "Технические подробности", "Подтвердить решение", "В каких единицах провайдер принимает сумму?")
+    expect(review.body).not_to include("Почему?")
+    expect(review.body).not_to include('<details class="technical-details" open')
     expect(review.body).not_to include(">Generation blocked<", ">Confirm<", ">Edit<")
     expect(generate.body).to include("Генерация ожидает проверки", "Открыть проверку")
     expect(blocked_post.status).to eq(422)
@@ -120,8 +126,8 @@ RSpec.describe ProviderCompiler::Web::Application do
     id = workspace_id(response)
     review = call("GET", "/workspace/#{id}/review")
 
-    expect(review.body).to include("Проверка не требуется", "14 решений принято", "0 требуют проверки", "0 блокирующих", "Перейти к предпросмотру", "Перейти к генерации")
-    expect(review.body).not_to include("Нет unresolved decisions")
+    expect(review.body).to include("Проверка не требуется", "14 решений принято", "0 требуют проверки", "0 блокирующих", "Перейти к предпросмотру", "Посмотреть принятые решения")
+    expect(review.body).not_to include("Нет unresolved decisions", "Открыть проверку", "Перейти к генерации")
   end
 
   it "resolves critical decisions through the review route and unlocks runtime checks" do

@@ -134,7 +134,7 @@ module ProviderCompiler
                 <div><h2>Операции</h2><p>#{h(canonical_endpoints.length)} операции Space Payments · #{h(extra_endpoints.length)} дополнительных endpoint</p></div>
               </div>
               <div class="operation-list">
-                #{endpoints.map { |endpoint| operation_row(workspace, endpoint) }.join}
+                #{endpoints.map { |endpoint| operation_row(workspace, endpoint, decisions) }.join}
               </div>
             </section>
             <section class="card facts-card">
@@ -149,14 +149,14 @@ module ProviderCompiler
                 <span class="label">Деньги</span>
                 <strong>#{h(money_summary(money))}</strong>
                 <span>#{h(money_detail(money))}</span>
-                <a href="/workspace/#{workspace.id}/analysis?decision=money%3Aamount-units">Почему?</a>
+                #{explainability_block(decision: find_decision(decisions, "money:amount-units"), result: money_summary(money), explanation: money_explanation(money), technical_data: { "money" => money })}
               </div>
               <div class="divider"></div>
               <div class="fact-block fact-with-action">
                 <span class="label">Webhook</span>
                 <strong>#{h(webhook_summary(webhook))}</strong>
                 <span>#{h(webhook.dig("signature", "header") || "Endpoint не определён")}</span>
-                <a href="/workspace/#{workspace.id}/analysis?decision=webhook%3Asignature">Почему?</a>
+                #{explainability_block(decision: find_decision(decisions, "webhook:signature"), result: webhook_summary(webhook), explanation: webhook_explanation(webhook), technical_data: { "webhook" => webhook })}
               </div>
             </section>
             <section class="card status-card">
@@ -164,13 +164,14 @@ module ProviderCompiler
               <p class="card-intro">#{h(status_map.length)} статусов провайдера переводятся в состояния Space Payments.</p>
               #{status_mapping_rows(status_map.first(2))}
               #{status_map.length > 2 ? "<details class=\"inline-details\"><summary>Показать все</summary>#{status_mapping_rows(status_map.drop(2))}</details>" : ""}
+              #{explainability_block(decision: find_decision(decisions, "status:provider-map"), result: "#{status_map.length} сопоставлений статусов", explanation: "Эти соответствия используются при fetch_status и обработке webhook.", technical_data: { "statuses" => status_map }, compact: true)}
               <p class="mapping-explanation">Эти правила используются при запросе статуса операции и обработке webhook.</p>
               #{status_map.empty? ? '<p class="muted">Статусы не обнаружены.</p>' : ""}
             </section>
             <section class="card focus-card">
               <h2>#{unresolved.empty? ? "Проверка не требуется" : "Что нужно подтвердить?"}</h2>
               <p>#{unresolved.empty? ? "Все критические решения подтверждены, можно открыть Preview или Generation." : "#{unresolved.length} решений требуют понятного подтверждения перед безопасной генерацией."}</p>
-              <a class="button button-secondary" href="/workspace/#{workspace.id}/review">#{unresolved.empty? ? "Открыть проверку" : "Открыть проверку"}</a>
+              <a class="button button-#{unresolved.empty? ? "primary" : "secondary"}" href="/workspace/#{workspace.id}/#{unresolved.empty? ? "preview" : "review"}">#{unresolved.empty? ? "Перейти к предпросмотру" : "Открыть проверку"}</a>
             </section>
           </div>
           <section class="detail-grid">
@@ -350,9 +351,10 @@ module ProviderCompiler
         end.join
       end
 
-      def operation_row(workspace, endpoint)
+      def operation_row(workspace, endpoint, decisions)
         canonical = endpoint["canonical"]
         decision_id = "operation:#{Util.slug(endpoint["operation_id"] || endpoint["method"].to_s + endpoint["path"].to_s)}"
+        decision = find_decision(decisions, decision_id)
         extra = canonical.nil?
         binding = if extra
                     '<strong class="binding muted">Дополнительная операция <span class="technical-label">EXTRA_OPERATION</span></strong>'
@@ -365,7 +367,15 @@ module ProviderCompiler
             <code>#{h(endpoint["path"])}</code>
             <span class="operation-id">#{h(endpoint["operation_id"] || "(без operationId)")}</span>
             #{binding}
-            <a href="/workspace/#{workspace.id}/analysis?decision=#{url_escape(decision_id)}">Почему?</a>
+            <details class="operation-details">
+              <summary>Подробнее</summary>
+              <div class="operation-detail-body">
+                <span class="label">Определено как</span>
+                <strong>#{h(extra ? "Дополнительная операция" : canonical)}</strong>
+                <p>#{h(operation_explanation(endpoint, canonical))}</p>
+                #{explainability_block(decision: decision, result: extra ? "EXTRA_OPERATION" : canonical, explanation: operation_explanation(endpoint, canonical), technical_data: { "endpoint" => endpoint })}
+              </div>
+            </details>
           </div>
         HTML
       end
@@ -396,10 +406,10 @@ module ProviderCompiler
         <<~HTML
           <section class="card review-card">
             <div class="review-card-heading"><div><h2>#{h(review_question(decision["decision_id"]))}</h2></div><div class="pill-row">#{status_pill(decision["outcome"], tone_for(decision["outcome"]))}#{decision["severity"] == "BLOCKING" ? status_pill(severity_label(decision["severity"]), "blocked") : ""}</div></div>
-            <div class="review-summary-grid"><div><span class="label">Что известно?</span><p>#{h(review_known(decision["decision_id"]))}</p></div><div><span class="label">Что нужно подтвердить?</span><p>#{h(review_unknown(decision["decision_id"]))}</p></div><div><span class="label">Почему это важно?</span><p>#{h(rationale_summary(decision["rationale"]))}</p></div></div>
-            <div class="review-candidate"><span class="label">Предлагаемый вариант</span>#{human_candidate_summary(decision)}</div>
+            <div class="review-summary-grid"><div><span class="label">Что известно?</span><p>#{h(review_known(decision["decision_id"]))}</p></div><div><span class="label">Что нужно подтвердить?</span><p>#{h(review_unknown(decision["decision_id"]))}</p></div><div><span class="label">Почему это важно?</span><p>#{h(review_impact(decision["decision_id"]))}</p></div></div>
+            <div class="review-candidate"><span class="label">Предлагаемый вариант</span>#{human_candidate_summary(decision, workspace)}</div>
+            #{explainability_block(decision: decision, action_label: "Основания предложения", result: "Предложение требует подтверждения", explanation: review_proposal_explanation(decision), technical_data: { "candidate" => candidate })}
             #{resolution_form(workspace, decision)}
-            <details class="technical-details review-technical"><summary>Технические подробности</summary><p>Decision ID: #{h(decision["decision_id"])}</p><p>Provenance: #{h(Array(decision["evidence"]).map { |item| item["source"] }.uniq.join(", "))}</p>#{Array(decision["evidence"]).map { |item| evidence_row(item) }.join}#{json_block(candidate)}<p>Rationale: #{h(decision["rationale"])}</p>#{Array(decision["conflicts"]).empty? ? "" : json_block(decision["conflicts"])}</details>
           </section>
         HTML
       end
@@ -414,7 +424,7 @@ module ProviderCompiler
         }.fetch(decision_id, decision_title(decision_id))
       end
 
-      def human_candidate_summary(decision)
+      def human_candidate_summary(decision, workspace = nil)
         case decision["decision_id"]
         when "money:amount-units"
           "Space Payments: major RUB → выберите provider unit и scale для безопасного пересчёта."
@@ -424,7 +434,8 @@ module ProviderCompiler
           Array(decision["candidate"]).select { |item| item["decision"] != "ACCEPT" || item["transform"].to_s == "unresolved" }.map { |item| "<div class=\"mapping-row review-mapping\"><span>#{h(item["canonical_path"])}</span><span class=\"arrow\">→</span><strong>#{h(item["provider_path"] || "?")}</strong></div>" }.join
         when "webhook:signature"
           candidate = decision["candidate"] || {}
-          "#{candidate["algorithm"] || "Алгоритм не подтверждён"} · encoding нужно выбрать явно."
+          webhook = workspace&.blueprint&.fetch("webhook", {}) || {}
+          "Endpoint: #{webhook["endpoint"] || "не определён"} · Header: #{webhook.dig("signature", "header") || "не определён"} · #{candidate["algorithm"] || "Алгоритм не подтверждён"} · encoding нужно выбрать явно."
         when "idempotency:header"
           "OpenAPI не показывает обязательный header. Подтвердите отсутствие или укажите имя header."
         else
@@ -460,8 +471,18 @@ module ProviderCompiler
                        else
                          '<p class="muted">Для этого решения нужен отдельный provider-specific input. Generation остаётся недоступной.</p>'
                        end
-        action = form_content.include?("provider-specific input") ? "" : %(<form class="resolution-form" method="post" action="/workspace/#{workspace.id}/review"><input type="hidden" name="decision_id" value="#{h(id)}">#{form_content}<button class="button button-primary" type="submit">Подтвердить решение</button></form>)
+        action = form_content.include?("provider-specific input") ? "" : %(<form class="resolution-form" method="post" action="/workspace/#{workspace.id}/review"><input type="hidden" name="decision_id" value="#{h(id)}">#{form_content}<button class="button button-primary" type="submit">#{h(resolution_action_label(id))}</button></form>)
         action
+      end
+
+      def resolution_action_label(decision_id)
+        {
+          "status:provider-map" => "Подтвердить соответствия",
+          "fields:create-request" => "Подтвердить сопоставления",
+          "webhook:signature" => "Подтвердить webhook",
+          "idempotency:header" => "Подтвердить решение",
+          "money:amount-units" => "Подтвердить решение"
+        }.fetch(decision_id.to_s, "Подтвердить решение")
       end
 
       def status_resolution_input(item, index)
@@ -517,7 +538,7 @@ module ProviderCompiler
       def detail_section(title, decision_id, value, decisions, workspace)
         decision = decisions.find { |item| item["decision_id"] == decision_id }
         <<~HTML
-          <details class="card detail-card"><summary><strong>#{h(title)}</strong>#{status_pill(decision ? decision["outcome"] : "INFO", decision ? tone_for(decision["outcome"]) : "muted")}</summary><div class="detail-body"><p class="detail-summary">#{h(detail_summary(decision_id, value, decision))}</p><details class="technical-details"><summary>Технические подробности</summary>#{json_block(value)}#{decision ? "<p>Decision ID: #{h(decision_id)}</p><a href=\"/workspace/#{workspace.id}/analysis?decision=#{url_escape(decision_id)}\">Почему принято это решение?</a>" : ""}</details></div></details>
+          <section class="card detail-card"><div class="card-heading"><div><h2>#{h(title)}</h2><p>#{h(detail_summary(decision_id, value, decision))}</p></div>#{status_pill(decision ? decision["outcome"] : "INFO", decision ? tone_for(decision["outcome"]) : "muted")}</div>#{explainability_block(decision: decision, result: detail_summary(decision_id, value, decision), explanation: detail_explanation(decision_id, value, decision), technical_data: { "value" => value })}</section>
         HTML
       end
 
@@ -532,6 +553,97 @@ module ProviderCompiler
         when "errors:provider-model" then "#{Array(value).length} HTTP/provider error rules сохранено."
         else "Детали решения доступны в технических подробностях."
         end
+      end
+
+      def explainability_block(decision:, result:, explanation:, evidence: nil, conflicts: nil, technical_data: nil, action_label: "Основания решения", compact: false)
+        decision ||= {}
+        evidence = Array(evidence || decision["evidence"])
+        conflicts = Array(conflicts || decision["conflicts"])
+        technical_data ||= { "candidate" => decision["candidate"], "rationale" => decision["rationale"], "evidence" => evidence, "conflicts" => conflicts }
+        source_ids = evidence.map { |item| item["source"].to_s }.reject(&:empty?).uniq
+        pointers = evidence.flat_map { |item| Array(item["locations"]) }.map(&:to_s).reject(&:empty?).uniq
+        source_labels = source_ids.map { |source| %(<span class="explainability-source"><span>#{h(evidence_source_label(source))}</span><code>#{h(source)}</code></span>) }.join
+        evidence_html = if evidence.empty?
+                          '<p class="muted">Данные для этого решения отсутствуют.</p>'
+                        else
+                          evidence.map { |item| human_evidence_row(item) }.join
+                        end
+        <<~HTML
+          <details class="explainability#{compact ? " compact" : ""}">
+            <summary class="explainability-trigger"><span class="explainability-icon" aria-hidden="true">ⓘ</span><span>#{h(action_label)}</span></summary>
+            <div class="explainability-panel">
+              <div class="explainability-result"><span class="label">Итог</span><strong>#{h(result)}</strong></div>
+              <p class="explainability-human">#{h(explanation)}</p>
+              <div class="explainability-evidence"><span class="label">Данные, использованные системой</span>#{evidence_html}</div>
+              <div class="explainability-sources"><span class="label">Источники решения</span><div class="explainability-source-list">#{source_labels.empty? ? '<span class="muted">Не определены</span>' : source_labels}</div></div>
+              <div class="explainability-conflicts"><span class="label">Конфликты</span><span>#{conflicts.empty? ? "нет" : "обнаружены: #{conflicts.length}"}</span></div>
+              <details class="technical-details"><summary>Технические подробности</summary><div class="technical-meta"><span>Decision ID</span><code>#{h(decision["decision_id"] || "—")}</code><span>Provenance</span><code>#{h(source_ids.empty? ? "—" : source_ids.join(", "))}</code><span>OpenAPI pointer</span><code>#{h(pointers.empty? ? "—" : pointers.join(", "))}</code></div>#{json_block(technical_data)}</details>
+            </div>
+          </details>
+        HTML
+      end
+
+      def human_evidence_row(item)
+        source = item["source"].to_s
+        <<~HTML
+          <div class="human-evidence-row"><div><strong>#{h(evidence_source_label(source))}</strong><code>#{h(source)}</code></div><p>#{h(item["excerpt"] || "Данные OpenAPI или профиля")}</p></div>
+        HTML
+      end
+
+      def evidence_source_label(source)
+        {
+          "BASE_SERVICE_PROFILE" => "Профиль Space Payments",
+          "SPEC_FACT" => "Факт OpenAPI",
+          "SPEC_DESCRIPTION" => "Описание OpenAPI",
+          "CASE_DEFAULT" => "Профиль кейса",
+          "HUMAN_CONFIRMED" => "Подтверждено человеком",
+          "ADAPTER_POLICY" => "Политика адаптера",
+          "UNKNOWN" => "Источник не определён"
+        }.fetch(source.to_s, source.to_s)
+      end
+
+      def find_decision(decisions, decision_id)
+        Array(decisions).find { |item| item["decision_id"] == decision_id }
+      end
+
+      def operation_explanation(endpoint, canonical)
+        return "Endpoint сохранён без автоматической привязки к BaseService." if canonical.nil?
+
+        "HTTP method, path и operationId дают evidence для привязки endpoint к #{canonical}."
+      end
+
+      def money_explanation(money)
+        "Space Payments хранит operation.amount в #{money.dig("host", "unit")} #{money.dig("host", "currency")}; provider принимает #{money.dig("provider", "unit")} amount, поэтому применяется #{conversion_factor_label(money.fetch("request_conversion"))}."
+      end
+
+      def webhook_explanation(webhook)
+        "Webhook проверяется по заявленным endpoint, алгоритму, заголовку и encoding; эти правила используются для безопасной обработки callback."
+      end
+
+      def detail_explanation(decision_id, value, decision)
+        return rationale_summary(decision["rationale"]) if decision && decision["rationale"]
+
+        case decision_id
+        when "idempotency:header" then "OpenAPI-факт и отдельная adapter policy показывают, как обрабатывать повторные запросы."
+        when "fields:create-request" then "Эти соответствия определяют, какие поля проходят между Space Payments и provider API."
+        when "constraints:create-request" then "Ограничения сохраняются для проверки generated request."
+        when "errors:provider-model" then "HTTP и provider error rules определяют безопасную обработку ошибок."
+        else "Техническое объяснение доступно в деталях решения."
+        end
+      end
+
+      def review_impact(decision_id)
+        {
+          "money:amount-units" => "Ошибка преобразования изменит сумму выплаты.",
+          "status:provider-map" => "Неверный mapping может преждевременно подтвердить или отклонить операцию.",
+          "fields:create-request" => "Неверное поле или transform отправит provider неправильные данные.",
+          "webhook:signature" => "Неверная проверка подписи может принять поддельный callback.",
+          "idempotency:header" => "Неверная retry policy может создать повторную выплату."
+        }.fetch(decision_id.to_s, "Неподтверждённое решение может сделать generated adapter небезопасным.")
+      end
+
+      def review_proposal_explanation(decision)
+        "Предложение собрано из доступных фактов OpenAPI, профиля Space Payments и case evidence; подтвердите только те значения, которые соответствуют provider documentation."
       end
 
       def preview_content(workspace, kind, result)
@@ -658,7 +770,7 @@ module ProviderCompiler
             <h2>Проверка не требуется</h2>
             <p>Все критические решения разрешены.</p>
             <div class="review-counts"><span>#{h(summary.fetch("accepted"))} решений принято</span><span>#{h(summary.fetch("review_required"))} требуют проверки</span><span>#{h(summary.fetch("blocking"))} блокирующих</span></div>
-            <div class="review-actions"><a class="button button-primary" href="/workspace/#{workspace.id}/preview">Перейти к предпросмотру</a><a class="button button-secondary" href="/workspace/#{workspace.id}/generate">Перейти к генерации</a></div>
+            <div class="review-actions"><a class="button button-primary" href="/workspace/#{workspace.id}/preview">Перейти к предпросмотру</a><a class="button button-secondary" href="/workspace/#{workspace.id}/analysis">Посмотреть принятые решения</a></div>
           </section>
         HTML
       end
