@@ -1,23 +1,23 @@
-# NovaPay spec-only baseline
+# Эталонный прогон NovaPay только по спецификации
 
-This report measures the official NovaPay OpenAPI input with no provider-specific
-defaults. It is separate from the seven-case mutation lane.
+Этот отчёт измеряет официальный входной OpenAPI-документ NovaPay без defaults,
+специфичных для провайдера. Он отделён от mutation lane из семи кейсов.
 
 <!-- BEGIN GENERATED: NOVAPAY_SPEC_ONLY_BASELINE -->
-**Official input**: `fixtures/novapay_provider_api.yaml`
-**Host profile**: `profiles/space_payments_v1.yml`
-**Provider defaults**: none (spec-only)
+**Официальный вход**: `fixtures/novapay_provider_api.yaml`
+**Профиль хоста**: `profiles/space_payments_v1.yml`
+**Provider defaults**: отсутствуют (spec-only)
 
-| Metric | Result |
+| Метрика | Результат |
 |---|---:|
-| Total decisions | 14 |
-| Accepted decisions | 10 |
-| Review-required decisions | 4 (28.6%) |
-| Blocking entries | 3 |
-| Decision automation | 10/14 (71.4%) |
-| Fully auto-ready | 0/1 (0.0%) |
-| Critical false ACCEPTs | 0 |
-| Unsafe generation attempts | 0 |
+| Всего решений | 14 |
+| Принятые решения | 10 |
+| Решения, требующие review | 4 (28.6%) |
+| Blocking-записи | 3 |
+| Автоматизация решений | 10/14 (71.4%) |
+| Полностью готово автоматически | 0/1 (0.0%) |
+| Критические ложные ACCEPT | 0 |
+| Попытки небезопасной генерации | 0 |
 
-Automatic facts are accepted only where the official specification provides sufficient evidence. Remaining review concerns are preserved in the Review Manifest; the spec-only run does not generate an adapter.
+Автоматические факты принимаются только там, где официальная спецификация даёт достаточные доказательства. Остальные вопросы сохраняются в Review Manifest; spec-only прогон не генерирует адаптер.
 <!-- END GENERATED: NOVAPAY_SPEC_ONLY_BASELINE -->

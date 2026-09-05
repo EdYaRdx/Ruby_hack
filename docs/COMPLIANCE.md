@@ -1,39 +1,45 @@
-# Compliance evidence
+# Доказательства соответствия
 
-This document records a deterministic source-LOC audit for the Ruby majority
-requirement. It counts participant-written source, not repository file counts.
+Этот документ фиксирует детерминированный аудит доли Ruby в исходном коде. Он
+считает написанный участниками исходный код, а не количество файлов в репозитории.
 
-The audit includes Ruby production source from `lib/**/*.rb` and `bin/*`, and
-counts participant-written Web UI JavaScript/CSS in the denominator. It excludes
-documentation, research prose, generated examples/artifacts, fixtures and data,
-dependencies, `vendor/`, and `tmp/`. Blank lines and comment-only lines are not
-counted. Tests are reported separately so the conservative production-only
-result remains visible.
+Аудит включает production-код Ruby из `lib/**/*.rb` и `bin/*`, а написанные
+участниками JavaScript/CSS Web UI входят в знаменатель. Исключаются документация,
+исследовательская проза, сгенерированные примеры и артефакты, fixtures и данные,
+зависимости, `vendor/` и `tmp/`. Пустые строки и строки только с комментариями
+не считаются. Тесты показываются отдельно, чтобы консервативный результат только
+для production оставался видимым.
 
 <!-- BEGIN GENERATED: RUBY_SHARE_AUDIT -->
-**Methodology**
+**Методика**
 
-Participant-written source LOC only. Blank lines and comment-only lines are excluded. Generated examples, fixtures/data, documentation, dependencies, `vendor/`, and `tmp/` are excluded. Web UI JavaScript/CSS is participant-written source and remains in the denominator.
+Считаются только написанные участниками строки исходного кода. Пустые строки и
+строки только с комментариями исключены. Сгенерированные примеры, fixtures/data,
+документация, зависимости, `vendor/` и `tmp/` исключены. JavaScript/CSS Web UI
+считаются исходным кодом участников и остаются в знаменателе.
 
-**Production source only**
+**Только production-код**
 
 - Ruby: 4110 LOC
-- Other participant-written source: 321 LOC
-- Total: 4431 LOC
-- Ruby share: 92.8%
+- Другой исходный код участников: 321 LOC
+- Всего: 4431 LOC
+- Доля Ruby: 92.8%
 
-**Production + tests**
+**Production-код + тесты**
 
 - Ruby: 5325 LOC
-- Other participant-written source: 321 LOC
-- Total: 5646 LOC
-- Ruby share: 94.3%
+- Другой исходный код участников: 321 LOC
+- Всего: 5646 LOC
+- Доля Ruby: 94.3%
 
-Both measurements exceed the `>50%` requirement. The machine-readable file is [`research/ruby_share_audit.json`](../research/ruby_share_audit.json). Re-run `ruby bin/audit_ruby_share` after source changes.
+Оба измерения превышают требование `>50%`. Машиночитаемый файл —
+[`research/ruby_share_audit.json`](../research/ruby_share_audit.json). После
+изменений исходного кода повторно выполните `ruby bin/audit_ruby_share`.
 <!-- END GENERATED: RUBY_SHARE_AUDIT -->
 
-The machine-readable report is [`research/ruby_share_audit.json`](../research/ruby_share_audit.json).
+Машиночитаемый отчёт находится в
+[`research/ruby_share_audit.json`](../research/ruby_share_audit.json).
 
-Project license status: no repository `LICENSE` or `COPYING` file is currently
-present. No license was added automatically; dependency licenses remain listed
-in [`THIRD_PARTY.md`](../THIRD_PARTY.md).
+Статус лицензии проекта: в репозитории сейчас нет файла `LICENSE` или `COPYING`.
+Лицензия автоматически не добавлялась; лицензии зависимостей перечислены в
+[`THIRD_PARTY.md`](../THIRD_PARTY.md).

@@ -1,40 +1,40 @@
-# GOAL 3: независимая validation второго провайдера
+# GOAL 3: независимая проверка второго провайдера
 
 Provider: Aurora Transfers
 
-Провайдер — намеренно независимая synthetic/reference OpenAPI fixture, а не
-переименованный NovaPay document. Его hand-authored ground truth создан в
-`fixtures/aurora_ground_truth.yml` до запуска compiler. Machine-readable
+Провайдер — намеренно независимая синтетическая/reference OpenAPI fixture, а не
+переименованный документ NovaPay. Его ground truth, подготовленная авторами,
+создана в `fixtures/aurora_ground_truth.yml` до запуска compiler. Машиночитаемый
 `semantic_subset` из этого файла сравнивается напрямую с resulting Blueprint;
 одного равенства top-level decision недостаточно.
 
 ## Отличия от NovaPay
 
-| Concern | Aurora Transfers |
+| Область | Aurora Transfers |
 |---|---|
-| Create endpoint | `POST /transfers`, `initiateTransfer` |
-| Status endpoint | `GET /transfers/{transfer_id}`, `getTransferState` |
-| Authentication | Bearer token in `Authorization` |
-| Money | nested `money.value` and `money.currency`, major USD decimal string |
-| Statuses | `queued`, `settled`, `declined`, `voided` |
+| Операция создания | `POST /transfers`, `initiateTransfer` |
+| Операция статуса | `GET /transfers/{transfer_id}`, `getTransferState` |
+| Аутентификация | Bearer token в `Authorization` |
+| Деньги | вложенные `money.value` и `money.currency`, major USD в виде decimal string |
+| Статусы | `queued`, `settled`, `declined`, `voided` |
 | Webhook | `POST /notifications`, `X-Aurora-Signature` |
-| Recipient | `destination` with bank/card conditional fields |
-| Idempotency | optional `X-Aurora-Request-Token` |
-| Extras | `/transfers/{transfer_id}/void` and `/limits` |
+| Получатель | `destination` с conditional fields для bank/card |
+| Idempotency | необязательный `X-Aurora-Request-Token` |
+| Дополнительно | `/transfers/{transfer_id}/void` и `/limits` |
 
 ## Уровни resolution
 
 Harness фиксирует все три требуемых уровня. Средний уровень выделен явно, хотя
-текущая implementation хранит safe reusable rules provider-neutral и встроенными
-в generic analyzer, поэтому input у него такой же, как у pure-generic run.
+текущая реализация хранит безопасные повторно используемые provider-neutral rules
+в общем analyzer, поэтому его input такой же, как у pure-generic run.
 
-| Level | Input beyond BaseServiceProfile | Result | Blocking | Generation |
+| Уровень | Input сверх BaseServiceProfile | Результат | Blocking | Генерация |
 |---|---|---|---:|---|
 | A. Pure generic | none | `REVIEW_REQUIRED` | 1 | not attempted |
 | B. Generic + safe reusable rules | built-in provider-neutral rules | `REVIEW_REQUIRED` | 1 | not attempted |
 | C. Generic + minimal provider-specific resolution | four explicit sections | `ACCEPT` | 0 | syntax and smoke PASS |
 
-Все три уровня прошли independent semantic comparator. Level C также прошёл
+Все три уровня прошли независимый semantic comparator. Level C также прошёл
 четыре hand-authored behavioral vectors.
 
 ### Pure generic level
@@ -62,19 +62,19 @@ profile/default. Generation на этом уровне не запускалас
 Этот уровень намеренно не является скрытым provider-specific rules file.
 Встроенные synonym candidates остаются review-only для critical status
 semantics, а неизвестные webhook raw-body/encoding details остаются blocking.
-Это подтверждает, что reusable generic rules улучшают объяснение, не принимая
+Это подтверждает, что повторно используемые общие rules улучшают объяснение, не принимая
 молча Aurora-specific meanings.
 
 ### Resolved level
 
-Минимальный provider-specific resolution file содержит четыре sections:
+Минимальный provider-specific resolution file содержит четыре раздела:
 
 - money representation metadata;
 - status map;
 - webhook raw-body/hex policy;
 - nested request/response field mappings.
 
-Полученная Blueprint имеет `ACCEPT`, zero blocking/review decisions, а generated
+Полученная Blueprint имеет `ACCEPT`, нулевые blocking/review decisions, а generated
 artifacts проходят syntax и contract smoke verification:
 
 - `tmp/benchmark/aurora-generic_plus_case_defaults/provider_blueprint.json`;
@@ -97,10 +97,10 @@ Semantic comparator независимо проверил resolved Blueprint д�
 
 ## Независимые behavioral vectors
 
-Vectors hand-authored в `fixtures/aurora_behavioral_vectors.yml` и не
-генерируются из Blueprint. Results generated service:
+Vectors подготовлены авторами в `fixtures/aurora_behavioral_vectors.yml` и не
+генерируются из Blueprint. Результаты generated service:
 
-| Vector | Expected behavior | Result |
+| Вектор | Ожидаемое поведение | Результат |
 |---|---|---|
 | Host create input | nested request body, Bearer auth, optional token header, sandbox URL | PASS |
 | Provider status response | `settled` → canonical `approved`, amount `12.50` | PASS |

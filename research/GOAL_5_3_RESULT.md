@@ -1,141 +1,143 @@
-# GOAL 5.3 FINAL HARDENING RESULT
+# GOAL 5.3 — итоговое усиление
 
-## Scope
+> Исторический отчёт состояния до финального commit/push GOAL 5.3. Текущие
+> результаты и доступность репозитория определяются корневым README, CI и
+> актуальным git remote.
 
-GOAL 5.3 added only GitHub/CI/compliance/documentation hardening. No analyzer,
-Blueprint, generator, Web UX, Review logic, benchmark ground truth, provider
-defaults, or Preview semantics were changed. No files under `lib/`, `app/`, or
-`web/` were modified.
+## Область работ
+
+GOAL 5.3 добавил только усиление GitHub/CI/compliance/документации. Не менялись
+analyzer, Blueprint, generator, Web UX, логика Review, ground truth benchmark,
+provider defaults и семантика Preview. Файлы в `lib/`, `app/` и `web/` не менялись.
 
 ## CI
 
 Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 
-Ruby version: `3.3` on `windows-latest`, matching the locked
-`x64-mingw-ucrt` platform.
+Версия Ruby: `3.3` на `windows-latest`, что соответствует платформе
+`x64-mingw-ucrt` из lockfile.
 
-- RSpec: PASS locally.
-- Reference benchmark: PASS locally, `37/37`.
-- NovaPay spec-only: PASS locally.
-- Aurora: PASS locally.
-- HeliosPay: PASS locally.
-- Ruby syntax: PASS locally.
-- Ruby-share audit: PASS locally.
-- Updater reproducibility: PASS locally.
-- `git diff --check`: PASS locally.
-- GitHub remote CI status: PENDING — workflow is syntactically validated but
-  this GOAL does not push or change repository settings.
+- RSpec: PASS локально.
+- Reference benchmark: PASS локально, `37/37`.
+- NovaPay spec-only: PASS локально.
+- Aurora: PASS локально.
+- HeliosPay: PASS локально.
+- Синтаксис Ruby: PASS локально.
+- Аудит доли Ruby: PASS локально.
+- Воспроизводимость updater-ов: PASS локально.
+- `git diff --check`: PASS локально.
+- Удалённый статус CI GitHub: PENDING — workflow синтаксически проверен, но на момент исходного аудита этот GOAL не выполнял push и не менял настройки репозитория.
 
-The workflow fails on RSpec, benchmark non-zero exit, Ruby-share threshold,
-syntax failure, updater diff, or `git diff --check` failure. It uses no live
-provider API, credentials, browser, or external inference service.
+Workflow завершается ошибкой при падении RSpec, ненулевом benchmark-коде,
+нарушении порога доли Ruby, ошибке синтаксиса, diff после updater-а или ошибке
+`git diff --check`. Он не использует live provider API, credentials, browser или
+внешний inference service.
 
-## Ruby compliance
+## Соответствие доле Ruby
 
-Audit script: [`bin/audit_ruby_share`](../bin/audit_ruby_share)
+Скрипт аудита: [`bin/audit_ruby_share`](../bin/audit_ruby_share)
 
-Machine-readable output: [`research/ruby_share_audit.json`](ruby_share_audit.json)
+Машиночитаемый результат: [`research/ruby_share_audit.json`](ruby_share_audit.json)
 
-Documentation: [`docs/COMPLIANCE.md`](../docs/COMPLIANCE.md)
+Документация: [`docs/COMPLIANCE.md`](../docs/COMPLIANCE.md)
 
-Methodology: count participant-written source LOC after excluding blank lines
-and comment-only lines. Production Ruby is `lib/**/*.rb` plus `bin/*`.
-Participant-written Web UI JavaScript/CSS is the non-Ruby denominator. Tests are
-reported separately. Documentation, research prose, generated examples,
-fixtures/data, JSON/YAML, dependencies, `vendor/`, and `tmp/` are excluded.
+Методика: считаются написанные участниками строки исходного кода после исключения
+пустых строк и строк только с комментариями. Production Ruby — это `lib/**/*.rb`
+и `bin/*`. Написанные участниками JavaScript/CSS Web UI входят в знаменатель не-
+Ruby. Тесты показываются отдельно. Документация, исследовательская проза,
+сгенерированные примеры, fixtures/data, JSON/YAML, зависимости, `vendor/` и
+`tmp/` исключаются.
 
 Production Ruby LOC: `4110`
 
-Other participant-written source LOC: `321`
+Другой исходный код участников: `321`
 
-Production Ruby share: `92.8%`
+Доля Ruby только в production: `92.8%`
 
 Production + tests Ruby LOC: `5325`
 
-Production + tests Ruby share: `94.3%`
+Доля Ruby в production + tests: `94.3%`
 
-Requirement `>50%`: PASS.
+Требование `>50%`: PASS.
 
-## Documentation
+## Документация
 
-- README: PASS — HeliosPay narrative, CI link, compliance evidence, current
-  structure and limitations are visible.
-- BENCHMARK intro: PASS — now lists four evidence families: regression,
-  reference mutation, spec-only lanes, and Aurora/Helios independent-provider
-  validation.
-- HeliosPay narrative: PASS — described as blind third-provider validation with
-  ground truth authored before the run, including query auth, nested money,
-  HTTP 202, errors, webhook events, and extra operations.
-- Compliance documentation: PASS.
-- Broken links: `0` after the final report is present.
-- Stale current metrics: `0`; legacy fields remain explicitly labelled as
-  historical machine-output fields.
-- Local absolute paths: `0` in current judge-facing documentation.
-- Credential-pattern scan outside ignored `tmp/`: `0` matches.
+- README: PASS — видны нарратив HeliosPay, CI-ссылка, compliance-доказательства,
+  текущая структура и ограничения.
+- Введение BENCHMARK: PASS — перечислены четыре группы доказательств: regression,
+  reference mutation, spec-only и независимая проверка Aurora/Helios.
+- Нарратив HeliosPay: PASS — провайдер описан как независимая проверка третьего
+  провайдера с ground truth, подготовленной до запуска, включая query auth,
+  вложенные деньги, HTTP 202, ошибки, события webhook и дополнительные операции.
+- Документация compliance: PASS.
+- Битые ссылки: `0` после добавления итогового отчёта.
+- Устаревшие текущие метрики: `0`; legacy-поля явно помечены как исторические
+  поля machine output.
+- Локальные абсолютные пути: `0` в текущей документации для оценки.
+- Совпадения credential-паттернов вне игнорируемого `tmp/`: `0`.
 
-Project license: ABSENT — no `LICENSE` or `COPYING` file is present. Risk:
-MEDIUM for a public submission until the owner chooses an appropriate project
-license. No license was added automatically; dependency licenses remain in
+Лицензия проекта: ОТСУТСТВУЕТ — файлов `LICENSE` и `COPYING` нет. Риск: СРЕДНИЙ
+для публичной отправки, пока владелец не выберет подходящую лицензию проекта.
+Лицензия автоматически не добавлялась; лицензии зависимостей перечислены в
 [`THIRD_PARTY.md`](../THIRD_PARTY.md).
 
-## Repository access
+## Доступ к репозиторию
 
-Visibility: `PRIVATE / not publicly readable without authentication` based on
-unauthenticated GitHub page/API responses returning HTTP 404. The authenticated
-git remote remains configured as:
+Видимость: `PRIVATE / not publicly readable without authentication` — это следует
+из ответов GitHub page/API без аутентификации со статусом HTTP 404. Настроенный
+аутентифицированный git remote:
 `https://github.com/EdYaRdx/Ruby_hack.git`.
 
-Judge access risk: `YES`.
+Риск доступа для judge: `YES`.
 
-Recommended action before submission: make the repository public, or explicitly
-add the organizers/judges as collaborators if the rules require a private
-repository. Visibility and GitHub settings were not changed automatically.
+Рекомендуемое действие перед отправкой: сделать репозиторий public или явно
+добавить организаторов/judges в collaborators, если правила требуют private
+репозиторий. Видимость и настройки GitHub автоматически не менялись.
 
-Repository metadata recommendation: set a concise description such as
-`OpenAPI → evidence-backed Ruby payment provider integration compiler` and add
-topics such as `ruby`, `openapi`, `payments`, and `hackathon` if appropriate.
-Metadata was not changed automatically.
+Рекомендуемое описание репозитория: `OpenAPI → evidence-backed Ruby payment
+provider integration compiler`; подходящие topics: `ruby`, `openapi`, `payments`
+и `hackathon`. Metadata автоматически не менялись.
 
-## Regression
+## Регрессия
 
 - RSpec: `77 examples, 0 failures`.
 - Reference benchmark: `37/37`.
-- NovaPay spec-only: `10/14` accepted decisions, `4/14` review-required,
-  `3` blocking entries, `0` critical false ACCEPTs.
-- NovaPay mutation lane: `74/98` accepted decisions, `24/98` review-required,
-  `17` blocking entries, `0` critical false ACCEPTs.
-- Aurora: spec-only `12/14`, resolved `14/14`, behavioral vectors `4/4`.
-- HeliosPay: spec-only `11/13`, resolved `13/13`, behavioral vectors `4/4`.
-- Critical false ACCEPTs: `0`.
-- Unsafe generation attempts: `0`.
-- Official NovaPay SHA:
+- NovaPay spec-only: `10/14` принятых решений, `4/14` review-required,
+  `3` blocking-записи, `0` критических ложных ACCEPT.
+- NovaPay mutation lane: `74/98` принятых решений, `24/98` review-required,
+  `17` blocking-записей, `0` критических ложных ACCEPT.
+- Aurora: spec-only `12/14`, после разрешения `14/14`, behavioral vectors `4/4`.
+- HeliosPay: spec-only `11/13`, после разрешения `13/13`, behavioral vectors `4/4`.
+- Критические ложные ACCEPT: `0`.
+- Попытки небезопасной генерации: `0`.
+- SHA официального NovaPay:
   `415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551`.
-- `update_docs` idempotent: YES.
-- `update_examples` idempotent: YES.
+- `update_docs` идемпотентен: YES.
+- `update_examples` идемпотентен: YES.
 - `git diff --check`: PASS.
 
 ## Backend
 
-Semantic changes: NONE.
+Семантические изменения: НЕТ.
 
-Files under `lib/` changed: NONE.
+Изменённые файлы в `lib/`: НЕТ.
 
-Architecture changed: NO.
+Архитектура изменена: НЕТ.
 
-## Final freeze
+## Финальная фиксация
 
-Remaining blocking issues: none in compiler correctness or local validation.
+Оставшиеся blocking-проблемы в корректности компилятора или локальной проверке:
+нет.
 
-Remaining non-blocking/submission issues:
+Оставшиеся неблокирующие проблемы отправки:
 
-- GitHub public visibility or judge collaborator access must be resolved by the
-  repository owner.
-- Remote GitHub Actions run is pending until the workflow is pushed.
-- Project license choice remains the owner's decision.
+- необходимо решить вопрос публичной видимости GitHub или доступа judge;
+- удалённый запуск GitHub Actions появится после push workflow;
+- выбор лицензии проекта остаётся решением владельца.
 
-READY FOR FINAL COMMIT: YES
+ГОТОВНОСТЬ К ФИНАЛЬНОМУ КОММИТУ: ДА
 
-READY FOR FINAL PUSH: NO — resolve judge access and review the new CI/compliance
-files first.
+ГОТОВНОСТЬ К ФИНАЛЬНОМУ PUSH: НЕТ — сначала нужно решить доступ judge и
+проверить новые CI/compliance-файлы.
 
-READY TO FREEZE DEVELOPMENT: YES for backend semantics and product behavior.
+ГОТОВНОСТЬ ЗАМОРОЗИТЬ РАЗРАБОТКУ: ДА для backend-семантики и поведения продукта.

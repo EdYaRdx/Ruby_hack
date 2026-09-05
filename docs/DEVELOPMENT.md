@@ -21,17 +21,17 @@ bundle exec ruby bin/provider_compiler_web
 
 После запуска откройте `http://127.0.0.1:4567`. Хост и порт можно изменить
 переменными `PROVIDER_COMPILER_WEB_HOST` и `PROVIDER_COMPILER_WEB_PORT`.
-UI-тесты находятся в `spec/web_spec.rb`; они проверяют upload, demo-сценарии,
-Review safety, runtime Preview и generated artifacts.
+UI-тесты находятся в `spec/web_spec.rb`; они проверяют загрузку, демо-сценарии,
+безопасность Review, runtime Preview и сгенерированные артефакты.
 
 ## Процесс изменения
 
 1. Меняйте минимально необходимый loader, analyzer, profile или generator.
-2. Добавляйте точечный RSpec regression для поведения и его safety boundary.
+2. Добавляйте точечный RSpec regression для поведения и его границы безопасности.
 3. Запускайте полный suite и проверки Ruby syntax.
 4. Пересоздавайте canonical example командой `ruby bin/update_examples`.
-5. Обновляйте benchmark-backed documentation командой `ruby bin/update_docs`.
-6. Проверяйте generated diff: `examples/novapay/` нельзя редактировать вручную.
+5. Обновляйте документацию с benchmark-данными командой `ruby bin/update_docs`.
+6. Проверяйте diff сгенерированных файлов: `examples/novapay/` нельзя редактировать вручную.
 
 Полезные команды:
 
@@ -51,16 +51,16 @@ ruby bin/update_docs
 
 ## Правила проектирования
 
-- Различайте provider facts, evidence, inference и adapter policy.
-- Храните canonical host mappings в profiles/Blueprints, а не в templates.
+- Различайте факты провайдера, evidence, inference и adapter policy.
+- Храните канонические сопоставления хоста в profiles/Blueprints, а не в templates.
 - Сохраняйте extra operations и неподдержанную информацию.
-- Считайте money units, terminal statuses, webhook verification и retry
-  idempotency safety-sensitive областями.
+- Считайте денежные единицы, terminal statuses, проверку webhook и retry
+  idempotency областями, чувствительными к безопасности.
 - Не превращайте `REVIEW_REQUIRED` или `UNKNOWN` в тихий `ACCEPT`.
 - Generator не выводит семантику самостоятельно: он получает уже разрешённый
   Blueprint.
-- Web UI остаётся presentation adapter над тем же Application/Core pipeline и не
-  дублирует analyzers, mapper-ы или BlueprintValidator.
+- Web UI остаётся адаптером представления над тем же Application/Core pipeline и не
+  дублирует анализаторы, mapper-ы или BlueprintValidator.
 - Не добавляйте live network calls, credentials или внешние runtime services.
 
 Перед semantic change прочитайте [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) и
@@ -72,14 +72,14 @@ ruby bin/update_docs
 Команды выше работают в PowerShell из корня репозитория. Если `ruby` или
 `bundle` не найдены, установите RubyInstaller с MSYS2 toolchain и откройте новый
 терминал; отдельное Python virtual environment для проекта не требуется.
-For arbitrary specifications, prefer explicit spec-only commands first:
+Для произвольных спецификаций сначала используйте явные команды spec-only:
 
 ```powershell
 ruby bin/provider_compiler inspect --spec path/to/provider.yaml
 ruby bin/provider_compiler analyze --spec path/to/provider.yaml --out tmp/spec-only
 ```
 
-Add `--defaults path/to/provider_defaults.yml` only when provider-specific
-business knowledge is intentionally supplied. The benchmark lanes are run
-independently with `research/benchmark/spec_only.rb` and
+Добавляйте `--defaults path/to/provider_defaults.yml` только когда намеренно
+передаёте бизнес-знания конкретного провайдера. Benchmark-прогоны запускаются
+независимо через `research/benchmark/spec_only.rb` и
 `research/benchmark/third_provider.rb`.

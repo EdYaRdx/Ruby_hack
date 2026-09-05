@@ -40,9 +40,9 @@ RSpec.describe "submission documentation" do
     readme = File.read(File.join(ROOT, "README.md"), encoding: "UTF-8")
     benchmark = File.read(File.join(ROOT, "docs", "BENCHMARK.md"), encoding: "UTF-8")
 
-    expect(readme).to include("Decision automation")
-    expect(readme).to include("Fully auto-ready")
-    expect(readme).to include("Critical false ACCEPTs")
+    expect(readme).to include("decision_automation_rate")
+    expect(readme).to include("fully_auto_ready_rate")
+    expect(readme).to include("unsafe_generation_attempts")
     expect(benchmark).to include("decision_automation_rate")
     expect(benchmark).to include("fully_auto_ready_rate")
     expect(benchmark).to include("unsafe_generation_attempts")

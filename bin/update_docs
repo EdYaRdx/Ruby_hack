@@ -48,7 +48,7 @@ end
 
 def safety_metrics(metrics)
   safety = metrics.fetch("safety")
-  "false ACCEPTs #{safety.fetch("critical_false_accepts")}; unsafe generation attempts #{safety.fetch("unsafe_generation_attempts")}"
+  "критических ложных ACCEPT #{safety.fetch("critical_false_accepts")}; попыток небезопасной генерации #{safety.fetch("unsafe_generation_attempts")}"
 end
 
 def replace_block(path, name, content)
@@ -102,78 +102,78 @@ helios_spec_metrics = third_spec_only.fetch("metrics")
 helios_resolved_metrics = third_resolved.fetch("metrics")
 
 status_block = <<~MARKDOWN
-  **Current verification snapshot (generated)**
+  **Текущий снимок проверки (сгенерировано)**
 
-  - RSpec: #{rspec_summary.fetch("example_count")} examples, failures: #{rspec_summary.fetch("failure_count")}.
-  - Reference mutation benchmark: #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")} adversarial mutations of one reference provider domain; semantic accuracy: #{percent(aggregate["semantic_accept_accuracy"])}; critical false ACCEPTs: #{aggregate.fetch("critical_false_accept_count")}.
-  - NovaPay official spec-only baseline: decision automation #{decision_metrics(baseline_metrics)}; review rate #{review_metrics(baseline_metrics)}; fully auto-ready #{full_ready_metrics(baseline_metrics)}; #{safety_metrics(baseline_metrics)}.
-  - NovaPay spec-only mutation lane: decision automation #{decision_metrics(spec_only_metrics)}; review rate #{review_metrics(spec_only_metrics)}; fully auto-ready #{full_ready_metrics(spec_only_metrics)}; #{safety_metrics(spec_only_metrics)}.
-  - Aurora spec-only: decision automation #{decision_metrics(aurora_spec_metrics)}; fully auto-ready #{full_ready_metrics(aurora_spec_metrics)}. Aurora resolved: #{full_ready_metrics(aurora_resolved_metrics)}; behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}.
-  - HeliosPay spec-only: decision automation #{decision_metrics(helios_spec_metrics)}; fully auto-ready #{full_ready_metrics(helios_spec_metrics)}. Resolved: #{full_ready_metrics(helios_resolved_metrics)}; behavioral vectors #{third_resolved.dig("behavioral_vectors", "passed_count")}/#{third_resolved.dig("behavioral_vectors", "count")}.
+  - RSpec: #{rspec_summary.fetch("example_count")} примеров, ошибок: #{rspec_summary.fetch("failure_count")}.
+  - Reference mutation benchmark: #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")} adversarial-мутаций одного домена эталонного провайдера; точность семантики: #{percent(aggregate["semantic_accept_accuracy"])}; критических ложных ACCEPT: #{aggregate.fetch("critical_false_accept_count")}.
+  - Официальный NovaPay spec-only baseline: автоматизация решений #{decision_metrics(baseline_metrics)}; доля review #{review_metrics(baseline_metrics)}; полностью готовых автоматически #{full_ready_metrics(baseline_metrics)}; #{safety_metrics(baseline_metrics)}.
+  - NovaPay spec-only mutation lane: автоматизация решений #{decision_metrics(spec_only_metrics)}; доля review #{review_metrics(spec_only_metrics)}; полностью готовых автоматически #{full_ready_metrics(spec_only_metrics)}; #{safety_metrics(spec_only_metrics)}.
+  - Aurora spec-only: автоматизация решений #{decision_metrics(aurora_spec_metrics)}; полностью готовых автоматически #{full_ready_metrics(aurora_spec_metrics)}. Aurora после разрешения: #{full_ready_metrics(aurora_resolved_metrics)}; behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}.
+  - HeliosPay spec-only: автоматизация решений #{decision_metrics(helios_spec_metrics)}; полностью готовых автоматически #{full_ready_metrics(helios_spec_metrics)}. После разрешения: #{full_ready_metrics(helios_resolved_metrics)}; behavioral vectors #{third_resolved.dig("behavioral_vectors", "passed_count")}/#{third_resolved.dig("behavioral_vectors", "count")}.
 
-  Run `ruby bin/update_docs` to refresh this snapshot from the benchmark and RSpec outputs.
+  Выполните `ruby bin/update_docs`, чтобы обновить этот снимок по результатам benchmark и RSpec.
 MARKDOWN
 
 capabilities_block = <<~MARKDOWN
-  - OpenAPI ingestion, local reference resolution and source fingerprinting are implemented in `lib/provider_compiler/core.rb`.
-  - Evidence-aware analysis, Review Manifest and Provider Blueprint are implemented across the analyzer/profile/blueprint layers.
-  - Deterministic Ruby projection and verification are implemented by the generator and verification layers.
-  - Canonical NovaPay example: #{example_files.length} files in `examples/novapay/` (`#{example_files.join("`, `")}`).
-  - Independent semantic validation: the NovaPay mutation benchmark and Aurora/Helios comparisons are included in the generated status below.
-  - Live provider calls are not implemented; the Web UI Demo Workbench is implemented in `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` and `web/public/`.
+  - Загрузка OpenAPI, разрешение локальных ссылок и fingerprint источника реализованы в `lib/provider_compiler/core.rb`.
+  - Анализ с учётом доказательств, `Review Manifest` и `Provider Blueprint` реализованы в слоях analyzer/profile/blueprint.
+  - Детерминированная Ruby-проекция и проверка результата реализованы в слоях generator и verification.
+  - Канонический пример NovaPay: #{example_files.length} файлов в `examples/novapay/` (`#{example_files.join("`, `")}`).
+  - Независимая проверка семантики: benchmark мутаций NovaPay и сравнения Aurora/Helios включены в сгенерированный статус ниже.
+  - Реальные вызовы провайдера не реализованы; локальный Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
-  Run `ruby bin/update_docs` to refresh this snapshot.
+  Выполните `ruby bin/update_docs`, чтобы обновить этот снимок.
 MARKDOWN
 
 judge_metrics_block = <<~MARKDOWN
-  | Lane | Decision automation | Review rate | Fully auto-ready | Safety |
+  | Прогон | Автоматизация решений | Доля review | Полностью готово автоматически | Безопасность |
   |---|---:|---:|---:|---|
-  | NovaPay official spec-only | #{decision_metrics(baseline_metrics)} | #{review_metrics(baseline_metrics)} | #{full_ready_metrics(baseline_metrics)} | #{safety_metrics(baseline_metrics)} |
-  | NovaPay spec-only mutation lane (7 cases) | #{decision_metrics(spec_only_metrics)} | #{review_metrics(spec_only_metrics)} | #{full_ready_metrics(spec_only_metrics)} | #{safety_metrics(spec_only_metrics)} |
+  | Официальный NovaPay spec-only | #{decision_metrics(baseline_metrics)} | #{review_metrics(baseline_metrics)} | #{full_ready_metrics(baseline_metrics)} | #{safety_metrics(baseline_metrics)} |
+  | NovaPay mutation lane (7 кейсов) | #{decision_metrics(spec_only_metrics)} | #{review_metrics(spec_only_metrics)} | #{full_ready_metrics(spec_only_metrics)} | #{safety_metrics(spec_only_metrics)} |
   | Aurora spec-only | #{decision_metrics(aurora_spec_metrics)} | #{review_metrics(aurora_spec_metrics)} | #{full_ready_metrics(aurora_spec_metrics)} | #{safety_metrics(aurora_spec_metrics)} |
-  | Aurora resolved | #{decision_metrics(aurora_resolved_metrics)} | #{review_metrics(aurora_resolved_metrics)} | #{full_ready_metrics(aurora_resolved_metrics)} | #{safety_metrics(aurora_resolved_metrics)} |
+  | Aurora после разрешения | #{decision_metrics(aurora_resolved_metrics)} | #{review_metrics(aurora_resolved_metrics)} | #{full_ready_metrics(aurora_resolved_metrics)} | #{safety_metrics(aurora_resolved_metrics)} |
   | HeliosPay spec-only | #{decision_metrics(helios_spec_metrics)} | #{review_metrics(helios_spec_metrics)} | #{full_ready_metrics(helios_spec_metrics)} | #{safety_metrics(helios_spec_metrics)} |
-  | HeliosPay resolved | #{decision_metrics(helios_resolved_metrics)} | #{review_metrics(helios_resolved_metrics)} | #{full_ready_metrics(helios_resolved_metrics)} | #{safety_metrics(helios_resolved_metrics)} |
+  | HeliosPay после разрешения | #{decision_metrics(helios_resolved_metrics)} | #{review_metrics(helios_resolved_metrics)} | #{full_ready_metrics(helios_resolved_metrics)} | #{safety_metrics(helios_resolved_metrics)} |
 
-  Decision automation is an accepted-decision metric, not a readiness claim. Full-spec auto-ready means a complete spec has zero `REVIEW_REQUIRED` decisions and zero blocking entries. Blocking is reported separately because one decision may produce multiple blocking entries. The benchmark also reports generation/runtime gates where generation is attempted.
+  Автоматизация решений — это метрика принятых решений, а не заявление о готовности. Полная автоматическая готовность означает, что спецификация не содержит решений `REVIEW_REQUIRED` и blocking-записей. Blocking считается отдельно, потому что одно решение может породить несколько blocking-записей. Benchmark также сообщает о контрольных точках генерации и runtime там, где генерация запускалась.
 MARKDOWN
 
 benchmark_block = <<~MARKDOWN
-  **Reference mutation benchmark**
+  **Эталонный benchmark мутаций**
 
-  - Scope: #{aggregate.fetch("cases_total")} adversarial mutations of one reference provider domain, not #{aggregate.fetch("cases_total")} providers.
-  - Independent decision/semantic cases passed: #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}.
-  - Decision accuracy: #{percent(aggregate["decision_accuracy"])}; semantic ACCEPT accuracy: #{percent(aggregate["semantic_accept_accuracy"])}.
-  - Semantic areas (operation / money / status / auth / webhook / idempotency / field mapping): #{%w[operation_semantic_accuracy money_semantic_accuracy status_semantic_accuracy auth_semantic_accuracy webhook_semantic_accuracy idempotency_semantic_accuracy field_mapping_semantic_accuracy].map { |key| percent(aggregate[key]) }.join(" / ")}.
-  - Critical false ACCEPTs: #{aggregate.fetch("critical_false_accept_count")}; generation: #{aggregate.fetch("generation_pass_count")}/#{aggregate.fetch("generation_attempt_count")} attempts passed.
+  - Область: #{aggregate.fetch("cases_total")} adversarial-мутаций одного домена эталонного провайдера, а не #{aggregate.fetch("cases_total")} провайдеров.
+  - Независимые decision/semantic-кейсы пройдены: #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")}.
+  - Точность решений: #{percent(aggregate["decision_accuracy"])}; точность semantic ACCEPT: #{percent(aggregate["semantic_accept_accuracy"])}.
+  - Семантические области (operation / money / status / auth / webhook / idempotency / field mapping): #{%w[operation_semantic_accuracy money_semantic_accuracy status_semantic_accuracy auth_semantic_accuracy webhook_semantic_accuracy idempotency_semantic_accuracy field_mapping_semantic_accuracy].map { |key| percent(aggregate[key]) }.join(" / ")}.
+  - Критических ложных ACCEPT: #{aggregate.fetch("critical_false_accept_count")}; генерация: #{aggregate.fetch("generation_pass_count")}/#{aggregate.fetch("generation_attempt_count")} попыток пройдены.
 
-  **Spec-only lanes**
+  **Прогоны только по спецификации**
 
-  - NovaPay official baseline: decision automation #{decision_metrics(baseline_metrics)}; review rate #{review_metrics(baseline_metrics)}; blocking entries #{baseline_metrics.dig("decision_level", "blocking_entries")}; fully auto-ready #{full_ready_metrics(baseline_metrics)}; #{safety_metrics(baseline_metrics)}.
-  - NovaPay mutation lane: #{spec_only_aggregate.fetch("cases_total")} cases, #{spec_only_aggregate.dig("metrics", "decision_level", "total_decisions")} decisions; decision automation #{decision_metrics(spec_only_metrics)}; review rate #{review_metrics(spec_only_metrics)}; blocking entries #{spec_only_metrics.dig("decision_level", "blocking_entries")}; fully auto-ready #{full_ready_metrics(spec_only_metrics)}; #{safety_metrics(spec_only_metrics)}.
-  - Aurora: spec-only decision automation #{decision_metrics(aurora_spec_metrics)}, fully auto-ready #{full_ready_metrics(aurora_spec_metrics)}; resolved fully auto-ready #{full_ready_metrics(aurora_resolved_metrics)}; behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}.
-  - HeliosPay: spec-only decision automation #{decision_metrics(helios_spec_metrics)}, fully auto-ready #{full_ready_metrics(helios_spec_metrics)}; resolved fully auto-ready #{full_ready_metrics(helios_resolved_metrics)}; behavioral vectors #{third_resolved.dig("behavioral_vectors", "passed_count")}/#{third_resolved.dig("behavioral_vectors", "count")}.
+  - Официальный NovaPay baseline: автоматизация решений #{decision_metrics(baseline_metrics)}; доля review #{review_metrics(baseline_metrics)}; blocking-записей #{baseline_metrics.dig("decision_level", "blocking_entries")}; полностью готовых автоматически #{full_ready_metrics(baseline_metrics)}; #{safety_metrics(baseline_metrics)}.
+  - NovaPay mutation lane: #{spec_only_aggregate.fetch("cases_total")} кейсов, #{spec_only_aggregate.dig("metrics", "decision_level", "total_decisions")} решений; автоматизация решений #{decision_metrics(spec_only_metrics)}; доля review #{review_metrics(spec_only_metrics)}; blocking-записей #{spec_only_metrics.dig("decision_level", "blocking_entries")}; полностью готовых автоматически #{full_ready_metrics(spec_only_metrics)}; #{safety_metrics(spec_only_metrics)}.
+  - Aurora: автоматизация решений только по спецификации #{decision_metrics(aurora_spec_metrics)}, полностью готовых автоматически #{full_ready_metrics(aurora_spec_metrics)}; после разрешения полностью готовых автоматически #{full_ready_metrics(aurora_resolved_metrics)}; behavioral vectors #{aurora_vectors_passed}/#{aurora_vectors_total}.
+  - HeliosPay: автоматизация решений только по спецификации #{decision_metrics(helios_spec_metrics)}, полностью готовых автоматически #{full_ready_metrics(helios_spec_metrics)}; после разрешения полностью готовых автоматически #{full_ready_metrics(helios_resolved_metrics)}; behavioral vectors #{third_resolved.dig("behavioral_vectors", "passed_count")}/#{third_resolved.dig("behavioral_vectors", "count")}.
 
-  Legacy `automatic_coverage` remains in machine results for historical comparison only. It is not a judge-facing automation or safety metric.
+  Legacy `automatic_coverage` остаётся в machine results только для исторического сравнения. Это не judge-facing метрика автоматизации или безопасности.
 MARKDOWN
 
 baseline_block = <<~MARKDOWN
-  **Official input**: `fixtures/novapay_provider_api.yaml`
-  **Host profile**: `profiles/space_payments_v1.yml`
-  **Provider defaults**: none (spec-only)
+  **Официальный вход**: `fixtures/novapay_provider_api.yaml`
+  **Профиль хоста**: `profiles/space_payments_v1.yml`
+  **Provider defaults**: отсутствуют (spec-only)
 
-  | Metric | Result |
+  | Метрика | Результат |
   |---|---:|
-  | Total decisions | #{baseline_metrics.dig("decision_level", "total_decisions")} |
-  | Accepted decisions | #{baseline_metrics.dig("decision_level", "accepted_decisions")} |
-  | Review-required decisions | #{baseline_metrics.dig("decision_level", "review_required_decisions")} (#{percent(baseline_metrics.dig("decision_level", "review_rate"))}) |
-  | Blocking entries | #{baseline_metrics.dig("decision_level", "blocking_entries")} |
-  | Decision automation | #{decision_metrics(baseline_metrics)} |
-  | Fully auto-ready | #{full_ready_metrics(baseline_metrics)} |
-  | Critical false ACCEPTs | #{baseline_metrics.dig("safety", "critical_false_accepts")} |
-  | Unsafe generation attempts | #{baseline_metrics.dig("safety", "unsafe_generation_attempts")} |
+  | Всего решений | #{baseline_metrics.dig("decision_level", "total_decisions")} |
+  | Принятые решения | #{baseline_metrics.dig("decision_level", "accepted_decisions")} |
+  | Решения, требующие review | #{baseline_metrics.dig("decision_level", "review_required_decisions")} (#{percent(baseline_metrics.dig("decision_level", "review_rate"))}) |
+  | Blocking-записи | #{baseline_metrics.dig("decision_level", "blocking_entries")} |
+  | Автоматизация решений | #{decision_metrics(baseline_metrics)} |
+  | Полностью готово автоматически | #{full_ready_metrics(baseline_metrics)} |
+  | Критические ложные ACCEPT | #{baseline_metrics.dig("safety", "critical_false_accepts")} |
+  | Попытки небезопасной генерации | #{baseline_metrics.dig("safety", "unsafe_generation_attempts")} |
 
-  Automatic facts are accepted only where the official specification provides sufficient evidence. Remaining review concerns are preserved in the Review Manifest; the spec-only run does not generate an adapter.
+  Автоматические факты принимаются только там, где официальная спецификация даёт достаточные доказательства. Остальные вопросы сохраняются в Review Manifest; spec-only прогон не генерирует адаптер.
 MARKDOWN
 
 replace_block(File.join(ROOT, "README.md"), "PROJECT_STATUS", status_block)

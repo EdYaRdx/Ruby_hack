@@ -2,33 +2,35 @@
 
 [![CI](https://github.com/EdYaRdx/Ruby_hack/actions/workflows/ci.yml/badge.svg)](https://github.com/EdYaRdx/Ruby_hack/actions/workflows/ci.yml)
 
-> OpenAPI → evidence-backed Provider Blueprint → verified Ruby adapter
+> OpenAPI → Provider Blueprint на основе доказательств → проверенный Ruby-адаптер
 
 Provider Compiler принимает OpenAPI платёжного провайдера, сопоставляет
-provider-specific API с контрактом Space Payments, формирует `Review Manifest` и
-`Resolved Provider Blueprint`, а затем детерминированно генерирует Ruby adapter,
+API провайдера с контрактом Space Payments, формирует `Review Manifest` и
+`Resolved Provider Blueprint`, а затем детерминированно генерирует Ruby-адаптер,
 документацию и fixtures. Критическая неоднозначность не угадывается: система
-переходит в `REVIEW_REQUIRED` / `BLOCKING` и запрещает unsafe generation.
+переходит в `REVIEW_REQUIRED` / `BLOCKING` и запрещает небезопасную генерацию.
 
 | | |
 |---|---|
 | Вход | OpenAPI YAML / JSON |
 | Выход | Ruby adapter + `INTEGRATION.md` + `fixtures.json` |
-| Target contract | `Provider::BaseService` |
-| Decision model | `ACCEPT` / `REVIEW_REQUIRED` / `UNKNOWN` |
-| Safety | critical ambiguity → generation blocked |
-| Runtime | Ruby, deterministic, no neural networks |
+| Целевой контракт | `Provider::BaseService` |
+| Модель решения | `ACCEPT` / `REVIEW_REQUIRED` / `UNKNOWN` |
+| Безопасность | критическая неоднозначность → генерация заблокирована |
+| Runtime | Ruby, детерминированная работа, без нейросетей |
 
 ## Проблема
 
 Space Payments регулярно подключает новых платёжных провайдеров. Ручная
-интеграция включает чтение документации, сопоставление endpoints и полей,
-money conversions, статусы, auth, webhooks, idempotency, ошибки, Ruby adapter,
-fixtures и integration docs; один provider занимает примерно 2–5 дней.
+интеграция включает чтение документации, сопоставление endpoint-ов и полей,
+конвертацию денежных единиц, статусы, аутентификацию, webhooks, idempotency,
+ошибки, Ruby-адаптер, fixtures и документацию интеграции; один provider
+занимает примерно 2–5 дней.
 
-Обычный OpenAPI codegen автоматизирует HTTP boilerplate, но не отвечает на
-главный вопрос: как provider-specific API отображается на payment-domain
-contract Space Payments. Именно это mapping, а не создание HTTP-классов, является
+Обычный OpenAPI codegen автоматизирует шаблонный HTTP-код, но не отвечает на
+главный вопрос: как API конкретного провайдера отображается на доменный
+контракт платежей Space Payments. Именно это сопоставление, а не создание
+HTTP-классов, является
 центральной задачей Provider Compiler.
 
 ## Чем отличается от OpenAPI Generator
@@ -37,114 +39,115 @@ contract Space Payments. Именно это mapping, а не создание H
 
 ```text
 OpenAPI
-  → API client / SDK
+  → API-клиент / SDK
 ```
 
 Provider Compiler:
 
 ```text
 OpenAPI
-  → facts
-  → payment semantics
-  → evidence / review
+  → факты
+  → платёжная семантика
+  → доказательства / проверка
   → Provider Blueprint
-  → verified Provider::BaseService adapter
+  → проверенный адаптер Provider::BaseService
 ```
 
 | | OpenAPI Generator | Provider Compiler |
 |---|---|---|
-| HTTP client | Да | Да, как часть adapter |
-| Payment semantics | Нет | Да |
-| Status mapping | Обычно нет | Да |
-| Money units | Обычно нет | Да |
-| Review ambiguous semantics | Нет | Да |
-| Fail-closed generation | Нет | Да |
-| `Provider::BaseService` adapter | Нет | Да |
+| HTTP-клиент | Да | Да, как часть адаптера |
+| Платёжная семантика | Нет | Да |
+| Сопоставление статусов | Обычно нет | Да |
+| Денежные единицы | Обычно нет | Да |
+| Проверка неоднозначной семантики | Нет | Да |
+| Безопасная генерация с остановкой | Нет | Да |
+| Адаптер `Provider::BaseService` | Нет | Да |
 
-Provider Compiler не позиционируется как generic SDK generator: его результатом
-является проверяемая проекция provider API на конкретный host contract.
+Provider Compiler не позиционируется как универсальный генератор SDK: его
+результатом является проверяемая проекция API провайдера на конкретный контракт
+хост-системы.
 
 ## Как работает
 
-1. OpenAPI читается и нормализуется; local `$ref` разрешаются до анализа.
-2. Immutable `Facts IR` сохраняет факты входного документа без semantic guesses.
-3. Independent analyzers строят решения для operations, money, auth, fields,
-   statuses, webhooks, idempotency, constraints и errors.
-4. Evidence и provenance попадают в `Review Manifest` вместе с rationale,
-   conflicts и outcome.
-5. Resolved decisions формируют `Provider Blueprint` — source of truth для
-   generation.
-6. Critical ambiguity переводит pipeline в fail-closed состояние.
-7. Deterministic Generator создаёт Ruby adapter и сопутствующие артефакты.
-8. Verification проверяет generated output.
+1. OpenAPI читается и нормализуется; локальные `$ref` разрешаются до анализа.
+2. Неизменяемый `Facts IR` сохраняет факты входного документа без семантических догадок.
+3. Независимые анализаторы строят решения для операций, денег, аутентификации,
+   полей, статусов, webhooks, idempotency, ограничений и ошибок.
+4. Доказательства и provenance попадают в `Review Manifest` вместе с обоснованием,
+   конфликтами и результатом.
+5. Разрешённые решения формируют `Provider Blueprint` — источник истины для
+   генерации.
+6. Критическая неоднозначность переводит pipeline в безопасное состояние с остановкой.
+7. Детерминированный генератор создаёт Ruby-адаптер и сопутствующие артефакты.
+8. Verification проверяет сгенерированный результат.
 
 ## Архитектура
 
 ```mermaid
 flowchart TD
-    A["OpenAPI specification"] --> B["Spec Ingestion"]
-    B --> C["Immutable Facts IR"]
-    D["BaseServiceProfile"] --> E["Integration Analyzers"]
+    A["OpenAPI-спецификация"] --> B["Загрузка спецификации"]
+    B --> C["Неизменяемый Facts IR"]
+    D["BaseServiceProfile"] --> E["Анализаторы интеграции"]
     F["Case Defaults / Overrides"] --> E
     C --> E
-    E --> G["Evidence Ledger"]
+    E --> G["Журнал доказательств"]
     G --> H["Review Manifest"]
-    H --> I{"Critical ambiguity?"}
-    I -->|Yes| J["Human Review / Resolution"]
-    I -->|No| K["Resolved Provider Blueprint"]
+    H --> I{"Критическая неоднозначность?"}
+    I -->|Да| J["Проверка человеком / разрешение"]
+    I -->|Нет| K["Resolved Provider Blueprint"]
     J --> K
-    K --> L["Blueprint Validation"]
-    L --> M["Deterministic Generator"]
-    M --> N["Ruby Provider Service"]
+    K --> L["Проверка Blueprint"]
+    L --> M["Детерминированный генератор"]
+    M --> N["Ruby-сервис провайдера"]
     M --> O["INTEGRATION.md"]
     M --> P["fixtures.json"]
     M --> Q["contract_smoke.rb"]
-    N --> R["Verification"]
+    N --> R["Проверка результата"]
     O --> R
     P --> R
     Q --> R
-    R --> S["Integration Ready"]
+    R --> S["Интеграция готова"]
 ```
 
 Слои намеренно разделены:
 
-- `Spec Ingestion` — YAML/JSON, OpenAPI validation, local `$ref` resolving и
-  fingerprint исходного closure;
-- `Facts IR` — immutable набор фактов, без semantic guesses;
-- `Analyzers` — provider-to-host mapping и safety decisions;
-- `Review Manifest` — почему принято решение: evidence, provenance, rationale,
-  conflicts и outcome;
+- `Spec Ingestion` — YAML/JSON, проверка OpenAPI, разрешение локальных `$ref` и
+  fingerprint исходного набора входных файлов;
+- `Facts IR` — неизменяемый набор фактов без семантических догадок;
+- `Analyzers` — сопоставление provider-to-host и решения по безопасности;
+- `Review Manifest` — почему принято решение: доказательства, provenance,
+  обоснование, конфликты и результат;
 - `Provider Blueprint` — что именно будет сгенерировано;
-- `Generator` — как это будет выражено в deterministic Ruby projection, без новых
-  semantic decisions;
-- `Verification` — проверка generated output.
+- `Generator` — как это будет выражено в детерминированной Ruby-проекции без новых
+  семантических решений;
+- `Verification` — проверка сгенерированного результата.
 
 ### Review Manifest vs Provider Blueprint
 
 ```mermaid
 flowchart LR
-    A["OpenAPI fact"] --> B["Analyzer"]
-    B --> C["Review Manifest - WHY"]
-    C --> D["Resolved Blueprint - WHAT"]
-    D --> E["Generated Ruby - HOW"]
+    A["Факт OpenAPI"] --> B["Анализатор"]
+    B --> C["Review Manifest — ПОЧЕМУ"]
+    C --> D["Resolved Blueprint — ЧТО"]
+    D --> E["Сгенерированный Ruby — КАК"]
 ```
 
 `Review Manifest` отвечает: «почему принято это решение?». `Provider Blueprint`
-отвечает: «какой должна быть интеграция?». Generated Ruby отвечает: «как это
-исполняется?». Generated Ruby не является source of truth: им остаётся resolved
-Blueprint, а provenance решения сохраняется в Manifest.
+отвечает: «какой должна быть интеграция?». Сгенерированный Ruby отвечает: «как это
+исполняется?». Сгенерированный Ruby не является источником истины: им остаётся
+resolved Blueprint, а provenance решения сохраняется в Manifest.
 
-### Core invariants
+### Ключевые инварианты
 
-- `FACT` не равен `INFERENCE`; Facts IR immutable.
-- Semantic decisions не живут в templates.
-- Resolved Blueprint — source of truth, generated Ruby — projection.
-- Critical semantics fail closed; каждое решение имеет provenance.
-- Unknown provider information сохраняется и показывается.
+- `FACT` не равен `INFERENCE`; Facts IR неизменяем.
+- Семантические решения не живут в templates.
+- Resolved Blueprint — источник истины, сгенерированный Ruby — проекция.
+- Критическая семантика обрабатывается fail-closed; каждое решение имеет provenance.
+- Неизвестная информация провайдера сохраняется и показывается.
 - CLI и Web используют один Application/Core pipeline.
-- Provider-specific assumptions не попадают в generic core.
+- Предположения конкретного провайдера не попадают в общий core.
 
-## Fail Closed
+## Безопасная остановка (fail-closed)
 
 Например, если в спецификации есть только:
 
@@ -154,8 +157,8 @@ amount:
 ```
 
 но не указано, используются ли major или minor units, какой scale и какова
-currency semantics, система не выбирает молча `×100` или `÷100`. Результат —
-`REVIEW_REQUIRED`, `BLOCKING`, generation unavailable. Для критической финансовой
+семантика currency, система не выбирает молча `×100` или `÷100`. Результат —
+`REVIEW_REQUIRED`, `BLOCKING`, генерация недоступна. Для критической финансовой
 семантики система предпочитает безопасную остановку потенциально неверной
 генерации.
 
@@ -165,40 +168,41 @@ currency semantics, система не выбирает молча `×100` ил
 результатов проверок. Он обновляется командой `bin/update_docs`.
 
 <!-- BEGIN GENERATED: CAPABILITIES -->
-- OpenAPI ingestion, local reference resolution and source fingerprinting are implemented in `lib/provider_compiler/core.rb`.
-- Evidence-aware analysis, Review Manifest and Provider Blueprint are implemented across the analyzer/profile/blueprint layers.
-- Deterministic Ruby projection and verification are implemented by the generator and verification layers.
-- Canonical NovaPay example: 7 files in `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
-- Independent semantic validation: the NovaPay mutation benchmark and Aurora/Helios comparisons are included in the generated status below.
-- Live provider calls are not implemented; the Web UI Demo Workbench is implemented in `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` and `web/public/`.
+- Загрузка OpenAPI, разрешение локальных ссылок и fingerprint источника реализованы в `lib/provider_compiler/core.rb`.
+- Анализ с учётом доказательств, `Review Manifest` и `Provider Blueprint` реализованы в слоях analyzer/profile/blueprint.
+- Детерминированная Ruby-проекция и проверка результата реализованы в слоях generator и verification.
+- Канонический пример NovaPay: 7 файлов в `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
+- Независимая проверка семантики: benchmark мутаций NovaPay и сравнения Aurora/Helios включены в сгенерированный статус ниже.
+- Реальные вызовы провайдера не реализованы; локальный Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
-Run `ruby bin/update_docs` to refresh this snapshot.
+Выполните `ruby bin/update_docs`, чтобы обновить этот снимок.
 <!-- END GENERATED: CAPABILITIES -->
 
 ## CLI
 
-### Input precedence and spec-only mode
+### Приоритет входов и режим только по спецификации
 
-OpenAPI is the primary semantic source. `CaseDefaults` are optional,
-explicitly supplied provider overrides or fallback business knowledge; they are
-not selected from an uploaded filename or fingerprint.
+OpenAPI — основной источник семантики. `CaseDefaults` — необязательные явно
+переданные переопределения провайдера или резервные бизнес-знания; они не
+выбираются по имени загруженного файла или fingerprint.
 
 ```powershell
-# arbitrary provider: empty provider defaults
+# произвольный провайдер: пустые defaults
 ruby bin/provider_compiler inspect --spec path/to/provider.yaml
 
-# explicit provider-specific knowledge
+# явные знания конкретного провайдера
 ruby bin/provider_compiler inspect --spec path/to/provider.yaml `
   --defaults path/to/provider_defaults.yml
 ```
 
-The `inspect` output reports `spec`, host profile and `provider_defaults` so the
-knowledge sources are visible. The built-in NovaPay reference command remains
-an explicit demo/reference mode, not the generic upload path.
+Вывод `inspect` показывает `spec`, профиль хоста и `provider_defaults`, поэтому
+источники знаний видны явно. Встроенная команда эталонного NovaPay остаётся
+явным демонстрационным режимом, а не общим путём загрузки.
 
-The generated fixture priority is `SPEC_EXAMPLE` > schema example/default/enum
-> deterministic schema sample > `CaseDefaults` fallback. Every generated
-`fixtures.json` records provenance and stays byte-deterministic.
+Приоритет для сгенерированных fixtures: `SPEC_EXAMPLE` > example/default/enum
+схемы > детерминированный sample схемы > fallback из `CaseDefaults`. Каждый
+сгенерированный `fixtures.json` сохраняет provenance и остаётся побайтно
+детерминированным.
 
 Требуется Ruby >= 3.0. Текущий checkout проверен на Ruby 4.0.6 и Bundler 2.5.22.
 
@@ -212,10 +216,10 @@ ruby bin/provider_compiler generate --out tmp/generated
 ruby bin/provider_compiler verify --out tmp/generated
 ```
 
-`inspect` выводит decision summary, `analyze` создаёт артефакты без отдельного
-финального запуска Blueprint validation, а `generate` выполняет validation перед
-generation. `verify` принимает каталог generated output и запускает Ruby syntax
-checks и `contract_smoke.rb`.
+`inspect` выводит сводку решения, `analyze` создаёт артефакты без отдельного
+финального запуска проверки Blueprint, а `generate` выполняет проверку перед
+генерацией. `verify` принимает каталог сгенерированного результата и запускает
+проверку синтаксиса Ruby и `contract_smoke.rb`.
 
 Для другого провайдера используются явные входы:
 
@@ -227,9 +231,9 @@ ruby bin/provider_compiler generate `
   --out tmp/provider
 ```
 
-Профили и case defaults остаются входами конкретного кейса, а provider-specific
-assumptions не зашиваются в generic analyzer-код. Вместо `--out` можно передать
-реальный alias `--output`; `PROVIDER_SPEC` задаёт spec по умолчанию.
+Профили и case defaults остаются входами конкретного кейса, а предположения
+провайдера не зашиваются в общий код анализаторов. Вместо `--out` можно передать
+полный alias `--output`; `PROVIDER_SPEC` задаёт спецификацию по умолчанию.
 
 ## Эталонный пример NovaPay
 
@@ -245,17 +249,17 @@ SHA-256 официального reference input:
 - `POST /payouts` -> `create_request`;
 - `GET /payouts/{payout_id}` -> `fetch_status`, operationId
   `getPayoutStatus`;
-- sandbox base URL из официальной спецификации: `https://api.sandbox.novapay.example/v1`;
+- базовый sandbox URL из официальной спецификации: `https://api.sandbox.novapay.example/v1`;
 - `operation.amount` хоста как major RUB и amount провайдера как minor kopecks;
   request conversion — `major -> minor` с factor `100`;
-- необязательный по OpenAPI `Idempotency-Key`; по умолчанию адаптер отправляет
+- необязательный в OpenAPI `Idempotency-Key`; по умолчанию адаптер отправляет
   переданный ключ (`if_available`), а `--always-send-idempotency` — явная политика
   адаптера, не факт спецификации;
 - `/balance` сохраняется как неблокирующий `EXTRA_OPERATION`;
 - webhook `payout.completed` с `X-NovaPay-Signature`, HMAC-SHA256, raw body и
   hex encoding;
-- mapping provider status `completed` → `approved`;
-- webhook event `payout.completed` → `approved` → callback action
+- сопоставление статуса провайдера `completed` → `approved`;
+- событие webhook `payout.completed` → `approved` → callback action
   `approve_operation`.
 
 End-to-end пример для `1500.50 RUB`:
@@ -275,7 +279,7 @@ NovaPay status: completed
 
 ## Что генерируется
 
-Команда `generate` создаёт шесть файлов в output directory:
+Команда `generate` создаёт шесть файлов в каталоге результата:
 
 ```text
 tmp/generated/
@@ -287,15 +291,15 @@ tmp/generated/
 └── contract_smoke.rb
 ```
 
-- `service.rb` — generated `Provider::BaseService` adapter;
+- `service.rb` — сгенерированный адаптер `Provider::BaseService`;
 - `INTEGRATION.md` — настройка и использование интеграции;
-- `fixtures.json` — request/response/webhook examples;
-- `provider_blueprint.json` — resolved integration contract;
-- `review_manifest.json` — evidence и decisions;
-- `contract_smoke.rb` — executable runtime smoke test.
+- `fixtures.json` — примеры request/response/webhook;
+- `provider_blueprint.json` — разрешённый контракт интеграции;
+- `review_manifest.json` — доказательства и решения;
+- `contract_smoke.rb` — исполняемый runtime smoke test.
 
 Канонический `examples/novapay/` дополнительно хранит копию входного
-`provider_api.yaml`, поэтому там семь файлов. Generated artifacts следует
+`provider_api.yaml`, поэтому там семь файлов. Сгенерированные артефакты следует
 пересоздавать из fixture/profile/defaults, а не редактировать вручную.
 
 ## Web UI
@@ -307,62 +311,62 @@ tmp/generated/
 bundle exec ruby bin/provider_compiler_web
 ```
 
-Откройте `http://127.0.0.1:4567` и пройдите flow
+Откройте `http://127.0.0.1:4567` и пройдите сценарий
 «Загрузка» → «Анализ» → «Review» → «Preview» → «Generate». На экране анализа
-видны endpoints, canonical operations, auth, money, statuses, webhook,
-idempotency, field mappings, constraints, errors и evidence. Review показывает
-решения Manifest и их основания; Preview выполняет request/response/webhook
-projections на fixture-данных; Generate показывает артефакты и Verification.
+видны endpoint-ы, канонические операции, аутентификация, деньги, статусы, webhook,
+idempotency, сопоставления полей, ограничения, ошибки и доказательства. Review
+показывает решения Manifest и их основания; Preview выполняет проекции
+request/response/webhook на fixture-данных; Generate показывает артефакты и результат проверки.
 
 На стартовом экране доступны NovaPay, неоднозначный money-case и Aurora. UI не
-выполняет реальных сетевых вызовов к provider.
+выполняет реальных сетевых вызовов к провайдеру.
 
 ## Что система анализирует
 
 | Область | Пример |
 |---|---|
-| Operations | `POST /payouts` → `create_request` |
-| Authentication | `X-API-Key` |
-| Money | `major` → `minor` ×100 |
-| Fields | `operation.amount` → `request.amount` |
-| Statuses | `completed` → `approved` |
+| Операции | `POST /payouts` → `create_request` |
+| Аутентификация | `X-API-Key` |
+| Деньги | `major` → `minor` ×100 |
+| Поля | `operation.amount` → `request.amount` |
+| Статусы | `completed` → `approved` |
 | Webhooks | `HMAC-SHA256` |
 | Idempotency | `Idempotency-Key` |
-| Constraints | `required` / `minimum` / `enum` |
-| Errors | `400` / `401` / `409` / `422` / `429` / `500` |
-| Extras | `/balance` preserved as `EXTRA_OPERATION` |
+| Ограничения | `required` / `minimum` / `enum` |
+| Ошибки | `400` / `401` / `409` / `422` / `429` / `500` |
+| Дополнительные операции | `/balance` сохраняется как `EXTRA_OPERATION` |
 
 ## Verification
 
-`Verification` проверяет только существующие в реализации gates: наличие
-generated `service.rb` и `contract_smoke.rb`, Ruby syntax для обоих файлов и
-успешное выполнение contract smoke. Сам smoke проверяет request projection,
-money conversion, sandbox URL, response/status mapping и webhook behavior на
-fixture-данных.
+`Verification` проверяет только существующие в реализации контрольные точки:
+наличие сгенерированных `service.rb` и `contract_smoke.rb`, синтаксис Ruby для
+обоих файлов и успешное выполнение contract smoke. Сам smoke проверяет проекцию request,
+конвертацию денег, sandbox URL, сопоставление response/status и поведение webhook
+на fixture-данных.
 
-## Universality и benchmark
+## Универсальность и benchmark
 
-Универсальность здесь означает переносимость generic pipeline на покрытые
-provider shapes, а не поддержку любого OpenAPI. Проверка состоит из NovaPay
-reference case, 37 independently materialized mutation scenarios с hand-authored
-semantic ground truth и independent comparator, а также второго synthetic
-provider Aurora с другой структурой API.
+Универсальность здесь означает переносимость общего pipeline на проверенные
+формы провайдерских API, а не поддержку любого OpenAPI. Проверка состоит из
+эталонного кейса NovaPay, 37 независимо материализованных сценариев мутаций с
+самостоятельно подготовленной semantic ground truth и independent comparator,
+а также второго синтетического провайдера Aurora с другой структурой API.
 
-Aurora проверяет другой endpoint naming, Bearer auth, nested `money.value`,
+Aurora проверяет другие имена endpoint-ов, Bearer-аутентификацию, вложенные `money.value`,
 `money.currency`, destination, `POST /notifications`, собственные status enums и
 preserved extra operations. Для него отдельно заданы semantic levels и
 behavioral vectors; decision equality сама по себе не считается доказательством.
 
-HeliosPay — blind third-provider validation с hand-authored ground truth,
-созданным до запуска compiler. Он проверяет другие operationId и paths,
-query API-key auth, nested `payment` / `settlement` money, HTTP `202` success
-handling, provider error codes и `Retry-After`, webhook events, а также
-сохранение `/account/limits` как extra operation. Это дополнительное evidence,
+HeliosPay — независимая проверка третьего провайдера с заранее подготовленной
+ground truth, созданной до запуска compiler. Он проверяет другие operationId и
+paths, query API-key auth, вложенные `payment` / `settlement` money, обработку
+успешного HTTP `202`, коды ошибок провайдера и `Retry-After`, события webhook,
+а также сохранение `/account/limits` как extra operation. Это дополнительное доказательство,
 что generic pipeline не привязан к NovaPay literals; это не заявление о полной
 универсальности для любого OpenAPI.
 
-В этой проверке Aurora — второй synthetic provider, а HeliosPay — blind
-third-provider validation.
+В этой проверке Aurora — второй синтетический провайдер, а HeliosPay — независимая
+проверка третьего провайдера.
 
 Подробная методика и определения метрик находятся в
 [`docs/BENCHMARK.md`](docs/BENCHMARK.md). Исторический comparator record — в
@@ -376,41 +380,45 @@ third-provider validation.
 runner-ов и текущего запуска RSpec. Числа не копируются вручную.
 
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
-**Current verification snapshot (generated)**
+**Текущий снимок проверки (сгенерировано)**
 
-- RSpec: 77 examples, failures: 0.
-- Reference mutation benchmark: 37/37 adversarial mutations of one reference provider domain; semantic accuracy: 100.0%; critical false ACCEPTs: 0.
-- NovaPay official spec-only baseline: decision automation 10/14 (71.4%); review rate 4/14 (28.6%); fully auto-ready 0/1 (0.0%); false ACCEPTs 0; unsafe generation attempts 0.
-- NovaPay spec-only mutation lane: decision automation 74/98 (75.5%); review rate 24/98 (24.5%); fully auto-ready 0/7 (0.0%); false ACCEPTs 0; unsafe generation attempts 0.
-- Aurora spec-only: decision automation 12/14 (85.7%); fully auto-ready 0/1 (0.0%). Aurora resolved: 1/1 (100.0%); behavioral vectors 4/4.
-- HeliosPay spec-only: decision automation 11/13 (84.6%); fully auto-ready 0/1 (0.0%). Resolved: 1/1 (100.0%); behavioral vectors 4/4.
+- RSpec: 77 примеров, ошибок: 0.
+- Reference mutation benchmark: 37/37 adversarial-мутаций одного домена эталонного провайдера; точность семантики: 100.0%; критических ложных ACCEPT: 0.
+- Официальный NovaPay spec-only baseline: автоматизация решений 10/14 (71.4%); доля review 4/14 (28.6%); полностью готовых автоматически 0/1 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
+- NovaPay spec-only mutation lane: автоматизация решений 74/98 (75.5%); доля review 24/98 (24.5%); полностью готовых автоматически 0/7 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
+- Aurora spec-only: автоматизация решений 12/14 (85.7%); полностью готовых автоматически 0/1 (0.0%). Aurora после разрешения: 1/1 (100.0%); behavioral vectors 4/4.
+- HeliosPay spec-only: автоматизация решений 11/13 (84.6%); полностью готовых автоматически 0/1 (0.0%). После разрешения: 1/1 (100.0%); behavioral vectors 4/4.
 
-Run `ruby bin/update_docs` to refresh this snapshot from the benchmark and RSpec outputs.
+Выполните `ruby bin/update_docs`, чтобы обновить этот снимок по результатам benchmark и RSpec.
 <!-- END GENERATED: PROJECT_STATUS -->
 
-## Judge-facing metrics
+## Метрики для оценки
 
-Decision automation measures accepted decisions. Fully auto-ready measures
-complete specifications with zero `REVIEW_REQUIRED` decisions and zero
-blocking entries. These are different metrics; safety is reported separately.
-Safety includes Critical false ACCEPTs and unsafe generation attempts.
+Автоматизация решений показывает долю принятых решений. Полностью готовый кейс
+показывает полные спецификации без решений `REVIEW_REQUIRED` и без blocking-записей.
+Это разные метрики; безопасность считается отдельно. Безопасность включает
+критические ложные `ACCEPT` и попытки небезопасной генерации.
+
+В machine-readable результатах эти показатели называются
+`decision_automation_rate`, `fully_auto_ready_rate` и
+`unsafe_generation_attempts`.
 
 <!-- BEGIN GENERATED: JUDGE_METRICS -->
-| Lane | Decision automation | Review rate | Fully auto-ready | Safety |
+| Прогон | Автоматизация решений | Доля review | Полностью готово автоматически | Безопасность |
 |---|---:|---:|---:|---|
-| NovaPay official spec-only | 10/14 (71.4%) | 4/14 (28.6%) | 0/1 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
-| NovaPay spec-only mutation lane (7 cases) | 74/98 (75.5%) | 24/98 (24.5%) | 0/7 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
-| Aurora spec-only | 12/14 (85.7%) | 2/14 (14.3%) | 0/1 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
-| Aurora resolved | 14/14 (100.0%) | 0/14 (0.0%) | 1/1 (100.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
-| HeliosPay spec-only | 11/13 (84.6%) | 2/13 (15.4%) | 0/1 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
-| HeliosPay resolved | 13/13 (100.0%) | 0/13 (0.0%) | 1/1 (100.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+| Официальный NovaPay spec-only | 10/14 (71.4%) | 4/14 (28.6%) | 0/1 (0.0%) | критических ложных ACCEPT 0; попыток небезопасной генерации 0 |
+| NovaPay mutation lane (7 кейсов) | 74/98 (75.5%) | 24/98 (24.5%) | 0/7 (0.0%) | критических ложных ACCEPT 0; попыток небезопасной генерации 0 |
+| Aurora spec-only | 12/14 (85.7%) | 2/14 (14.3%) | 0/1 (0.0%) | критических ложных ACCEPT 0; попыток небезопасной генерации 0 |
+| Aurora после разрешения | 14/14 (100.0%) | 0/14 (0.0%) | 1/1 (100.0%) | критических ложных ACCEPT 0; попыток небезопасной генерации 0 |
+| HeliosPay spec-only | 11/13 (84.6%) | 2/13 (15.4%) | 0/1 (0.0%) | критических ложных ACCEPT 0; попыток небезопасной генерации 0 |
+| HeliosPay после разрешения | 13/13 (100.0%) | 0/13 (0.0%) | 1/1 (100.0%) | критических ложных ACCEPT 0; попыток небезопасной генерации 0 |
 
-Decision automation is an accepted-decision metric, not a readiness claim. Full-spec auto-ready means a complete spec has zero `REVIEW_REQUIRED` decisions and zero blocking entries. Blocking is reported separately because one decision may produce multiple blocking entries. The benchmark also reports generation/runtime gates where generation is attempted.
+Автоматизация решений — это метрика принятых решений, а не заявление о готовности. Полная автоматическая готовность означает, что спецификация не содержит решений `REVIEW_REQUIRED` и blocking-записей. Blocking считается отдельно, потому что одно решение может породить несколько blocking-записей. Benchmark также сообщает о контрольных точках генерации и runtime там, где генерация запускалась.
 <!-- END GENERATED: JUDGE_METRICS -->
 
 Регрессионное покрытие UI находится в [`spec/web_spec.rb`](spec/web_spec.rb).
 
-## Documentation
+## Документация
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — текущая архитектура и
   инварианты;
@@ -420,32 +428,32 @@ Decision automation is an accepted-decision metric, not a readiness claim. Full-
   Aurora и CLI fallback;
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — процесс разработки и проверок;
 - [`docs/DOCS_POLICY.md`](docs/DOCS_POLICY.md) — правила для стабильной и
-  generated-документации;
-- [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — LOC-based Ruby majority audit;
+  сгенерированной документации;
+- [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — аудит доли Ruby в исходном коде;
 - [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — единый словарь терминов;
 - [`THIRD_PARTY.md`](THIRD_PARTY.md) — зависимости и лицензии;
-- [`research/README.md`](research/README.md) — supporting research и audit
-  artifacts с явным разделением текущих и исторических материалов.
+- [`research/README.md`](research/README.md) — исследовательские материалы и
+  audit-артефакты с явным разделением текущих и исторических данных.
 
-## Repository structure
+## Структура репозитория
 
 ```text
 bin/                    CLI, Web entrypoint и детерминированные updater-ы
-lib/provider_compiler/  Facts IR, analyzers, Blueprint, generation, Web/API
-profiles/               BaseServiceProfile для host-контракта
-fixtures/               OpenAPI, case defaults и независимая Aurora ground truth
-examples/               сгенерированные и проверяемые provider projections
-spec/                   RSpec regression, semantic и Web UI проверки
+lib/provider_compiler/  Facts IR, анализаторы, Blueprint, генерация, Web/API
+profiles/               BaseServiceProfile для контракта хоста
+fixtures/               OpenAPI, case defaults и независимая ground truth Aurora
+examples/               сгенерированные и проверяемые проекции провайдеров
+spec/                   RSpec-проверки, семантика и Web UI
 research/               benchmark corpus, comparator и исторические материалы
-docs/                   актуальная engineering и judge-facing документация
-.github/workflows/      reproducible GitHub Actions verification
+docs/                   актуальная инженерная документация и материалы для оценки
+.github/workflows/      воспроизводимые проверки GitHub Actions
 ```
 
-## Verification / CI
+## Проверка и CI
 
-Workflow [`CI`](.github/workflows/ci.yml) выполняет RSpec, Ruby syntax audit,
-Ruby-share compliance audit, reference benchmark, NovaPay spec-only benchmark,
-Aurora, HeliosPay, оба deterministic updater-а и `git diff --check`. Он не
+Workflow [`CI`](.github/workflows/ci.yml) выполняет RSpec, аудит синтаксиса Ruby,
+аудит доли Ruby, reference benchmark, NovaPay spec-only benchmark, проверки
+Aurora и HeliosPay, оба детерминированных updater-а и `git diff --check`. Он не
 использует credentials, live provider API или browser; кроме checkout и
 установки gems, проверки работают offline.
 
@@ -463,31 +471,31 @@ ruby bin/update_examples
 git diff --check
 ```
 
-## Limitations
+## Ограничения
 
 Это research/hackathon prototype, а не SaaS и не заявление о поддержке любого
 провайдера. Production `Provider::BaseService` в репозитории не предоставлен:
-для verification используется local stub/harness. Live provider calls, production
-credentials и deployment не входят в scope.
+для verification используется локальный stub/harness. Реальные вызовы провайдера,
+production credentials и deployment не входят в scope.
 
-Для нового provider могут потребоваться явные profile, case defaults и human
-review полученного Manifest. Remote `$ref` не поддерживаются и отклоняются;
-некоторые provider semantics остаются `REVIEW_REQUIRED` или `UNKNOWN`, пока не
-появятся достаточные evidence и resolution.
+Для нового провайдера могут потребоваться явные profile, case defaults и review
+полученного Manifest человеком. Remote `$ref` не поддерживаются и отклоняются;
+некоторые семантические решения провайдера остаются `REVIEW_REQUIRED` или
+`UNKNOWN`, пока не появятся достаточные evidence и resolution.
 
-## Hackathon compliance
+## Соответствие условиям хакатона
 
-Ruby share измеряется по participant-written source LOC: blank lines и
-comment-only lines исключены; generated examples, data, docs и dependencies не
-считаются. Текущий production-only результат — `92.8%`, production + tests —
+Доля Ruby измеряется по написанным участниками строкам исходного кода: пустые и
+содержащие только комментарии строки исключены; сгенерированные примеры, данные,
+документация и зависимости не считаются. Текущий результат только для production — `92.8%`, production + tests —
 `94.3%`. Методология и machine-readable evidence находятся в
 [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) и
 [`research/ruby_share_audit.json`](research/ruby_share_audit.json).
 
-Core functionality не зависит от proprietary runtime service: dependencies —
-open-source gems, generated output не требует внешнего inference service, а
-runtime работает детерминированно и без нейросетевых моделей. Project license
-file отсутствует; случайная лицензия автоматически не добавлялась. Лицензии
+Основная функциональность не зависит от proprietary runtime service: зависимости —
+open-source gems, сгенерированный результат не требует внешнего inference service,
+а runtime работает детерминированно и без нейросетевых моделей. Файл лицензии
+проекта отсутствует; случайная лицензия автоматически не добавлялась. Лицензии
 используемых зависимостей перечислены в [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
 ## Безопасность и соответствие ограничениям
@@ -495,8 +503,8 @@ file отсутствует; случайная лицензия автомат�
 Спецификации обрабатываются локально; UI не сохраняет production credentials и
 не выполняет вызовы провайдера. Неизвестная или критически неоднозначная
 семантика сохраняется в `Review Manifest` и не превращается молча в `ACCEPT`.
-Source fingerprint включает root document, resolved local inputs и resolver
-policy.
+Source fingerprint включает корневой документ, разрешённые локальные входы и
+политику resolver.
 
 Для расширения системы используйте [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
 и соблюдайте инварианты безопасности из

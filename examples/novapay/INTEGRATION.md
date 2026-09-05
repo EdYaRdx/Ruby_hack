@@ -3,10 +3,10 @@
 Сгенерировано из Provider Blueprint v1.
 
 - Sandbox URL: https://api.sandbox.novapay.example/v1
-- Runtime base URL: `NOVAPAY_BASE_URL` (по умолчанию используется sandbox URL)
+- Базовый URL runtime: `NOVAPAY_BASE_URL` (по умолчанию используется sandbox URL)
 - Аутентификация: ApiKeyAuth
 - Сумма: major RUB -> kopecks; scale 100; request factor 100
-- Обязательность Idempotency по spec: false
+- Обязательность Idempotency по спецификации: false
 - Подпись webhook: HMAC-SHA256 / hex
 - Действия callback: {"approved" => "approve_operation", "rejected" => "reject_operation", "in_progress" => nil}
 - Дополнительные operations: /payouts/{payout_id}/cancel, /balance
@@ -21,9 +21,9 @@
 
 ## Проверка request и ошибки
 
-Сгенерированный adapter проверяет required fields, enums, patterns, lengths,
+Сгенерированный адаптер проверяет обязательные поля, enums, patterns, lengths,
 conditional recipient fields и host-side minimum amount до отправки.
-HTTP errors возвращаются без blind retries; POST retries после rate limit
+HTTP-ошибки возвращаются без blind retries; POST retries после rate limit
 должны повторно использовать тот же idempotency key.
 
 - HTTP 400: validation_error
@@ -36,8 +36,8 @@ HTTP errors возвращаются без blind retries; POST retries посл
 - HTTP 404: not_found → not_found
 - HTTP 409: invalid_status → conflict
 
-Webhook processing использует fail-closed поведение, если raw body,
+Обработка webhook использует fail-closed поведение, если raw body,
 signature, secret или known event outcome отсутствуют либо некорректны.
 
 Сгенерированный Ruby является проекцией resolved Blueprint. Перед production
-use проверьте review decisions и host BaseService contract.
+use проверьте решения review и контракт host BaseService.
