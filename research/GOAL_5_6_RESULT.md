@@ -145,4 +145,4 @@ behavior or canonical semantics.
 - Demo-ready for checkpoint: YES
 - Backend still frozen: YES
 - GOAL 5.6 complete locally: YES
-- Remote CI: pending final commit/push
+- Remote CI: commit pushed to `origin/main`; GitHub Actions status is not observable from this environment (`Page not found`)
