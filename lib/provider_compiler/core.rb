@@ -71,6 +71,13 @@ module ProviderCompiler
       end
     end
 
+    # JSON's default pretty printer changed its rendering of empty objects and
+    # arrays between Ruby versions. Keep committed artifacts byte-stable on
+    # the Ruby 3.3 CI runner and on newer local Rubies.
+    def pretty_json(value)
+      JSON.pretty_generate(value).gsub(/\{\n\s*\}/, "{}").gsub(/\[\n\s*\]/, "[]")
+    end
+
     def pointer_get(document, fragment)
       return document if fragment.nil? || fragment.empty? || fragment == "#"
 

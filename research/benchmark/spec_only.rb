@@ -52,8 +52,8 @@ module SpecOnlyBenchmark
       }
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
-    File.write(OUTPUT_PATH, JSON.pretty_generate(report) + "\n", encoding: "UTF-8")
-    puts JSON.pretty_generate(report.fetch("aggregate"))
+    File.write(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n", encoding: "UTF-8")
+    puts ProviderCompiler::Util.pretty_json(report.fetch("aggregate"))
     puts "Wrote #{OUTPUT_PATH}"
     report
   end

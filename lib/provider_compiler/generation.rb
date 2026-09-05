@@ -690,10 +690,10 @@ module ProviderCompiler
       FileUtils.mkdir_p(output_dir)
       fixture_data = fixtures(blueprint, examples, spec_document: spec_document)
       files = {
-        "provider_blueprint.json" => JSON.pretty_generate(blueprint) + "\n",
-        "review_manifest.json" => JSON.pretty_generate(manifest.to_h) + "\n",
+        "provider_blueprint.json" => Util.pretty_json(blueprint) + "\n",
+        "review_manifest.json" => Util.pretty_json(manifest.to_h) + "\n",
         "service.rb" => RubyProjection.new(blueprint).render,
-        "fixtures.json" => JSON.pretty_generate(fixture_data) + "\n",
+        "fixtures.json" => Util.pretty_json(fixture_data) + "\n",
         "INTEGRATION.md" => integration_doc(blueprint),
         "contract_smoke.rb" => smoke_harness(blueprint, fixture_data)
       }
@@ -736,7 +736,7 @@ module ProviderCompiler
         - Сумма: #{blueprint.dig("money", "host", "representation")} #{blueprint.dig("money", "host", "currency")} -> #{blueprint.dig("money", "provider", "unit_name")}; scale #{blueprint.dig("money", "provider", "scale")}; request factor #{blueprint.dig("money", "request_conversion", "factor")}
         - Обязательность Idempotency по спецификации: #{blueprint.dig("idempotency", "spec_required")}
         - Подпись webhook: #{blueprint.dig("webhook", "signature", "algorithm")} / #{blueprint.dig("webhook", "signature", "encoding")}
-        - Действия callback: #{blueprint.dig("base_service_profile", "callback_actions") || "не разрешены; terminal events завершаются безопасным отказом"}
+        - Действия callback: #{format_mapping(blueprint.dig("base_service_profile", "callback_actions"))}
         - Дополнительные operations: #{blueprint.fetch("extra_operations").map { |item| item["path"] }.join(", ")}
 
         ## Endpoint-ы
@@ -758,6 +758,12 @@ module ProviderCompiler
         Сгенерированный Ruby является проекцией resolved Blueprint. Перед production
         use проверьте решения review и контракт host BaseService.
       DOC
+    end
+
+    def format_mapping(value)
+      return "не разрешены; terminal events завершаются безопасным отказом" unless value.is_a?(Hash)
+
+      "{" + value.map { |key, item| "#{key.inspect} => #{item.inspect}" }.join(", ") + "}"
     end
 
     def smoke_harness(blueprint, examples)
