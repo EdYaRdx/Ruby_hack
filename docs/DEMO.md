@@ -114,6 +114,9 @@ ruby bin/provider_compiler verify --out tmp/demo-generated
 `inspect` показывает сводку Review Manifest, `generate` создаёт ту же
 проверяемую проекцию, а `verify` проверяет синтаксис Ruby и contract-smoke
 harness. Для другого входа укажите явно `--spec`, `--profile` и `--defaults`.
+Для отдельного unresolved анализа используйте `analyze`: он создаёт только
+`provider_blueprint.json` и `review_manifest.json`, а runtime-файлы появляются
+только после успешной validation в `generate`.
 Карточка NovaPay — явный reference-case и использует свой case profile. Обычный
 загруженный OpenAPI-документ анализируется с пустыми provider defaults. Чтобы
 показать общий путь, используйте fixtures Aurora или HeliosPay: их resolved

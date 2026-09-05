@@ -137,6 +137,13 @@ RSpec.describe "Goal 5 spec-only hardening and generator correctness" do
         invalid = valid.merge("recipient" => { "type" => "sbp", "phone" => "79001234567" })
         expect(service.check_conditions(invalid, "create")).to include("ok" => false, "http_status" => 422, "error_code" => "validation_error")
         expect(service.failure_calls.last).to include(422, "validation_error")
+
+        non_create = service.check_conditions(invalid, "status")
+        expect(non_create).to include("ok" => true)
+        expect(service.base_check_calls).to eq(4)
+        non_create_blocked = service.check_conditions(valid.merge("base_blocked" => true), "status")
+        expect(non_create_blocked).to include("ok" => false, "error_code" => "base_blocked")
+        expect(service.base_check_calls).to eq(5)
       end
     end
   end
@@ -195,6 +202,17 @@ RSpec.describe "Goal 5 spec-only hardening and generator correctness" do
       expect(doc).to match(/HTTP 429: .*rate_limit_exceeded.*Retry-After/)
       expect(doc).to match(/HTTP 500: .*internal_error/)
       expect(doc).not_to match(/HTTP 401: .*insufficient_balance/)
+      expect(doc).to include("## Маппинг статусов", "## ProviderGateway / конфигурация")
+      pipeline.blueprint.fetch("statuses").each do |item|
+        expect(doc).to include("| `#{item.fetch("provider_value")}` | `#{item.fetch("canonical_value")}` |")
+      end
+      expect(doc).to include("NOVAPAY_BASE_URL", "X-API-Key", "Idempotency-Key")
     end
+  end
+
+  it "keeps integration documentation generation provider-neutral" do
+    source = File.read(File.join(root, "lib", "provider_compiler", "generation.rb"), encoding: "UTF-8")
+
+    expect(source).not_to include("NovaPay", "novapay", "payouts", "X-NovaPay")
   end
 end

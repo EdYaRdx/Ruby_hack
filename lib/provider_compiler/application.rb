@@ -2,6 +2,21 @@
 
 module ProviderCompiler
 
+  class AnalysisArtifactWriter
+    RUNTIME_ARTIFACTS = %w[service.rb fixtures.json INTEGRATION.md contract_smoke.rb].freeze
+
+    def self.write(output_dir, blueprint, manifest)
+      FileUtils.mkdir_p(output_dir)
+      RUNTIME_ARTIFACTS.each do |name|
+        path = File.join(output_dir, name)
+        File.delete(path) if File.file?(path)
+      end
+      File.write(File.join(output_dir, "provider_blueprint.json"), Util.pretty_json(blueprint) + "\n", encoding: "UTF-8")
+      File.write(File.join(output_dir, "review_manifest.json"), Util.pretty_json(manifest.to_h) + "\n", encoding: "UTF-8")
+      ["provider_blueprint.json", "review_manifest.json"].map { |name| File.join(output_dir, name) }
+    end
+  end
+
   class Pipeline
     attr_reader :source_document, :facts, :bundle, :blueprint, :manifest, :defaults
 
@@ -51,8 +66,12 @@ module ProviderCompiler
           return 0
         end
         if command == "analyze"
-          DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, options.fetch(:out), examples: pipeline.defaults.examples, spec_document: pipeline.source_document.resolved)
-          puts JSON.pretty_generate(pipeline.manifest.to_h.fetch("summary"))
+          AnalysisArtifactWriter.write(options.fetch(:out), pipeline.blueprint, pipeline.manifest)
+          summary = pipeline.manifest.to_h.fetch("summary").merge(
+            "decision" => pipeline.blueprint.fetch("decision"),
+            "generation_ready" => pipeline.blueprint.fetch("decision") == "ACCEPT"
+          )
+          puts Util.pretty_json(summary)
           return 0
         end
         pipeline.validate_blueprint!

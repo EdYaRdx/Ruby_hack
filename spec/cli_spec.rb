@@ -41,4 +41,43 @@ RSpec.describe "provider_compiler CLI" do
       expect(JSON.parse(stdout).fetch("passed")).to be(true)
     end
   end
+
+  it "keeps unresolved analyze output machine-readable without runtime artifacts" do
+    Dir.mktmpdir("provider-cli-analyze") do |directory|
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "analyze",
+        "--spec", SpecSupport::SPEC_PATH,
+        "--profile", SpecSupport::PROFILE_PATH,
+        "--out", directory
+      )
+
+      expect(status.success?).to be(true), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      summary = JSON.parse(stdout)
+      expect(summary).to include("decision" => "REVIEW_REQUIRED", "generation_ready" => false)
+      expect(summary.fetch("blocking")).to be > 0
+      expect(Dir.children(directory)).to contain_exactly("provider_blueprint.json", "review_manifest.json")
+    end
+  end
+
+  it "fails closed for unresolved generate without deleting unrelated output" do
+    Dir.mktmpdir("provider-cli-generate") do |parent|
+      directory = File.join(parent, "output")
+      Dir.mkdir(directory)
+      File.write(File.join(directory, "keep.txt"), "user file\n")
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "generate",
+        "--spec", SpecSupport::SPEC_PATH,
+        "--profile", SpecSupport::PROFILE_PATH,
+        "--out", directory
+      )
+
+      expect(status.success?).to be(false), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      expect(File).to exist(File.join(directory, "keep.txt"))
+      expect(Dir.children(directory)).to contain_exactly("keep.txt")
+    end
+  end
 end

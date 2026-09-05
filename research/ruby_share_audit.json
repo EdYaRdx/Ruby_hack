@@ -57,7 +57,7 @@
         },
         {
           "path": "lib/provider_compiler/application.rb",
-          "loc": 100
+          "loc": 117
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
@@ -73,7 +73,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 725
+          "loc": 749
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -88,7 +88,7 @@
           "loc": 862
         }
       ],
-      "loc": 4117
+      "loc": 4158
     },
     "other_participant_source": {
       "files": [
@@ -103,7 +103,7 @@
       ],
       "loc": 321
     },
-    "total_source_loc": 4438,
+    "total_source_loc": 4479,
     "ruby_share_percent": 92.8
   },
   "production_plus_tests": {
@@ -139,7 +139,7 @@
         },
         {
           "path": "lib/provider_compiler/application.rb",
-          "loc": 100
+          "loc": 117
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
@@ -155,7 +155,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 725
+          "loc": 749
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -179,7 +179,7 @@
         },
         {
           "path": "spec/cli_spec.rb",
-          "loc": 36
+          "loc": 71
         },
         {
           "path": "spec/documentation_spec.rb",
@@ -191,7 +191,7 @@
         },
         {
           "path": "spec/goal5_spec.rb",
-          "loc": 181
+          "loc": 196
         },
         {
           "path": "spec/metrics_spec.rb",
@@ -230,7 +230,7 @@
           "loc": 286
         }
       ],
-      "loc": 5332
+      "loc": 5423
     },
     "other_participant_source": {
       "files": [
@@ -245,7 +245,7 @@
       ],
       "loc": 321
     },
-    "total_source_loc": 5653,
-    "ruby_share_percent": 94.3
+    "total_source_loc": 5744,
+    "ruby_share_percent": 94.4
   }
 }

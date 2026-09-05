@@ -216,10 +216,14 @@ ruby bin/provider_compiler generate --out tmp/generated
 ruby bin/provider_compiler verify --out tmp/generated
 ```
 
-`inspect` выводит сводку решения, `analyze` создаёт артефакты без отдельного
-финального запуска проверки Blueprint, а `generate` выполняет проверку перед
-генерацией. `verify` принимает каталог сгенерированного результата и запускает
-проверку синтаксиса Ruby и `contract_smoke.rb`.
+`inspect` выводит сводку решения. `analyze` создаёт только machine-readable
+`provider_blueprint.json` и `review_manifest.json`; для `REVIEW_REQUIRED` или
+`BLOCKING` он завершается успешно как analysis command, но показывает
+`generation_ready: false` и не создаёт runtime integration artifacts.
+`generate` выполняет Blueprint validation перед генерацией и fail-closed
+останавливается на unresolved critical semantics. `verify` принимает каталог
+сгенерированного результата и запускает проверку синтаксиса Ruby и
+`contract_smoke.rb`.
 
 Для другого провайдера используются явные входы:
 
@@ -278,6 +282,14 @@ NovaPay status: completed
 сохраняется как `EXTRA_OPERATION` и остаётся неблокирующим.
 
 ## Что генерируется
+
+Команда `analyze` создаёт только два analysis artifacts:
+
+```text
+tmp/analyzed/
+├── provider_blueprint.json
+└── review_manifest.json
+```
 
 Команда `generate` создаёт шесть файлов в каталоге результата:
 
@@ -382,7 +394,7 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущий снимок проверки (сгенерировано)**
 
-- RSpec: 77 примеров, ошибок: 0.
+- RSpec: 80 примеров, ошибок: 0.
 - Reference mutation benchmark: 37/37 adversarial-мутаций одного домена эталонного провайдера; точность семантики: 100.0%; критических ложных ACCEPT: 0.
 - Официальный NovaPay spec-only baseline: автоматизация решений 10/14 (71.4%); доля review 4/14 (28.6%); полностью готовых автоматически 0/1 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
 - NovaPay spec-only mutation lane: автоматизация решений 74/98 (75.5%); доля review 24/98 (24.5%); полностью готовых автоматически 0/7 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.

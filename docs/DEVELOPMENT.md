@@ -49,6 +49,12 @@ ruby bin/update_examples
 ruby bin/update_docs
 ```
 
+`analyze` — только analysis stage: он записывает `provider_blueprint.json` и
+`review_manifest.json`, включая `decision`, `blocking` и `generation_ready`, но
+не создаёт `service.rb`, fixtures, integration documentation или smoke harness.
+`generate` сначала выполняет `validate_blueprint!`; при unresolved critical
+semantics runtime artifacts не создаются.
+
 ## Правила проектирования
 
 - Различайте факты провайдера, evidence, inference и adapter policy.

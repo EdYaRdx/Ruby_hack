@@ -19,6 +19,34 @@
 - `POST /webhooks/payout` - payoutWebhook -> process_callback
 - `GET /balance` - getBalance - EXTRA_OPERATION
 
+## Маппинг статусов
+
+| Статус провайдера | Space Payments |
+|---|---|
+| `pending` | `in_progress` |
+| `processing` | `in_progress` |
+| `completed` | `approved` |
+| `failed` | `rejected` |
+| `cancelled` | `rejected` |
+
+Источник: resolved Provider Blueprint `statuses`.
+
+## ProviderGateway / конфигурация
+
+- Service class: `Provider::NovapayService`; BaseService: `Provider::BaseService`
+- Окружения и base URL:
+- sandbox: `https://api.sandbox.novapay.example/v1`
+- production: `https://api.novapay.example/v1`
+- Auth strategy: `ApiKeyAuth` (`api_key` / `header` / `X-API-Key`)
+- API key/config parameter: `X-API-Key`; runtime URL override: `NOVAPAY_BASE_URL`
+- Webhook secret: передаётся в generated adapter, если Blueprint содержит signature semantics (`X-NovaPay-Signature`)
+- Idempotency по спецификации: `false`; adapter policy: `if_available`; header: `Idempotency-Key`
+- Supported canonical operations: `create`, `status`, `callback`
+
+Параметры, которые необходимо передать в окружение/host gateway, должны
+быть адаптированы к API host-приложения; этот generated документ не
+объявляет production framework contract, которого нет в Blueprint.
+
 ## Проверка request и ошибки
 
 Сгенерированный адаптер проверяет обязательные поля, enums, patterns, lengths,

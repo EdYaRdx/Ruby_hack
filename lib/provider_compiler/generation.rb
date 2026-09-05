@@ -146,12 +146,12 @@ module ProviderCompiler
           end
 
           def check_conditions(operation, request_method)
-            return success if request_method.to_s != "create"
-
             if CALL_SUPER_CONDITIONS
               base_result = super(operation, request_method)
               return base_result if base_result.is_a?(Hash) && base_result["ok"] == false
             end
+
+            return success if request_method.to_s != "create"
 
             errors = validate_constraints(operation)
             errors.concat(validate_conditionals(operation))
@@ -720,6 +720,17 @@ module ProviderCompiler
 
     def integration_doc(blueprint)
       endpoint_lines = blueprint.fetch("endpoints").map { |endpoint| "- `#{endpoint["method"]} #{endpoint["path"]}` - #{endpoint["operation_id"]}#{endpoint["canonical"] ? " -> #{endpoint["canonical"]}" : " - EXTRA_OPERATION"}" }.join("\n")
+      status_lines = blueprint.fetch("statuses").map { |item| "| `#{item["provider_value"]}` | `#{item["canonical_value"]}` |" }.join("\n")
+      status_lines = "| — | mapping unresolved |" if status_lines.empty?
+      server_lines = blueprint.fetch("servers").map { |server| "- #{server["environment"]}: `#{server["url"]}`" }.join("\n")
+      auth = blueprint.fetch("auth", {})
+      auth_strategy = auth.fetch("strategy", {})
+      auth_name = auth_strategy["name"] || "not resolved"
+      auth_transport = auth_strategy["transport"] || "not resolved"
+      provider_slug = Util.slug(blueprint.dig("provider", "name"))
+      provider_class = "Provider::#{Util.camel(blueprint.dig("provider", "name"))}Service"
+      idempotency = blueprint.fetch("idempotency", {})
+      idempotency_policy = idempotency.dig("adapter_policy", "send_header") || "not resolved"
       error_lines = blueprint.fetch("errors").select { |item| item["http_status"].to_i >= 400 }.map do |item|
         codes = Array(item["provider_codes"]).map { |code| "#{code["code"]} → #{code["category"]}" }.uniq
         label = codes.empty? ? item["canonical_category"] : codes.join(", ")
@@ -742,6 +753,29 @@ module ProviderCompiler
         ## Endpoint-ы
 
         #{endpoint_lines}
+
+        ## Маппинг статусов
+
+        | Статус провайдера | Space Payments |
+        |---|---|
+        #{status_lines}
+
+        Источник: resolved Provider Blueprint `statuses`.
+
+        ## ProviderGateway / конфигурация
+
+        - Service class: `#{provider_class}`; BaseService: `#{blueprint.dig("base_service_profile", "class_name") || "not resolved"}`
+        - Окружения и base URL:
+        #{server_lines}
+        - Auth strategy: `#{auth.fetch("selected", "not resolved")}` (`#{auth_strategy["kind"] || "not resolved"}` / `#{auth_transport}` / `#{auth_name}`)
+        - API key/config parameter: `#{auth_name}`; runtime URL override: `#{provider_slug.upcase}_BASE_URL`
+        - Webhook secret: передаётся в generated adapter, если Blueprint содержит signature semantics (`#{blueprint.dig("webhook", "signature", "header") || "not resolved"}`)
+        - Idempotency по спецификации: `#{idempotency["spec_required"]}`; adapter policy: `#{idempotency_policy}`; header: `#{idempotency["header"] || "not resolved"}`
+        - Supported canonical operations: `#{Array(blueprint.dig("base_service_profile", "canonical_operations")).join("`, `")}`
+
+        Параметры, которые необходимо передать в окружение/host gateway, должны
+        быть адаптированы к API host-приложения; этот generated документ не
+        объявляет production framework contract, которого нет в Blueprint.
 
         ## Проверка request и ошибки
 

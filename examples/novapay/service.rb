@@ -39,12 +39,12 @@ module Provider
     end
 
     def check_conditions(operation, request_method)
-      return success if request_method.to_s != "create"
-
       if CALL_SUPER_CONDITIONS
         base_result = super(operation, request_method)
         return base_result if base_result.is_a?(Hash) && base_result["ok"] == false
       end
+
+      return success if request_method.to_s != "create"
 
       errors = validate_constraints(operation)
       errors.concat(validate_conditionals(operation))
