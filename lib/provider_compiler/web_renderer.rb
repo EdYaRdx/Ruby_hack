@@ -66,14 +66,14 @@ module ProviderCompiler
       def upload_page
         content = <<~HTML
           <section class="hero-copy">
-            <h1>Загрузите спецификацию провайдера</h1>
-            <p>YAML, YML или JSON. Спецификация анализируется локально и никуда не отправляется.</p>
+            <h1>Новая интеграция</h1>
+            <p>Загрузите OpenAPI платёжного провайдера. Система проанализирует методы, поля, авторизацию, статусы, webhook и правила преобразования данных.</p>
           </section>
           <form class="upload-form" method="post" action="/analyze" enctype="multipart/form-data">
             <label class="dropzone" for="spec-file">
               <span class="eyebrow accent">OpenAPI</span>
-              <strong>Перетащите provider_api.yaml сюда</strong>
-              <span>или выберите файл на диске</span>
+              <strong>Перетащите OpenAPI YAML / JSON</strong>
+              <span>или выберите файл на диске · обработка локально</span>
               <span class="button button-secondary">Выбрать файл</span>
               <input id="spec-file" name="spec_file" type="file" accept=".yaml,.yml,.json,application/yaml,application/json" required>
             </label>
@@ -84,7 +84,7 @@ module ProviderCompiler
             <p>Готовые сценарии для проверки положительного пути, безопасной остановки и универсальности.</p>
             <div class="demo-grid">
               #{demo_card("novapay", "NovaPay", "Официальный кейс", "READY", "ready")}
-              #{demo_card("ambiguous", "Ambiguous", "Неизвестная единица amount", "BLOCKED", "blocked")}
+              #{demo_card("ambiguous", "Ambiguous", "Неизвестная единица amount", "REVIEW_REQUIRED", "review")}
               #{demo_card("aurora", "Aurora", "Другая структура провайдера", "REVIEW_REQUIRED", "review")}
             </div>
           </section>
@@ -96,7 +96,6 @@ module ProviderCompiler
         blueprint = workspace.blueprint
         summary = workspace.manifest.to_h.fetch("summary")
         decisions = Array(blueprint["decisions"])
-        selected = decisions.find { |item| item["decision_id"] == selected_id.to_s } || decisions.find { |item| item["decision_id"] == "money:amount-units" } || decisions.first
         endpoints = Array(blueprint["endpoints"])
         status_map = Array(blueprint["statuses"])
         auth = blueprint.dig("auth", "strategy") || {}
@@ -107,64 +106,78 @@ module ProviderCompiler
                      end
         money = blueprint.fetch("money")
         webhook = blueprint.fetch("webhook")
+        canonical_endpoints = endpoints.reject { |endpoint| endpoint["canonical"].nil? }
+        extra_endpoints = endpoints.select { |endpoint| endpoint["canonical"].nil? }
+        unresolved = workspace.unresolved_decisions
+        headline_status = unresolved.empty? ? "READY" : "REVIEW REQUIRED"
+        recognition = if workspace.case_pack == "novapay"
+                        '<div class="case-recognition"><strong>NovaPay</strong><span>✓ Распознан reference case Hack.Genesis по fingerprint</span><small>Используется профиль кейса NovaPay для подтверждённых business semantics.</small></div>'
+                      else
+                        '<div class="case-recognition neutral"><strong>Provider case</strong><span>Провайдерский case pack не найден</span><small>Решения строятся только по доступным evidence и explicit profile.</small></div>'
+                      end
         content = <<~HTML
           <div class="page-heading split-heading">
             <div>
-              <h1>Анализ спецификации</h1>
-              <p>#{h(endpoints.length)} конечных точек · #{h(summary.fetch("decisions"))} решений · #{h(summary.fetch("review_required"))} требуют проверки · #{h(summary.fetch("blocking"))} блокируют генерацию</p>
+              <h1>Что система поняла?</h1>
+              <p>#{h(workspace_title(workspace))} · #{h(endpoints.length)} endpoints · #{h(canonical_endpoints.length)} операции Space Payments · #{h(extra_endpoints.length)} дополнительных endpoint</p>
             </div>
             <div class="pill-row">
               #{status_pill("#{summary.fetch("accepted")} ПРИНЯТО", "ready")}
               #{status_pill("#{summary.fetch("review_required")} ТРЕБУЕТ ПРОВЕРКИ", summary.fetch("review_required").positive? ? "review" : "muted")}
-              #{status_pill("#{summary.fetch("blocking")} БЛОКИРУЕТ ГЕНЕРАЦИЮ", summary.fetch("blocking").positive? ? "blocked" : "muted")}
+              #{status_pill(status_label(headline_status), tone_for(headline_status))}
             </div>
           </div>
+          #{recognition}
           <div class="analysis-grid">
             <section class="card operations-card">
               <div class="card-heading">
-                <div><h2>Операции</h2><p>Как конечные точки провайдера сопоставлены с контрактом Space Payments</p></div>
+                <div><h2>Операции</h2><p>#{h(canonical_endpoints.length)} операции Space Payments · #{h(extra_endpoints.length)} дополнительных endpoint</p></div>
               </div>
               <div class="operation-list">
                 #{endpoints.map { |endpoint| operation_row(workspace, endpoint) }.join}
               </div>
             </section>
             <section class="card facts-card">
-                <h2>Параметры интеграции</h2>
+                <h2>Ключевые решения</h2>
                 <div class="fact-block">
                 <span class="label">Авторизация</span>
-                <strong>#{h(auth_label)}</strong>
+                <strong>✓ #{h(auth_label)}</strong>
                 #{status_pill(decision_outcome(decisions, "auth:security-schemes"), tone_for(decision_outcome(decisions, "auth:security-schemes")))}
               </div>
               <div class="divider"></div>
               <div class="fact-block fact-with-action">
                 <span class="label">Деньги</span>
-                <strong>#{h(semantic_label(money.dig("host", "unit")))} #{h(money.dig("host", "currency"))} → #{h(semantic_label(money.dig("provider", "unit")))} #{h(money.dig("provider", "currency"))}</strong>
-                <span>×#{h(money.dig("request_conversion", "factor"))} · #{h(unit_label(money.dig("provider", "unit_name")))}</span>
+                <strong>#{h(money_summary(money))}</strong>
+                <span>#{h(money_detail(money))}</span>
                 <a href="/workspace/#{workspace.id}/analysis?decision=money%3Aamount-units">Почему?</a>
               </div>
               <div class="divider"></div>
               <div class="fact-block fact-with-action">
                 <span class="label">Webhook</span>
-                <strong>#{h(semantic_label(webhook.dig("signature", "algorithm")))} · #{h(semantic_label(webhook.dig("signature", "encoding")))}</strong>
-                <span>#{h(webhook.dig("signature", "header"))}</span>
+                <strong>#{h(webhook_summary(webhook))}</strong>
+                <span>#{h(webhook.dig("signature", "header") || "Endpoint не определён")}</span>
                 <a href="/workspace/#{workspace.id}/analysis?decision=webhook%3Asignature">Почему?</a>
               </div>
             </section>
             <section class="card status-card">
-              <h2>Сопоставление статусов</h2>
-              #{status_map.map { |item| "<div class=\"mapping-row\"><span>#{h(item["provider_value"])}</span><span class=\"arrow\">→</span><strong>#{h(semantic_label(item["canonical_value"]))}</strong></div>" }.join}
+              <h2>Статусы операций</h2>
+              <p class="card-intro">#{h(status_map.length)} статусов провайдера переводятся в состояния Space Payments.</p>
+              #{status_mapping_rows(status_map.first(2))}
+              #{status_map.length > 2 ? "<details class=\"inline-details\"><summary>Показать все</summary>#{status_mapping_rows(status_map.drop(2))}</details>" : ""}
+              <p class="mapping-explanation">Эти правила используются при запросе статуса операции и обработке webhook.</p>
               #{status_map.empty? ? '<p class="muted">Статусы не обнаружены.</p>' : ""}
             </section>
-            <section class="card evidence-card">
-              <h2>Почему принято это решение?</h2>
-              #{render_decision(selected)}
+            <section class="card focus-card">
+              <h2>#{unresolved.empty? ? "Проверка не требуется" : "Что нужно подтвердить?"}</h2>
+              <p>#{unresolved.empty? ? "Все критические решения подтверждены, можно открыть Preview или Generation." : "#{unresolved.length} решений требуют понятного подтверждения перед безопасной генерацией."}</p>
+              <a class="button button-secondary" href="/workspace/#{workspace.id}/review">#{unresolved.empty? ? "Открыть проверку" : "Открыть проверку"}</a>
             </section>
           </div>
           <section class="detail-grid">
             #{detail_section("Идемпотентность", "idempotency:header", blueprint.fetch("idempotency"), decisions, workspace)}
             #{detail_section("Сопоставление полей", "fields:create-request", blueprint.fetch("field_mappings"), decisions, workspace)}
             #{detail_section("Ограничения", "constraints:create-request", blueprint.fetch("constraints"), decisions, workspace)}
-            #{detail_section("Ошибки", "errors:provider-model", blueprint.fetch("errors"), decisions, workspace)}
+            #{detail_section("Обработка ошибок API", "errors:provider-model", blueprint.fetch("errors"), decisions, workspace)}
           </section>
         HTML
         layout(workspace, active: "analysis", title: workspace_title(workspace), subtitle: workspace_subtitle(workspace), state: display_state(workspace), content: content)
@@ -174,20 +187,20 @@ module ProviderCompiler
         decisions = workspace.unresolved_decisions
         blocking = workspace.blocking_decisions
         summary = workspace.manifest.to_h.fetch("summary")
+        needs_review = !decisions.empty?
         content = <<~HTML
           <div class="page-heading split-heading">
             <div>
-              <h1>#{blocking.empty? ? "Проверка не требуется" : "Требуется подтверждение"}</h1>
-              <p>#{blocking.empty? ? "Все критические решения разрешены." : "#{blocking.length} критических неоднозначностей блокируют генерацию."}</p>
+              <h1>#{needs_review ? "Требуется проверка" : "Проверка не требуется"}</h1>
+              <p>#{needs_review ? "Чтобы безопасно сгенерировать интеграцию, нужно подтвердить #{decisions.length} решений." : "Все критические решения подтверждены."}</p>
             </div>
             <div class="pill-row">
-              #{status_pill("#{blocking.length} БЛОКИРУЕТ ГЕНЕРАЦИЮ", blocking.empty? ? "muted" : "blocked")}
-              #{status_pill("#{decisions.count { |item| item["outcome"] == "REVIEW_REQUIRED" }} ТРЕБУЕТ ПРОВЕРКИ", decisions.empty? ? "muted" : "review")}
+              #{status_pill("#{summary.fetch("accepted")} ПРИНЯТО", "ready")}
+              #{status_pill("#{decisions.length} ТРЕБУЕТ ПРОВЕРКИ", needs_review ? "review" : "muted")}
             </div>
           </div>
-          #{blocking.empty? ? "" : '<div class="blocking-alert"><strong>Генерация заблокирована</strong><span>Нерешённые критические решения нельзя безопасно превратить в сгенерированный адаптер.</span></div>'}
+          #{needs_review ? "<div class=\"review-progress\"><strong>#{decisions.length} решений нужно подтвердить</strong><span>После последнего подтверждения Blueprint будет пересобран, а Preview и Generation станут доступны.</span></div>" : ""}
           #{decisions.empty? ? happy_review_card(summary, workspace) : decisions.map { |decision| review_decision_card(workspace, decision) }.join}
-          #{blocking.empty? ? "" : '<div class="blocked-action"><strong>Сгенерировать интеграцию</strong><span>Сначала проверьте решения, блокирующие генерацию</span></div>'}
         HTML
         layout(workspace, active: "review", title: workspace_title(workspace), subtitle: workspace_subtitle(workspace), state: display_state(workspace), content: content)
       end
@@ -196,7 +209,7 @@ module ProviderCompiler
         unless workspace.accepted?
           content = <<~HTML
             <div class="page-heading"><h1>Предпросмотр преобразований</h1><p>Предпросмотр доступен только для разрешённого Blueprint без решений, блокирующих генерацию.</p></div>
-            <section class="card empty-card"><h2>Предпросмотр заблокирован</h2><p>Текущий результат: #{h(status_label(workspace.blueprint["decision"]))}. Сначала разрешите критические неоднозначности.</p><a class="button button-secondary" href="/workspace/#{workspace.id}/review">Открыть проверку</a></section>
+            <section class="card empty-card"><h2>Предпросмотр пока недоступен</h2><p>Сначала подтвердите #{h(workspace.unresolved_decisions.length)} решений на экране проверки. Приложение не сломалось: generation ожидает review.</p><a class="button button-secondary" href="/workspace/#{workspace.id}/review">Открыть проверку</a></section>
           HTML
           return layout(workspace, active: "preview", title: workspace_title(workspace), subtitle: workspace_subtitle(workspace), state: display_state(workspace), content: content)
         end
@@ -220,8 +233,8 @@ module ProviderCompiler
       def generate_page(workspace, artifact_name = nil)
         unless workspace.accepted?
           content = <<~HTML
-            <div class="page-heading"><h1>Генерация заблокирована</h1><p>Сгенерированный адаптер нельзя выпустить, пока Blueprint содержит нерешённые критические решения.</p></div>
-            <section class="card empty-card"><h2>Генерация недоступна</h2><p>Текущий результат: #{h(status_label(workspace.blueprint["decision"]))}.</p><a class="button button-secondary" href="/workspace/#{workspace.id}/review">Открыть проверку</a></section>
+            <div class="page-heading"><h1>Генерация ожидает проверки</h1><p>Сначала завершите проверку #{h(workspace.unresolved_decisions.length)} решений. Это safety gate, а не ошибка приложения.</p></div>
+            <section class="card empty-card"><h2>Сгенерировать интеграцию</h2><p>🔒 Недоступно до завершения проверки.</p><a class="button button-secondary" href="/workspace/#{workspace.id}/review">Открыть проверку</a></section>
           HTML
           return layout(workspace, active: "generate", title: workspace_title(workspace), subtitle: workspace_subtitle(workspace), state: display_state(workspace), content: content)
         end
@@ -312,16 +325,46 @@ module ProviderCompiler
         HTML
       end
 
+      def money_summary(money)
+        return "Требует проверки: единицы суммы" unless money["decision"] == "ACCEPT"
+
+        provider_unit = money.dig("provider", "unit") == "minor" ? "копейки" : "основные единицы"
+        "✓ #{money.dig("host", "currency")} → #{provider_unit} · #{conversion_factor_label(money.fetch("request_conversion"))}"
+      end
+
+      def money_detail(money)
+        return "Нужно подтвердить major/minor и scale" unless money["decision"] == "ACCEPT"
+
+        "operation.amount: #{money.dig("host", "unit")} · provider: #{money.dig("provider", "unit_name")}"
+      end
+
+      def webhook_summary(webhook)
+        return "Требует проверки: правила подписи" unless webhook["decision"] == "ACCEPT"
+
+        "✓ #{webhook.dig("signature", "algorithm")} · #{webhook.dig("signature", "encoding")}"
+      end
+
+      def status_mapping_rows(items)
+        items.map do |item|
+          "<div class=\"mapping-row\"><span>#{h(item["provider_value"])}</span><span class=\"arrow\">→</span><strong>#{h(semantic_label(item["canonical_value"]))}</strong></div>"
+        end.join
+      end
+
       def operation_row(workspace, endpoint)
         canonical = endpoint["canonical"]
         decision_id = "operation:#{Util.slug(endpoint["operation_id"] || endpoint["method"].to_s + endpoint["path"].to_s)}"
         extra = canonical.nil?
+        binding = if extra
+                    '<strong class="binding muted">Дополнительная операция <span class="technical-label">EXTRA_OPERATION</span></strong>'
+                  else
+                    "<strong class=\"binding\">→ #{h(canonical)}</strong>"
+                  end
         <<~HTML
           <div class="operation-row">
             #{method_pill(endpoint["method"])}
             <code>#{h(endpoint["path"])}</code>
             <span class="operation-id">#{h(endpoint["operation_id"] || "(без operationId)")}</span>
-            <strong class="binding #{extra ? "muted" : ""}">→ #{h(extra ? "Дополнительная операция · EXTRA_OPERATION" : canonical)}</strong>
+            #{binding}
             <a href="/workspace/#{workspace.id}/analysis?decision=#{url_escape(decision_id)}">Почему?</a>
           </div>
         HTML
@@ -352,19 +395,143 @@ module ProviderCompiler
         title = decision_title(decision["decision_id"])
         <<~HTML
           <section class="card review-card">
-            <div class="review-card-heading"><div><h2>#{h(title)}</h2><span class="label">решение: #{h(decision["decision_id"])}</span></div>#{status_pill(decision["outcome"], tone_for(decision["outcome"]))}</div>
-            <div class="review-summary-grid"><div><span class="label">Известно</span><p>#{h(review_known(decision["decision_id"]))}</p></div><div><span class="label">Не хватает данных</span><p>#{h(review_unknown(decision["decision_id"]))}</p></div><div><span class="label">Почему генерация заблокирована?</span><p>#{h(rationale_summary(decision["rationale"]))}</p></div></div>
-            <div class="review-columns"><div><span class="label">Предлагаемый вариант</span>#{json_block(candidate)}</div><div><span class="label">Основания</span>#{Array(decision["evidence"]).map { |item| evidence_row(item) }.join}<span class="label">Обоснование</span><p>#{h(rationale_summary(decision["rationale"]))}</p><details class="technical-details"><summary>Технические подробности</summary><p>rationale: #{h(decision["rationale"])}</p></details></div></div>
-            <div class="review-actions"><button class="button button-primary" disabled title="Сохранение решений в рабочей области недоступно">Подтвердить вариант</button><button class="button button-secondary" disabled title="Сохранение решений в рабочей области недоступно">Изменить решение</button><span>Слой сохранения решений не подключён; решение остаётся в безопасном режиме.</span></div>
+            <div class="review-card-heading"><div><h2>#{h(review_question(decision["decision_id"]))}</h2></div><div class="pill-row">#{status_pill(decision["outcome"], tone_for(decision["outcome"]))}#{decision["severity"] == "BLOCKING" ? status_pill(severity_label(decision["severity"]), "blocked") : ""}</div></div>
+            <div class="review-summary-grid"><div><span class="label">Что известно?</span><p>#{h(review_known(decision["decision_id"]))}</p></div><div><span class="label">Что нужно подтвердить?</span><p>#{h(review_unknown(decision["decision_id"]))}</p></div><div><span class="label">Почему это важно?</span><p>#{h(rationale_summary(decision["rationale"]))}</p></div></div>
+            <div class="review-candidate"><span class="label">Предлагаемый вариант</span>#{human_candidate_summary(decision)}</div>
+            #{resolution_form(workspace, decision)}
+            <details class="technical-details review-technical"><summary>Технические подробности</summary><p>Decision ID: #{h(decision["decision_id"])}</p><p>Provenance: #{h(Array(decision["evidence"]).map { |item| item["source"] }.uniq.join(", "))}</p>#{Array(decision["evidence"]).map { |item| evidence_row(item) }.join}#{json_block(candidate)}<p>Rationale: #{h(decision["rationale"])}</p>#{Array(decision["conflicts"]).empty? ? "" : json_block(decision["conflicts"])}</details>
           </section>
+        HTML
+      end
+
+      def review_question(decision_id)
+        {
+          "money:amount-units" => "В каких единицах провайдер принимает сумму?",
+          "status:provider-map" => "Как статусы провайдера переводятся в Space Payments?",
+          "fields:create-request" => "Какие данные передавать в запрос провайдера?",
+          "webhook:signature" => "Как проверять webhook провайдера?",
+          "idempotency:header" => "Как обрабатывать повторы запроса?"
+        }.fetch(decision_id, decision_title(decision_id))
+      end
+
+      def human_candidate_summary(decision)
+        case decision["decision_id"]
+        when "money:amount-units"
+          "Space Payments: major RUB → выберите provider unit и scale для безопасного пересчёта."
+        when "status:provider-map"
+          status_mapping_rows(Array(decision["candidate"]).map { |item| { "provider_value" => item["provider_value"], "canonical_value" => item["canonical_value"] == "UNKNOWN" ? (item["candidate_canonical_value"] || "?") : item["canonical_value"] } })
+        when "fields:create-request"
+          Array(decision["candidate"]).select { |item| item["decision"] != "ACCEPT" || item["transform"].to_s == "unresolved" }.map { |item| "<div class=\"mapping-row review-mapping\"><span>#{h(item["canonical_path"])}</span><span class=\"arrow\">→</span><strong>#{h(item["provider_path"] || "?")}</strong></div>" }.join
+        when "webhook:signature"
+          candidate = decision["candidate"] || {}
+          "#{candidate["algorithm"] || "Алгоритм не подтверждён"} · encoding нужно выбрать явно."
+        when "idempotency:header"
+          "OpenAPI не показывает обязательный header. Подтвердите отсутствие или укажите имя header."
+        else
+          h(rationale_summary(decision["rationale"]))
+        end
+      end
+
+      def resolution_form(workspace, decision)
+        id = decision["decision_id"]
+        form_content = case id
+                       when "money:amount-units"
+                         candidate = decision["candidate"] || {}
+                         conversion = candidate["request_conversion"] || {}
+                         unit = candidate["provider_unit"] == "UNKNOWN" ? "minor" : candidate["provider_unit"]
+                         <<~HTML
+                           <label class="input-label">Единица провайдера<select name="provider_unit"><option value="minor"#{unit == "minor" ? " selected" : ""}>minor — копейки</option><option value="major"#{unit == "major" ? " selected" : ""}>major — основные единицы</option></select></label>
+                           <label class="input-label">Подразделение<input name="provider_subunit" value="#{h(unit == "minor" ? "kopecks" : "major_units")}"></label>
+                           <label class="input-label">Scale<input name="scale" value="#{h(conversion["scale"] || 100)}" inputmode="numeric"></label>
+                         HTML
+                       when "status:provider-map"
+                         Array(decision["candidate"]).each_with_index.map { |item, index| status_resolution_input(item, index) }.join
+                       when "fields:create-request"
+                         Array(decision["candidate"]).each_with_index.filter_map do |item, index|
+                           next if item["decision"] == "ACCEPT" && item["transform"].to_s != "unresolved"
+
+                           field_resolution_input(item, index)
+                         end.join
+                       when "webhook:signature"
+                         encoding = decision.dig("candidate", "encoding") == "base64" ? "base64" : "hex"
+                         webhook_resolution_input(encoding)
+                       when "idempotency:header"
+                         idempotency_resolution_input(decision.dig("candidate", "header"))
+                       else
+                         '<p class="muted">Для этого решения нужен отдельный provider-specific input. Generation остаётся недоступной.</p>'
+                       end
+        action = form_content.include?("provider-specific input") ? "" : %(<form class="resolution-form" method="post" action="/workspace/#{workspace.id}/review"><input type="hidden" name="decision_id" value="#{h(id)}">#{form_content}<button class="button button-primary" type="submit">Подтвердить решение</button></form>)
+        action
+      end
+
+      def status_resolution_input(item, index)
+        selected = item["canonical_value"] == "UNKNOWN" ? item["candidate_canonical_value"] : item["canonical_value"]
+        options = %w[in_progress approved rejected].map do |value|
+          selected_attr = value == selected ? " selected" : ""
+          "<option value=\"#{value}\"#{selected_attr}>#{value}</option>"
+        end.join
+        <<~HTML
+          <input type="hidden" name="status_#{index}_provider" value="#{h(item["provider_value"])}">
+          <label class="input-label resolution-select">#{h(item["provider_value"])}<select name="status_#{index}_value">#{options}</select></label>
+        HTML
+      end
+
+      def field_resolution_input(item, index)
+        direction = item["direction"] || "request"
+        amount_mapping = item["canonical_path"].to_s.end_with?("amount")
+        transform = item["transform"] == "unresolved" ? (direction == "response" ? "provider_to_money" : "money_to_provider") : (item["transform"] || "identity")
+        factor = item["factor"] || (transform == "provider_to_money" ? 0.01 : (transform == "money_to_provider" ? 100 : 1))
+        required = item["required"] ? "true" : "false"
+        provider_path = item["provider_path"] == "request.amount" ? "request.amount" : item["provider_path"]
+        transform_input = if amount_mapping
+                            options = [["identity", "Без пересчёта"], ["money_to_provider", "major → minor"], ["provider_to_money", "minor → major"]].map do |value, label|
+                              %(<option value="#{value}"#{transform == value ? " selected" : ""}>#{label}</option>)
+                            end.join
+                            %(<label class="input-label">Преобразование<select name="field_#{index}_transform">#{options}</select></label><label class="input-label">Factor<input name="field_#{index}_factor" value="#{h(factor)}" inputmode="decimal"></label>)
+                          else
+                            %(<input type="hidden" name="field_#{index}_transform" value="identity"><input type="hidden" name="field_#{index}_factor" value="1">)
+                          end
+        <<~HTML
+          <input type="hidden" name="field_#{index}_canonical" value="#{h(item["canonical_path"])}">
+          <input type="hidden" name="field_#{index}_direction" value="#{h(direction)}">
+          <input type="hidden" name="field_#{index}_required" value="#{required}">
+          <label class="input-label">#{h(item["canonical_path"])}<input name="field_#{index}_path" value="#{h(provider_path)}"></label>
+          #{transform_input}
+        HTML
+      end
+
+      def webhook_resolution_input(encoding)
+        <<~HTML
+          <input type="hidden" name="webhook_raw_body" value="true">
+          <label class="input-label">Encoding<select name="webhook_encoding"><option value="hex"#{encoding == "hex" ? " selected" : ""}>hex</option><option value="base64"#{encoding == "base64" ? " selected" : ""}>base64</option></select></label>
+        HTML
+      end
+
+      def idempotency_resolution_input(header)
+        <<~HTML
+          <label class="input-label">Решение<select name="idempotency_mode"><option value="none">Header отсутствует</option><option value="header">Используется header</option></select></label>
+          <label class="input-label">Имя header<input name="idempotency_header" value="#{h(header)}"></label>
         HTML
       end
 
       def detail_section(title, decision_id, value, decisions, workspace)
         decision = decisions.find { |item| item["decision_id"] == decision_id }
         <<~HTML
-          <details class="card detail-card"><summary><strong>#{h(title)}</strong>#{status_pill(decision ? decision["outcome"] : "INFO", decision ? tone_for(decision["outcome"]) : "muted")}</summary><div class="detail-body">#{json_block(value)}#{decision ? "<a href=\"/workspace/#{workspace.id}/analysis?decision=#{url_escape(decision_id)}\">Почему принято это решение?</a>" : ""}</div></details>
+          <details class="card detail-card"><summary><strong>#{h(title)}</strong>#{status_pill(decision ? decision["outcome"] : "INFO", decision ? tone_for(decision["outcome"]) : "muted")}</summary><div class="detail-body"><p class="detail-summary">#{h(detail_summary(decision_id, value, decision))}</p><details class="technical-details"><summary>Технические подробности</summary>#{json_block(value)}#{decision ? "<p>Decision ID: #{h(decision_id)}</p><a href=\"/workspace/#{workspace.id}/analysis?decision=#{url_escape(decision_id)}\">Почему принято это решение?</a>" : ""}</details></div></details>
         HTML
+      end
+
+      def detail_summary(decision_id, value, decision)
+        return "Данные отсутствуют." if value.nil? || (value.respond_to?(:empty?) && value.empty?)
+        return "#{decision["outcome"] == "ACCEPT" ? "Правила распознаны." : "Нужно подтвердить часть правил."}" if decision
+
+        case decision_id
+        when "idempotency:header" then value["header"] ? "#{value["header"]}; обязательность: #{value["spec_required"]}" : "Параметр идемпотентности не найден."
+        when "fields:create-request" then "#{Array(value).length} сопоставлений полей сохранено."
+        when "constraints:create-request" then "#{Array(value).length} ограничений запроса сохранено."
+        when "errors:provider-model" then "#{Array(value).length} HTTP/provider error rules сохранено."
+        else "Детали решения доступны в технических подробностях."
+        end
       end
 
       def preview_content(workspace, kind, result)
@@ -658,9 +825,8 @@ module ProviderCompiler
 
       def display_state(workspace)
         return "START" unless workspace.analyzed?
-        return "BLOCKED" if workspace.blocking_decisions.any?
         return "UNKNOWN" if workspace.blueprint["decision"] == "UNKNOWN"
-        return "REVIEW REQUIRED" if workspace.blueprint["decision"] == "REVIEW_REQUIRED"
+        return "REVIEW REQUIRED" unless workspace.unresolved_decisions.empty?
 
         "READY"
       end

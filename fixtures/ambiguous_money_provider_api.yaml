@@ -63,3 +63,20 @@ paths:
                 $ref: '#/components/schemas/PayoutResponse'
         '422':
           description: Validation error
+  /payouts/{payout_id}:
+    get:
+      operationId: getPayoutStatus
+      summary: Get payout status
+      parameters:
+        - name: payout_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResponse'

@@ -289,7 +289,7 @@ module ProviderCompiler
                           "#/components/schemas/*/properties/amount/description"
                         end
       provider_evidence << Evidence.new(source: "SPEC_DESCRIPTION", locations: [amount_location], excerpt: description) if described_unit
-      provider_evidence << Evidence.new(source: "CASE_DEFAULT", locations: ["organizer_case_qa.money"], excerpt: "provider amount unit and subunit") unless @defaults.money.empty?
+      provider_evidence << Evidence.new(source: @defaults.money.fetch("source", "CASE_DEFAULT"), locations: ["organizer_case_qa.money"], excerpt: "provider amount unit and subunit") unless @defaults.money.empty?
       host_evidence = Evidence.new(source: "BASE_SERVICE_PROFILE", locations: ["profile#/canonical_amount"], excerpt: "operation.amount is #{host_unit} #{host_currency}")
       request_conversion = MoneyConversion.resolve(host_unit, provider_unit, scale: scale)
       response_conversion = MoneyConversion.inverse(request_conversion)
@@ -423,10 +423,11 @@ module ProviderCompiler
       values = status_enums(facts.components).flatten.uniq
       mappings = values.map do |provider_value|
         canonical = @defaults.statuses[provider_value]
+        mapping_source = @defaults.data.fetch("status_source", "CASE_DEFAULT")
         mapping = {
           "provider_value" => provider_value,
           "canonical_value" => canonical || "UNKNOWN",
-          "evidence_sources" => ["SPEC_FACT", canonical ? "CASE_DEFAULT" : "UNKNOWN"],
+          "evidence_sources" => ["SPEC_FACT", canonical ? mapping_source : "UNKNOWN"],
           "decision" => canonical ? "ACCEPT" : "REVIEW_REQUIRED"
         }
         if canonical.nil? && (candidate = StatusSemantics.candidate(provider_value))
@@ -446,7 +447,7 @@ module ProviderCompiler
         outcome: complete ? "ACCEPT" : (ambiguous ? "REVIEW_REQUIRED" : "UNKNOWN"),
         severity: complete ? "INFO" : (ambiguous ? "WARNING" : "BLOCKING"),
         candidate: mappings,
-        evidence: [Evidence.new(source: "SPEC_FACT", locations: ["#/components/schemas/*/properties/status/enum"], excerpt: values.join(", ")), Evidence.new(source: "CASE_DEFAULT", locations: ["organizer_case_qa.statuses"], excerpt: "case default status mapping")],
+        evidence: [Evidence.new(source: "SPEC_FACT", locations: ["#/components/schemas/*/properties/status/enum"], excerpt: values.join(", ")), Evidence.new(source: @defaults.data.fetch("status_source", "CASE_DEFAULT"), locations: ["organizer_case_qa.statuses"], excerpt: "status mapping for this workspace")],
         rationale: complete ? "every provider status has an explicit case-default canonical mapping" : (ambiguous ? "one or more provider statuses have plausible but unconfirmed terminal aliases" : "one or more provider statuses lack a confirmed canonical mapping")
       )
       AnalysisResult.new(section: mappings, decisions: [decision])
@@ -513,7 +514,7 @@ module ProviderCompiler
       evidence = []
       escaped_path = operation["path"].gsub("/", "~1")
       evidence << Evidence.new(source: "SPEC_DESCRIPTION", locations: ["#/paths/#{escaped_path}/post/description", "#/paths/#{escaped_path}/post/parameters"], excerpt: description)
-      evidence << Evidence.new(source: "CASE_DEFAULT", locations: ["organizer_case_qa.webhook"], excerpt: "raw body and #{encoding} signature encoding") unless @defaults.webhook.empty?
+      evidence << Evidence.new(source: @defaults.webhook.fetch("source", "CASE_DEFAULT"), locations: ["organizer_case_qa.webhook"], excerpt: "raw body and #{encoding} signature encoding") unless @defaults.webhook.empty?
       decision = Decision.new(id: "webhook:signature", outcome: outcome, severity: severity, candidate: { "algorithm" => algorithm, "encoding" => encoding, "events" => event_map }, evidence: evidence, rationale: complete ? "endpoint, signature header, algorithm, raw body, encoding and event outcomes are represented" : "webhook verification requires endpoint and complete signature/event semantics")
       section = {
         "endpoint" => "#{operation["method"]} #{operation["path"]}",
@@ -542,8 +543,9 @@ module ProviderCompiler
   end
 
   class IdempotencyAnalyzer
-    def initialize(adapter_policy)
+    def initialize(adapter_policy, defaults = nil)
       @adapter_policy = adapter_policy
+      @defaults = defaults
     end
 
     def analyze(facts)
@@ -555,20 +557,24 @@ module ProviderCompiler
         schema.fetch("properties", {}).keys.any? { |name| name.to_s.match?(/amount|sum|total/) }
       end
       parameter = operation && Array(operation["parameters"]).find { |item| item["name"].to_s.downcase.include?("idempot") || item["description"].to_s.downcase.match?(/idempot|duplicate|\u0438\u0434\u0435\u043c\u043f\u043e\u0442\u0435\u043d\u0442/) }
-      required = parameter ? parameter.fetch("required", false) : nil
+      resolution = @defaults&.idempotency || {}
+      resolved_header = resolution.fetch("header", nil)
+      resolved_required = resolution.fetch("spec_required", false)
+      resolved_explicitly = !resolution.empty?
+      required = parameter ? parameter.fetch("required", false) : (resolved_explicitly ? resolved_required : nil)
       present = !parameter.nil?
       decision = Decision.new(
         id: "idempotency:header",
-        outcome: present ? "ACCEPT" : "REVIEW_REQUIRED",
-        severity: present ? "INFO" : "WARNING",
-        candidate: { "header" => parameter && parameter["name"], "spec_required" => required },
-        evidence: [Evidence.new(source: "SPEC_FACT", locations: ["#/components/parameters/IdempotencyKey"], excerpt: parameter && parameter["description"])],
-        rationale: present ? "header presence and requiredness are read from the OpenAPI parameter" : "no explicit idempotency parameter was found"
+        outcome: present || resolved_explicitly ? "ACCEPT" : "REVIEW_REQUIRED",
+        severity: present || resolved_explicitly ? "INFO" : "WARNING",
+        candidate: { "header" => parameter ? parameter["name"] : resolved_header, "spec_required" => required },
+        evidence: [Evidence.new(source: present ? "SPEC_FACT" : (resolution["source"] || "UNKNOWN"), locations: ["#/components/parameters/IdempotencyKey"], excerpt: parameter ? parameter["description"] : (resolved_explicitly ? "human-confirmed absence or shape of idempotency header" : nil))],
+        rationale: present ? "header presence and requiredness are read from the OpenAPI parameter" : (resolved_explicitly ? "idempotency behavior was explicitly confirmed for this workspace" : "no explicit idempotency parameter was found")
       )
       section = {
-        "header" => parameter && parameter["name"],
+        "header" => parameter ? parameter["name"] : resolved_header,
         "spec_required" => required,
-        "spec_evidence_source" => present ? "SPEC_FACT" : "UNKNOWN",
+        "spec_evidence_source" => present ? "SPEC_FACT" : (resolution["source"] || "UNKNOWN"),
         "adapter_policy" => { "send_header" => @adapter_policy, "provenance" => "ADAPTER_POLICY" },
         "retry_policy" => { "name" => present ? "preserve_same_key" : "unknown", "provenance" => "ADAPTER_POLICY" }
       }
@@ -881,7 +887,7 @@ module ProviderCompiler
         [:auth, AuthAnalyzer.new],
         [:money, MoneyAnalyzer.new(@profile, @defaults)],
         [:statuses, StatusMapper.new(@defaults)],
-        [:idempotency, IdempotencyAnalyzer.new(@adapter_policy)],
+        [:idempotency, IdempotencyAnalyzer.new(@adapter_policy, @defaults)],
         [:conditionals, ConditionalAnalyzer.new]
       ]
       analyzers.each do |key, analyzer|

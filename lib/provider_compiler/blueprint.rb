@@ -107,7 +107,7 @@ module ProviderCompiler
       issues << "response amount conversion is not the inverse request conversion" unless response_conversion == MoneyConversion.inverse(request_conversion)
       issues << "money host evidence is missing or provider evidence is mixed into it" unless blueprint.dig("money", "host", "evidence_source") == "BASE_SERVICE_PROFILE" && Array(blueprint.dig("money", "host", "evidence")).any?
       provider_sources = Array(blueprint.dig("money", "provider", "evidence")).map { |item| item["source"] }
-      issues << "money provider evidence is missing or mixed with host provenance" unless provider_sources.any? { |source| %w[SPEC_FACT SPEC_DESCRIPTION CASE_DEFAULT].include?(source) } && !provider_sources.include?("BASE_SERVICE_PROFILE")
+      issues << "money provider evidence is missing or mixed with host provenance" unless provider_sources.any? { |source| %w[SPEC_FACT SPEC_DESCRIPTION CASE_DEFAULT HUMAN_CONFIRMED].include?(source) } && !provider_sources.include?("BASE_SERVICE_PROFILE")
       issues << "generated profile methods are incomplete" unless Array(blueprint.dig("base_service_profile", "required_methods")).sort == profile.required_methods.sort
       issues << "blocking semantic decisions prevent generation" if Array(blueprint["decisions"]).any? { |item| item["severity"] == "BLOCKING" }
       auth_scheme = Array(blueprint.dig("auth", "schemes")).find { |scheme| scheme["name"] == blueprint.dig("auth", "selected") }

@@ -41,14 +41,18 @@ module ProviderCompiler
     }.freeze
 
     class Workspace
-      attr_reader :id, :root_dir, :filename, :profile_path, :defaults_path, :pipeline, :generated_dir, :runtime_dir, :verification, :preview_results
+      attr_reader :id, :root_dir, :filename, :profile_path, :defaults_path, :pipeline, :generated_dir, :runtime_dir, :verification, :preview_results, :case_pack, :resolutions
 
-      def initialize(id:, root_dir:, filename:, profile_path:, defaults_path:)
+      def initialize(id:, root_dir:, filename:, profile_path:, defaults_path:, case_pack: nil)
         @id = id
         @root_dir = root_dir
         @filename = filename
         @profile_path = profile_path
         @defaults_path = defaults_path
+        @case_pack = case_pack
+        @base_defaults_data = Util.deep_dup(CaseDefaults.load(defaults_path).data)
+        @defaults_data = Util.deep_dup(@base_defaults_data)
+        @resolutions = {}
         @generated_dir = File.join(root_dir, "generated")
         @runtime_dir = File.join(root_dir, "runtime")
         @preview_results = {}
@@ -61,7 +65,11 @@ module ProviderCompiler
       end
 
       def analyze!
-        @pipeline = Pipeline.new(spec_path: spec_path, profile_path: profile_path, defaults_path: defaults_path)
+        @pipeline = Pipeline.new(spec_path: spec_path, profile_path: profile_path, defaults_path: defaults_path, defaults_data: @defaults_data)
+        @preview_results.clear
+        @verification = nil
+        @generated = false
+        @runtime_loaded = false
         self
       end
 
@@ -86,7 +94,7 @@ module ProviderCompiler
       end
 
       def accepted?
-        blueprint && blueprint["decision"] == "ACCEPT"
+        blueprint && blueprint["decision"] == "ACCEPT" && unresolved_decisions.empty?
       end
 
       def blocking_decisions
@@ -97,6 +105,15 @@ module ProviderCompiler
         Array(blueprint && blueprint["decisions"]).select do |item|
           item["outcome"] == "REVIEW_REQUIRED" || item["outcome"] == "UNKNOWN" || item["severity"] == "BLOCKING"
         end
+      end
+
+      def resolve!(decision_id, params)
+        override = resolution_override(decision_id.to_s, params)
+        @resolutions[decision_id.to_s] = override
+        @defaults_data = merge_defaults(@base_defaults_data, @resolutions.values)
+        FileUtils.rm_rf(generated_dir) if File.directory?(generated_dir)
+        FileUtils.rm_rf(runtime_dir) if File.directory?(runtime_dir)
+        analyze!
       end
 
       def generate!
@@ -154,6 +171,93 @@ module ProviderCompiler
       end
 
       private
+
+      def resolution_override(decision_id, params)
+        case decision_id
+        when "money:amount-units"
+          unit = params.fetch("provider_unit", "").to_s
+          subunit = params.fetch("provider_subunit", "").to_s
+          scale = Integer(params.fetch("scale", ""), 10)
+          raise ValidationError, ["выберите единицу суммы провайдера и положительный scale"] unless %w[major minor].include?(unit) && !subunit.empty? && scale.positive?
+
+          { "money" => { "provider_unit" => unit, "provider_subunit" => subunit, "scale" => scale, "source" => "HUMAN_CONFIRMED" } }
+        when "status:provider-map"
+          statuses = params.keys.filter_map do |key|
+            match = key.match(/\Astatus_(\d+)_provider\z/)
+            next unless match
+
+            provider_value = params.fetch(key).to_s
+            canonical = params.fetch("status_#{match[1]}_value", "").to_s
+            next if provider_value.empty? || canonical.empty?
+
+            [provider_value, canonical]
+          end.to_h
+          raise ValidationError, ["укажите канонический статус для каждого значения провайдера"] if statuses.empty? || statuses.values.any? { |value| !%w[in_progress approved rejected].include?(value) }
+
+          { "statuses" => statuses, "status_source" => "HUMAN_CONFIRMED" }
+        when "fields:create-request"
+          mappings = params.keys.filter_map do |key|
+            match = key.match(/\Afield_(\d+)_canonical\z/)
+            next unless match
+
+            index = match[1]
+            canonical_path = params.fetch(key).to_s
+            provider_path = params.fetch("field_#{index}_path", "").to_s
+            next if canonical_path.empty? || provider_path.empty?
+
+            direction = params.fetch("field_#{index}_direction", "request").to_s
+            transform = params.fetch("field_#{index}_transform", "identity").to_s
+            factor = Float(params.fetch("field_#{index}_factor", "1"), exception: false)
+            raise ValidationError, ["выберите поддерживаемое преобразование поля и положительный factor"] unless %w[request response].include?(direction) && %w[identity money_to_provider provider_to_money status_map].include?(transform) && factor&.finite? && factor.positive?
+
+            { "canonical_path" => canonical_path, "provider_path" => provider_path, "direction" => direction, "transform" => transform, "factor" => factor, "required" => params.fetch("field_#{index}_required", "false") == "true", "provenance" => "HUMAN_CONFIRMED", "decision" => "ACCEPT" }
+          end
+          raise ValidationError, ["укажите поле провайдера для каждого нерешённого сопоставления"] if mappings.empty?
+
+          { "field_mappings" => mappings }
+        when "webhook:signature"
+          encoding = params.fetch("webhook_encoding", "").to_s
+          raw_body = params.fetch("webhook_raw_body", "") == "true"
+          raise ValidationError, ["выберите encoding webhook"] unless %w[hex base64].include?(encoding)
+
+          { "webhook" => { "raw_body" => raw_body, "signature_encoding" => encoding, "source" => "HUMAN_CONFIRMED" } }
+        when "idempotency:header"
+          mode = params.fetch("idempotency_mode", "none").to_s
+          raise ValidationError, ["выберите допустимое решение для idempotency header"] unless %w[none header].include?(mode)
+
+          header = mode == "header" ? params.fetch("idempotency_header", "").to_s : nil
+          raise ValidationError, ["укажите имя idempotency header"] if mode == "header" && header.empty?
+
+          { "idempotency" => { "header" => header, "spec_required" => false, "source" => "HUMAN_CONFIRMED" } }
+        else
+          raise ValidationError, ["это решение нельзя подтвердить из Web UI без дополнительного case input"]
+        end
+      rescue ArgumentError
+        raise ValidationError, ["scale должен быть положительным целым числом"]
+      end
+
+      def merge_defaults(base, overrides)
+        result = Util.deep_dup(base)
+        overrides.each do |override|
+          override.each do |key, value|
+            if key == "field_mappings"
+              existing = Array(result["field_mappings"])
+              Array(value).each do |mapping|
+                existing.reject! { |item| item["canonical_path"] == mapping["canonical_path"] && item["direction"] == mapping["direction"] }
+                existing << mapping
+              end
+              result[key] = existing
+            elsif key == "statuses"
+              result[key] = result.fetch(key, {}).merge(value)
+            elsif result[key].is_a?(Hash) && value.is_a?(Hash)
+              result[key] = result[key].merge(value)
+            else
+              result[key] = value
+            end
+          end
+        end
+        result
+      end
 
       def ensure_runtime_service
         return if @runtime_loaded
@@ -250,17 +354,18 @@ module ProviderCompiler
         raise ValidationError, ["only YAML, YML and JSON uploads are supported"] unless ALLOWED_EXTENSIONS.include?(extension)
         raise ValidationError, ["uploaded specification is too large (limit: #{MAX_UPLOAD_BYTES} bytes)"] if content.to_s.bytesize > MAX_UPLOAD_BYTES
 
-        config = official_novapay?(content) ? DEMOS.fetch("novapay") : {
+        case_pack = case_pack_for(content)
+        config = case_pack ? DEMOS.fetch(case_pack) : {
           "profile" => File.join(ROOT, "profiles", "space_payments_v1.yml"),
           "defaults" => File.join(ROOT, "fixtures", "empty_case_defaults.yml")
         }
-        create_workspace(filename: filename, content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"))
+        create_workspace(filename: filename, content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"), case_pack: case_pack)
       end
 
       def create_demo(name)
         config = DEMOS.fetch(name.to_s) { raise Error, "unknown demo" }
         content = File.binread(config.fetch("spec"))
-        create_workspace(filename: config.fetch("filename"), content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"))
+        create_workspace(filename: config.fetch("filename"), content: content, profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"), case_pack: name.to_s)
       end
 
       def fetch(id)
@@ -274,14 +379,14 @@ module ProviderCompiler
 
       private
 
-      def create_workspace(filename:, content:, profile_path:, defaults_path:)
+      def create_workspace(filename:, content:, profile_path:, defaults_path:, case_pack: nil)
         id = SecureRandom.hex(10)
         root_dir = Dir.mktmpdir("provider-compiler-web-")
         safe_name = File.basename(filename.to_s).gsub(/[^a-zA-Z0-9_.-]/, "_")
         extension = File.extname(safe_name).downcase
         target = File.join(root_dir, "provider_api#{extension}")
         File.binwrite(target, content)
-        workspace = Workspace.new(id: id, root_dir: root_dir, filename: safe_name, profile_path: profile_path, defaults_path: defaults_path)
+        workspace = Workspace.new(id: id, root_dir: root_dir, filename: safe_name, profile_path: profile_path, defaults_path: defaults_path, case_pack: case_pack)
         @workspaces[id] = workspace
         workspace.analyze!
       rescue StandardError
@@ -289,9 +394,11 @@ module ProviderCompiler
         raise
       end
 
-      def official_novapay?(content)
-        expected = Digest::SHA256.file(File.join(ROOT, "fixtures", "novapay_provider_api.yaml")).hexdigest
-        Digest::SHA256.hexdigest(content.to_s) == expected
+      def case_pack_for(content)
+        sha = Digest::SHA256.hexdigest(content.to_s).upcase
+        return "novapay" if sha == "415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551"
+
+        nil
       end
     end
 
@@ -370,6 +477,11 @@ module ProviderCompiler
           end
         elsif request.request_method == "POST"
           case action
+          when "review"
+            fields = form_fields(request)
+            decision_id = fields.fetch("decision_id")
+            workspace.resolve!(decision_id, fields)
+            redirect(response, "/workspace/#{workspace.id}/review")
           when "preview"
             fields = form_fields(request)
             workspace.preview!(fields.fetch("kind", "request"), fields)

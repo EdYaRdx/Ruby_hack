@@ -5,12 +5,12 @@ module ProviderCompiler
   class Pipeline
     attr_reader :source_document, :facts, :bundle, :blueprint, :manifest, :defaults
 
-    def initialize(spec_path:, profile_path:, defaults_path:, adapter_policy: "if_available")
+    def initialize(spec_path:, profile_path:, defaults_path:, adapter_policy: "if_available", defaults_data: nil)
       @source_document = OpenAPILoader.new(spec_path).load
       OpenAPIValidator.new.validate!(@source_document)
       @facts = FactsBuilder.new.build(@source_document)
       @profile = BaseServiceProfile.load(profile_path)
-      @defaults = CaseDefaults.load(defaults_path)
+      @defaults = defaults_data ? CaseDefaults.new(defaults_data) : CaseDefaults.load(defaults_path)
       @bundle = AnalyzerEngine.new(profile: @profile, defaults: @defaults, adapter_policy: adapter_policy).analyze(@facts)
       @blueprint = BlueprintBuilder.new.build(@facts, @profile, @bundle)
       @manifest = ReviewManifest.new(source: @source_document.to_h, decisions: @bundle.decisions, blueprint_status: @blueprint["decision"])

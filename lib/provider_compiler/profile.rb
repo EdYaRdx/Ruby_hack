@@ -88,6 +88,10 @@ module ProviderCompiler
     def examples
       data.fetch("examples", {})
     end
+
+    def idempotency
+      data.fetch("idempotency", {})
+    end
   end
 
 end

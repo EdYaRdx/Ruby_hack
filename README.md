@@ -341,7 +341,7 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущая проверка (сгенерировано автоматически)**
 
-- RSpec: 59 examples, failures: 0.
+- RSpec: 63 examples, failures: 0.
 - Mutation benchmark NovaPay: безопасно пройдено 37/37; decision_accuracy: 100.0%; safe_decision_coverage: 100.0%.
 - automatic_accept_rate: 48.6%; review_required_rate: 40.5%; unknown_rate: 10.8%.
 - semantic_accept_accuracy: 100.0%; critical_false_accept_count: 0.

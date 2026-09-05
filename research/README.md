@@ -16,7 +16,8 @@ research, benchmark corpus и исторические записи решени
 `REFERENCE_GROUND_TRUTH.md`, `GROUND_TRUTH_CORRECTIONS.md`,
 `PROVIDER_BLUEPRINT_V1.md`, `RULE_PRECEDENCE.md`, `ARCHITECTURE_INVARIANTS.md`,
 `ARCHITECTURE_RED_TEAM.md`, `REAL_MUTATION_BENCHMARK.md`,
-`SEMANTIC_BENCHMARK_VALIDATION.md` и `SECOND_PROVIDER_VALIDATION.md` содержат
+`SEMANTIC_BENCHMARK_VALIDATION.md`, `SECOND_PROVIDER_VALIDATION.md` и
+`GOAL_4_4_RESULT.md` содержат
 актуальные technical evidence. Их aggregate-метрики всё равно публикуются
 канонически через [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
 
