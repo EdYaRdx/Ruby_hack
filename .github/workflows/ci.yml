@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Ruby verification
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Run RSpec
+        run: bundle exec rspec
+
+      - name: Check Ruby syntax
+        shell: pwsh
+        run: |
+          $files = git ls-files 'lib/**/*.rb' 'bin/*' 'research/**/*.rb' 'spec/**/*.rb'
+          foreach ($file in $files) {
+            ruby -c $file
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Audit Ruby source share
+        run: ruby bin/audit_ruby_share
+
+      - name: Run reference benchmark
+        run: ruby research/benchmark/run.rb
+
+      - name: Run NovaPay spec-only benchmark
+        run: ruby research/benchmark/spec_only.rb
+
+      - name: Run Aurora benchmark
+        run: ruby research/benchmark/second_provider.rb
+
+      - name: Run HeliosPay benchmark
+        run: ruby research/benchmark/third_provider.rb
+
+      - name: Refresh generated documentation
+        run: ruby bin/update_docs
+
+      - name: Refresh generated example
+        run: ruby bin/update_examples
+
+      - name: Verify reproducibility and repository hygiene
+        shell: pwsh
+        run: |
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $changed = git diff --name-only
+          if ($changed) {
+            git diff --stat
+            git diff
+            exit 1
+          }

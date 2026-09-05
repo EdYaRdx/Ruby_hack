@@ -103,8 +103,10 @@ NovaPay fixture: это воспроизводимый mutation corpus, а не 
 и описана в `SECOND_PROVIDER_VALIDATION.md`.
 ## Goal 5 evidence
 
+- [`GOAL_5_3_RESULT.md`](GOAL_5_3_RESULT.md) — final GitHub, compliance, CI, visibility, and freeze audit.
 - [`GOAL_5_2_RESULT.md`](GOAL_5_2_RESULT.md) — final pre-push repository audit, documentation/UI review, and regression verdict.
 - [`GOAL_5_RESULT.md`](GOAL_5_RESULT.md) — final spec-only hardening and generator report.
+- [`../docs/COMPLIANCE.md`](../docs/COMPLIANCE.md) — current source-LOC compliance methodology and result.
 - [`NOVAPAY_SPEC_ONLY_BASELINE.md`](NOVAPAY_SPEC_ONLY_BASELINE.md) — official NovaPay spec-only decision-level and spec-level metrics.
 - [`spec_only_novapay_report.json`](spec_only_novapay_report.json) — NovaPay with empty defaults.
 - [`benchmark/spec_only.rb`](benchmark/spec_only.rb) — independent spec-only mutation lane.

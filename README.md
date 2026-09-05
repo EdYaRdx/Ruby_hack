@@ -1,5 +1,7 @@
 # Provider Compiler
 
+[![CI](https://github.com/EdYaRdx/Ruby_hack/actions/workflows/ci.yml/badge.svg)](https://github.com/EdYaRdx/Ruby_hack/actions/workflows/ci.yml)
+
 > OpenAPI → evidence-backed Provider Blueprint → verified Ruby adapter
 
 Provider Compiler принимает OpenAPI платёжного провайдера, сопоставляет
@@ -351,6 +353,17 @@ Aurora проверяет другой endpoint naming, Bearer auth, nested `mon
 preserved extra operations. Для него отдельно заданы semantic levels и
 behavioral vectors; decision equality сама по себе не считается доказательством.
 
+HeliosPay — blind third-provider validation с hand-authored ground truth,
+созданным до запуска compiler. Он проверяет другие operationId и paths,
+query API-key auth, nested `payment` / `settlement` money, HTTP `202` success
+handling, provider error codes и `Retry-After`, webhook events, а также
+сохранение `/account/limits` как extra operation. Это дополнительное evidence,
+что generic pipeline не привязан к NovaPay literals; это не заявление о полной
+универсальности для любого OpenAPI.
+
+В этой проверке Aurora — второй synthetic provider, а HeliosPay — blind
+third-provider validation.
+
 Подробная методика и определения метрик находятся в
 [`docs/BENCHMARK.md`](docs/BENCHMARK.md). Исторический comparator record — в
 [`research/SEMANTIC_BENCHMARK_VALIDATION.md`](research/SEMANTIC_BENCHMARK_VALIDATION.md),
@@ -408,6 +421,7 @@ Decision automation is an accepted-decision metric, not a readiness claim. Full-
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — процесс разработки и проверок;
 - [`docs/DOCS_POLICY.md`](docs/DOCS_POLICY.md) — правила для стабильной и
   generated-документации;
+- [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — LOC-based Ruby majority audit;
 - [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — единый словарь терминов;
 - [`THIRD_PARTY.md`](THIRD_PARTY.md) — зависимости и лицензии;
 - [`research/README.md`](research/README.md) — supporting research и audit
@@ -424,6 +438,29 @@ examples/               сгенерированные и проверяемые
 spec/                   RSpec regression, semantic и Web UI проверки
 research/               benchmark corpus, comparator и исторические материалы
 docs/                   актуальная engineering и judge-facing документация
+.github/workflows/      reproducible GitHub Actions verification
+```
+
+## Verification / CI
+
+Workflow [`CI`](.github/workflows/ci.yml) выполняет RSpec, Ruby syntax audit,
+Ruby-share compliance audit, reference benchmark, NovaPay spec-only benchmark,
+Aurora, HeliosPay, оба deterministic updater-а и `git diff --check`. Он не
+использует credentials, live provider API или browser; кроме checkout и
+установки gems, проверки работают offline.
+
+Локальный эквивалент полного прогона:
+
+```powershell
+bundle exec rspec
+ruby bin/audit_ruby_share
+ruby research/benchmark/run.rb
+ruby research/benchmark/spec_only.rb
+ruby research/benchmark/second_provider.rb
+ruby research/benchmark/third_provider.rb
+ruby bin/update_docs
+ruby bin/update_examples
+git diff --check
 ```
 
 ## Limitations
@@ -440,10 +477,18 @@ review полученного Manifest. Remote `$ref` не поддержива�
 
 ## Hackathon compliance
 
-Ruby share проходит требование `>50%` согласно текущему repository audit. Core
-functionality не зависит от proprietary runtime service: dependencies —
+Ruby share измеряется по participant-written source LOC: blank lines и
+comment-only lines исключены; generated examples, data, docs и dependencies не
+считаются. Текущий production-only результат — `92.8%`, production + tests —
+`94.3%`. Методология и machine-readable evidence находятся в
+[`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) и
+[`research/ruby_share_audit.json`](research/ruby_share_audit.json).
+
+Core functionality не зависит от proprietary runtime service: dependencies —
 open-source gems, generated output не требует внешнего inference service, а
-runtime работает детерминированно и без нейросетевых моделей.
+runtime работает детерминированно и без нейросетевых моделей. Project license
+file отсутствует; случайная лицензия автоматически не добавлялась. Лицензии
+используемых зависимостей перечислены в [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
 ## Безопасность и соответствие ограничениям
 

@@ -1,0 +1,251 @@
+{
+  "methodology": {
+    "description": "Participant-written source LOC; blank lines and comment-only lines are excluded.",
+    "ruby_patterns": [
+      "lib/**/*.rb",
+      "bin/*",
+      "spec/**/*.rb"
+    ],
+    "other_source_patterns": [
+      "web/public/**/*.js",
+      "web/public/**/*.css",
+      "web/public/**/*.html"
+    ],
+    "excluded": [
+      "docs",
+      "README",
+      "research prose",
+      "generated examples",
+      "fixtures/data",
+      "JSON/YAML",
+      "dependencies",
+      "vendor",
+      "tmp"
+    ],
+    "threshold_percent": 50.0
+  },
+  "production_only": {
+    "ruby": {
+      "files": [
+        {
+          "path": "bin/audit_ruby_share",
+          "loc": 111
+        },
+        {
+          "path": "bin/provider_compiler",
+          "loc": 3
+        },
+        {
+          "path": "bin/provider_compiler_web",
+          "loc": 6
+        },
+        {
+          "path": "bin/update_docs",
+          "loc": 147
+        },
+        {
+          "path": "bin/update_examples",
+          "loc": 27
+        },
+        {
+          "path": "lib/provider_compiler.rb",
+          "loc": 7
+        },
+        {
+          "path": "lib/provider_compiler/analysis.rb",
+          "loc": 889
+        },
+        {
+          "path": "lib/provider_compiler/application.rb",
+          "loc": 100
+        },
+        {
+          "path": "lib/provider_compiler/blueprint.rb",
+          "loc": 128
+        },
+        {
+          "path": "lib/provider_compiler/core.rb",
+          "loc": 430
+        },
+        {
+          "path": "lib/provider_compiler/decisions.rb",
+          "loc": 53
+        },
+        {
+          "path": "lib/provider_compiler/generation.rb",
+          "loc": 721
+        },
+        {
+          "path": "lib/provider_compiler/profile.rb",
+          "loc": 79
+        },
+        {
+          "path": "lib/provider_compiler/web.rb",
+          "loc": 547
+        },
+        {
+          "path": "lib/provider_compiler/web_renderer.rb",
+          "loc": 862
+        }
+      ],
+      "loc": 4110
+    },
+    "other_participant_source": {
+      "files": [
+        {
+          "path": "web/public/app.css",
+          "loc": 282
+        },
+        {
+          "path": "web/public/app.js",
+          "loc": 39
+        }
+      ],
+      "loc": 321
+    },
+    "total_source_loc": 4431,
+    "ruby_share_percent": 92.8
+  },
+  "production_plus_tests": {
+    "ruby": {
+      "files": [
+        {
+          "path": "bin/audit_ruby_share",
+          "loc": 111
+        },
+        {
+          "path": "bin/provider_compiler",
+          "loc": 3
+        },
+        {
+          "path": "bin/provider_compiler_web",
+          "loc": 6
+        },
+        {
+          "path": "bin/update_docs",
+          "loc": 147
+        },
+        {
+          "path": "bin/update_examples",
+          "loc": 27
+        },
+        {
+          "path": "lib/provider_compiler.rb",
+          "loc": 7
+        },
+        {
+          "path": "lib/provider_compiler/analysis.rb",
+          "loc": 889
+        },
+        {
+          "path": "lib/provider_compiler/application.rb",
+          "loc": 100
+        },
+        {
+          "path": "lib/provider_compiler/blueprint.rb",
+          "loc": 128
+        },
+        {
+          "path": "lib/provider_compiler/core.rb",
+          "loc": 430
+        },
+        {
+          "path": "lib/provider_compiler/decisions.rb",
+          "loc": 53
+        },
+        {
+          "path": "lib/provider_compiler/generation.rb",
+          "loc": 721
+        },
+        {
+          "path": "lib/provider_compiler/profile.rb",
+          "loc": 79
+        },
+        {
+          "path": "lib/provider_compiler/web.rb",
+          "loc": 547
+        },
+        {
+          "path": "lib/provider_compiler/web_renderer.rb",
+          "loc": 862
+        },
+        {
+          "path": "spec/analyzers_spec.rb",
+          "loc": 72
+        },
+        {
+          "path": "spec/benchmark_spec.rb",
+          "loc": 88
+        },
+        {
+          "path": "spec/cli_spec.rb",
+          "loc": 36
+        },
+        {
+          "path": "spec/documentation_spec.rb",
+          "loc": 92
+        },
+        {
+          "path": "spec/generator_spec.rb",
+          "loc": 117
+        },
+        {
+          "path": "spec/goal5_spec.rb",
+          "loc": 181
+        },
+        {
+          "path": "spec/metrics_spec.rb",
+          "loc": 54
+        },
+        {
+          "path": "spec/pipeline_spec.rb",
+          "loc": 51
+        },
+        {
+          "path": "spec/second_provider_spec.rb",
+          "loc": 46
+        },
+        {
+          "path": "spec/semantic_comparator_spec.rb",
+          "loc": 70
+        },
+        {
+          "path": "spec/spec_helper.rb",
+          "loc": 21
+        },
+        {
+          "path": "spec/support/base_service_stub.rb",
+          "loc": 20
+        },
+        {
+          "path": "spec/support/organizer_contract_harness.rb",
+          "loc": 38
+        },
+        {
+          "path": "spec/universality_spec.rb",
+          "loc": 43
+        },
+        {
+          "path": "spec/web_spec.rb",
+          "loc": 286
+        }
+      ],
+      "loc": 5325
+    },
+    "other_participant_source": {
+      "files": [
+        {
+          "path": "web/public/app.css",
+          "loc": 282
+        },
+        {
+          "path": "web/public/app.js",
+          "loc": 39
+        }
+      ],
+      "loc": 321
+    },
+    "total_source_loc": 5646,
+    "ruby_share_percent": 94.3
+  }
+}

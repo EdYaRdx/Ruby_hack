@@ -1,0 +1,140 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+
+ROOT = File.expand_path("..", __dir__)
+REPORT_PATH = File.join(ROOT, "research", "ruby_share_audit.json")
+COMPLIANCE_PATH = File.join(ROOT, "docs", "COMPLIANCE.md")
+
+def tracked_files(patterns)
+  patterns.flat_map { |pattern| Dir.glob(File.join(ROOT, pattern)) }
+         .select { |path| File.file?(path) }
+         .uniq
+         .sort
+end
+
+def source_loc(path, language)
+  count = 0
+  in_block_comment = false
+
+  File.foreach(path, encoding: "UTF-8") do |line|
+    text = line.strip
+    next if text.empty?
+
+    if language == :ruby
+      next if text.start_with?("#")
+    else
+      if in_block_comment
+        if text.include?("*/")
+          in_block_comment = false
+        end
+        next
+      end
+
+      next if text.start_with?("//")
+      if text.start_with?("/*")
+        in_block_comment = !text.include?("*/")
+        next
+      end
+    end
+
+    count += 1
+  end
+
+  count
+end
+
+def file_records(files, language)
+  files.map do |path|
+    {
+      "path" => path.delete_prefix("#{ROOT}#{File::SEPARATOR}").tr("\\", "/"),
+      "loc" => source_loc(path, language)
+    }
+  end
+end
+
+def group(files, language)
+  records = file_records(files, language)
+  { "files" => records, "loc" => records.sum { |record| record.fetch("loc") } }
+end
+
+def share(ruby_loc, other_loc)
+  total = ruby_loc + other_loc
+  total.zero? ? 0.0 : (ruby_loc.to_f * 100 / total).round(1)
+end
+
+production_ruby_files = tracked_files(["lib/**/*.rb", "bin/*"])
+test_ruby_files = tracked_files(["spec/**/*.rb"])
+other_source_files = tracked_files(["web/public/**/*.js", "web/public/**/*.css", "web/public/**/*.html"])
+
+production_ruby = group(production_ruby_files, :ruby)
+production_other = group(other_source_files, :web)
+production_plus_tests_ruby = group(production_ruby_files + test_ruby_files, :ruby)
+
+report = {
+  "methodology" => {
+    "description" => "Participant-written source LOC; blank lines and comment-only lines are excluded.",
+    "ruby_patterns" => ["lib/**/*.rb", "bin/*", "spec/**/*.rb"],
+    "other_source_patterns" => ["web/public/**/*.js", "web/public/**/*.css", "web/public/**/*.html"],
+    "excluded" => ["docs", "README", "research prose", "generated examples", "fixtures/data", "JSON/YAML", "dependencies", "vendor", "tmp"],
+    "threshold_percent" => 50.0
+  },
+  "production_only" => {
+    "ruby" => production_ruby,
+    "other_participant_source" => production_other,
+    "total_source_loc" => production_ruby.fetch("loc") + production_other.fetch("loc"),
+    "ruby_share_percent" => share(production_ruby.fetch("loc"), production_other.fetch("loc"))
+  },
+  "production_plus_tests" => {
+    "ruby" => production_plus_tests_ruby,
+    "other_participant_source" => production_other,
+    "total_source_loc" => production_plus_tests_ruby.fetch("loc") + production_other.fetch("loc"),
+    "ruby_share_percent" => share(production_plus_tests_ruby.fetch("loc"), production_other.fetch("loc"))
+  }
+}
+
+File.write(REPORT_PATH, JSON.pretty_generate(report) + "\n", encoding: "UTF-8")
+
+def replace_generated_block(path, name, content)
+  source = File.read(path, encoding: "UTF-8")
+  start_marker = "<!-- BEGIN GENERATED: #{name} -->"
+  end_marker = "<!-- END GENERATED: #{name} -->"
+  pattern = /#{Regexp.escape(start_marker)}.*?#{Regexp.escape(end_marker)}/m
+  abort "missing or duplicate generated block #{name} in #{path}" unless source.scan(pattern).length == 1
+
+  replacement = "#{start_marker}\n#{content.rstrip}\n#{end_marker}"
+  File.write(path, source.sub(pattern, replacement), encoding: "UTF-8")
+end
+
+production = report.fetch("production_only")
+with_tests = report.fetch("production_plus_tests")
+block = <<~MARKDOWN
+  **Methodology**
+
+  Participant-written source LOC only. Blank lines and comment-only lines are excluded. Generated examples, fixtures/data, documentation, dependencies, `vendor/`, and `tmp/` are excluded. Web UI JavaScript/CSS is participant-written source and remains in the denominator.
+
+  **Production source only**
+
+  - Ruby: #{production.dig("ruby", "loc")} LOC
+  - Other participant-written source: #{production.dig("other_participant_source", "loc")} LOC
+  - Total: #{production.fetch("total_source_loc")} LOC
+  - Ruby share: #{format("%.1f", production.fetch("ruby_share_percent"))}%
+
+  **Production + tests**
+
+  - Ruby: #{with_tests.dig("ruby", "loc")} LOC
+  - Other participant-written source: #{with_tests.dig("other_participant_source", "loc")} LOC
+  - Total: #{with_tests.fetch("total_source_loc")} LOC
+  - Ruby share: #{format("%.1f", with_tests.fetch("ruby_share_percent"))}%
+
+  Both measurements exceed the `>50%` requirement. The machine-readable file is [`research/ruby_share_audit.json`](../research/ruby_share_audit.json). Re-run `ruby bin/audit_ruby_share` after source changes.
+MARKDOWN
+replace_generated_block(COMPLIANCE_PATH, "RUBY_SHARE_AUDIT", block)
+
+puts "Production Ruby share: #{format('%.1f', production.fetch('ruby_share_percent'))}%"
+puts "Production + tests Ruby share: #{format('%.1f', with_tests.fetch('ruby_share_percent'))}%"
+puts "Wrote #{REPORT_PATH} and #{COMPLIANCE_PATH}"
+
+threshold = report.fetch("methodology").fetch("threshold_percent")
+exit 1 unless production.fetch("ruby_share_percent") > threshold && with_tests.fetch("ruby_share_percent") > threshold

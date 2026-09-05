@@ -1,20 +1,21 @@
 # Проверка универсальности и безопасности
 
-Текущая validation состоит из трёх независимых gates:
+Текущая validation состоит из четырёх evidence families:
 
 1. regression suite на RSpec;
-2. mutation benchmark из 37 self-authored adversarial кейсов на основе NovaPay,
-   где hand-authored semantic
-   subsets сравниваются с фактической Blueprint;
-3. semantic comparison второго провайдера Aurora и hand-authored behavioral
-   vectors.
+2. reference mutation benchmark из 37 self-authored adversarial кейсов на
+   основе NovaPay, где hand-authored semantic subsets сравниваются с фактической
+   Blueprint;
+3. spec-only lanes для официального NovaPay и mutation corpus;
+4. independent provider validation для Aurora и HeliosPay с hand-authored
+   ground truth и behavioral vectors.
 
 Официальный `provider_api.yaml` NovaPay — reference input организатора. Сам
 mutation benchmark — воспроизводимый self-authored corpus, а не набор тестов,
 предоставленный организатором, и не заявление, что 37 mutations представляют
 всех провайдеров. Его ground truth находится в
 [`research/benchmark/semantic_ground_truth.yml`](../research/benchmark/semantic_ground_truth.yml).
-Aurora — независимый synthetic second provider; его ground truth и behavioral
+Aurora и HeliosPay — независимые provider lanes; их ground truth и behavioral
 vectors находятся в [`fixtures/`](../fixtures/). Comparator проверяет не только
 совпадение decision и отсутствие crash, но и независимые semantic subsets,
 fail-closed safety и generation/runtime gates.
