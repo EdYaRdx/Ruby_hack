@@ -85,4 +85,4 @@ Accessibility snapshots подтверждают понятные состоян
 - UI ready for checkpoint: **YES**
 - Demo flow ready: **YES**
 - Backend frozen: **YES**
-- Entire project frozen after push: **YES**
+- Entire project frozen after push: **NO — ожидается подтверждение remote CI из внешнего окружения**
