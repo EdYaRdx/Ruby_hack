@@ -57,7 +57,7 @@ module ProviderCompiler
         "one or more conditional phrases need review" => "Одно или несколько условных правил требуют проверки.",
         "canonical fields have explicit direct or transformed mappings" => "Для канонических полей заданы явные прямые или преобразованные сопоставления.",
         "one or more canonical field mappings are unresolved" => "Одно или несколько канонических сопоставлений полей не разрешены.",
-        "structured request constraints are preserved for generated validation" => "Структурные ограничения запроса сохранены для проверки в generated adapter.",
+        "structured request constraints are preserved for generated validation" => "Структурные ограничения запроса сохранены для проверки в сгенерированном адаптере.",
         "create request schema is missing" => "Схема create request отсутствует.",
         "no response model was found" => "Модель ответа не найдена.",
         "known and example-only provider codes are represented with conservative retry policies" => "Известные и приведённые только в примерах коды сохранены с осторожной retry-политикой."
@@ -77,7 +77,7 @@ module ProviderCompiler
           </section>
 
           <section class="mode-section">
-            <div class="section-heading"><div><h2>Выберите режим работы</h2><p>Один и тот же provider может иметь разные readiness states — в зависимости от явно переданных business semantics.</p></div></div>
+            <div class="section-heading"><div><h2>Выберите режим работы</h2><p>Один и тот же провайдер может получить разный результат — в зависимости от явно переданных правил.</p></div></div>
             <div class="mode-grid">
               <article class="mode-panel mode-panel-upload">
                 <div class="mode-panel-heading"><span class="mode-icon">↥</span><div><h3>Новый анализ OpenAPI</h3><span class="mode-kicker">Только OpenAPI</span></div></div>
@@ -93,30 +93,30 @@ module ProviderCompiler
                   </label>
                   <button class="button button-primary" type="submit">Анализировать спецификацию</button>
                 </form>
-                <small>Дополнительные provider-specific правила не подмешиваются автоматически.</small>
+                <small>Дополнительные правила провайдера не подмешиваются автоматически.</small>
               </article>
               <article class="mode-panel mode-panel-explainer">
                 <span class="eyebrow">ПОЧЕМУ ЭТО ВАЖНО</span>
-                <h3>Review — это safety feature</h3>
+                <h3>Review — безопасная остановка перед генерацией</h3>
                 <p>OpenAPI хорошо описывает HTTP API, но не всегда содержит смысл финансовых полей, статусов и webhook.</p>
-                <div class="mode-comparison"><div><strong>Только OpenAPI</strong><span>Только доказуемые факты</span><em>Нерешённые semantics → Review</em></div><div><strong>Resolved сценарий</strong><span>OpenAPI + подтверждённые правила</span><em>Критические решения разрешены</em></div></div>
-                <details class="inline-details"><summary>Что произойдёт после Review?</summary><p>После подтверждения unresolved semantics Blueprint пересоберётся, Preview откроет реальные преобразования, а Generation — детерминированный Ruby adapter и проверки.</p></details>
+                <div class="mode-comparison"><div><strong>Только OpenAPI</strong><span>Только доказуемые факты</span><em>Нерешённые вопросы → Review</em></div><div><strong>Сценарий с подтверждёнными правилами</strong><span>OpenAPI + подтверждённые правила</span><em>Критические решения разрешены</em></div></div>
+                <details class="inline-details"><summary>Что произойдёт после проверки?</summary><p>После подтверждения нерешённых вопросов Blueprint пересоберётся, предпросмотр покажет реальные преобразования, а генерация создаст детерминированный Ruby adapter и проверки.</p></details>
               </article>
             </div>
           </section>
 
           <section class="demo-section">
-            <div class="section-heading"><div><h2>Демо-сценарии</h2><p>Явно разделены spec-only и resolved knowledge modes.</p></div></div>
+            <div class="section-heading"><div><h2>Демо-сценарии</h2><p>Явно разделены режимы «только OpenAPI» и «с подтверждёнными правилами».</p></div></div>
             <div class="demo-grid demo-grid-primary">
-              #{demo_card("novapay_spec_only", "NovaPay — только OpenAPI", "Честный spec-only анализ официальной спецификации", "ТРЕБУЕТ ПРОВЕРКИ", "review", "Запустить spec-only")}
-              #{demo_card("novapay", "NovaPay — эталонный resolved сценарий", "OpenAPI + заранее подтверждённые business semantics", "ГОТОВО К ГЕНЕРАЦИИ", "ready", "Открыть resolved пример")}
+              #{demo_card("novapay_spec_only", "NovaPay — только OpenAPI", "Честный анализ только по официальной спецификации", "ТРЕБУЕТ ПРОВЕРКИ", "review", "Запустить анализ по OpenAPI")}
+              #{demo_card("novapay", "NovaPay — с подтверждёнными правилами", "OpenAPI + заранее подтверждённые правила провайдера", "ГОТОВО К ГЕНЕРАЦИИ", "ready", "Открыть подтверждённый пример")}
             </div>
           </section>
           <section class="demo-section secondary-demos">
             <div class="section-heading"><div><h2>Другие провайдеры</h2><p>Проверка универсальности на другой структуре API.</p></div></div>
             <div class="demo-grid demo-grid-secondary">
               #{demo_card("aurora", "Aurora", "Другая структура provider API", "ТРЕБУЕТ ПРОВЕРКИ", "review", "Открыть анализ")}
-              #{demo_card("heliospay", "HeliosPay", "Ещё один независимый provider", "ГОТОВО", "ready", "Открыть анализ")}
+              #{demo_card("heliospay", "HeliosPay — с подтверждёнными правилами", "Независимый провайдер с другой структурой API", "ГОТОВО К ГЕНЕРАЦИИ", "ready", "Открыть подтверждённый пример")}
               #{demo_card("ambiguous", "Неоднозначный provider", "Безопасная остановка на неизвестной сумме", "ТРЕБУЕТ ПРОВЕРКИ", "review", "Открыть Review")}
             </div>
           </section>
@@ -143,8 +143,8 @@ module ProviderCompiler
                       else
                         "Найдено #{status_map.length} статусов провайдера. Их соответствие Space Payments требует подтверждения."
                       end
-        mode = workspace.case_pack ? "Эталонный resolved сценарий" : "Только OpenAPI"
-        mode_note = workspace.case_pack ? "Использованы OpenAPI и явно подтверждённые business semantics." : "Дополнительные правила провайдера не использовались."
+        mode = workspace.case_pack ? "Сценарий с подтверждёнными правилами" : "Только OpenAPI"
+        mode_note = workspace.case_pack ? "Использованы OpenAPI и явно подтверждённые правила провайдера." : "Использовалась только спецификация OpenAPI."
         content = <<~HTML
           <section class="analysis-hero">
             <div class="analysis-hero-copy">
@@ -152,16 +152,16 @@ module ProviderCompiler
               <h1>#{h(workspace_title(workspace))}</h1>
               <h2>Анализ OpenAPI завершён</h2>
               <p class="analysis-lead"><strong>#{h(summary.fetch("accepted"))} из #{h(total)} решений</strong> определены автоматически.</p>
-              <p class="analysis-lead #{unresolved.empty? ? "success-copy" : "review-copy"}">#{unresolved.empty? ? "Все критические решения разрешены — можно открыть Preview." : "#{h(summary.fetch("review_required"))} решения нужно подтвердить перед генерацией."}</p>
+              <p class="analysis-lead #{unresolved.empty? ? "success-copy" : "review-copy"}">#{unresolved.empty? ? "Все критические решения разрешены — можно открыть предпросмотр." : "#{h(summary.fetch("review_required"))} решения нужно подтвердить перед генерацией."}</p>
               <div class="analysis-hero-actions">
                 <a class="button button-#{unresolved.empty? ? "primary" : "secondary"}" href="/workspace/#{workspace.id}/#{unresolved.empty? ? "preview" : "review"}">#{unresolved.empty? ? "Перейти к предпросмотру" : "Проверить #{summary.fetch("review_required")} решения"}</a>
-                <details class="inline-details"><summary>Почему нужна проверка?</summary><p>OpenAPI описывает структуру API, но может не содержать бизнес-смысл финансовых полей, статусов или webhook.</p></details>
+                <details class="inline-details"><summary>Почему нужна проверка?</summary><p>OpenAPI описывает структуру API, но может не содержать смысл финансовых полей, статусов или webhook.</p></details>
               </div>
             </div>
             <div class="analysis-hero-status">#{status_pill(status_label(headline_status), tone_for(headline_status))}<span>#{h(mode_note)}</span></div>
           </section>
           <section class="semantic-section">
-            <div class="section-heading"><div><h2>Что система определила</h2><p>Человеческое резюме решений; технические evidence доступны внутри деталей.</p></div></div>
+            <div class="section-heading"><div><h2>Что система определила</h2><p>Краткое резюме решений; технические основания доступны внутри деталей.</p></div></div>
             <div class="semantic-grid">#{semantic_area_rows(blueprint, decisions)}</div>
           </section>
           <div class="analysis-grid">
@@ -204,7 +204,7 @@ module ProviderCompiler
             </section>
             <section class="card focus-card">
               <h2>#{unresolved.empty? ? "Готово к предпросмотру" : "Следующий шаг"}</h2>
-              <p>#{unresolved.empty? ? "Blueprint разрешён. Посмотрите реальные request, response и webhook transformations." : "#{unresolved.length} решений требуют понятного подтверждения перед безопасной генерацией."}</p>
+              <p>#{unresolved.empty? ? "Blueprint разрешён. Посмотрите реальные запрос, ответ и преобразование webhook." : "#{unresolved.length} решений требуют подтверждения перед безопасной генерацией."}</p>
               <a class="button button-#{unresolved.empty? ? "primary" : "secondary"}" href="/workspace/#{workspace.id}/#{unresolved.empty? ? "preview" : "review"}">#{unresolved.empty? ? "Перейти к предпросмотру" : "Открыть проверку"}</a>
             </section>
           </div>
@@ -226,13 +226,13 @@ module ProviderCompiler
         content = <<~HTML
           <section class="review-hero">
             <div>
-              <span class="eyebrow accent">SAFETY REVIEW</span>
+              <span class="eyebrow accent">БЕЗОПАСНАЯ ПРОВЕРКА</span>
               <h1>#{needs_review ? "Требуется подтвердить #{decisions.length} решения" : "Проверка не требуется"}</h1>
-              <p>#{needs_review ? "OpenAPI не содержит достаточно информации для безопасной генерации. Мы не угадываем критическую финансовую или бизнес-семантику." : "Все критические решения разрешены — можно перейти к Preview и Generation."}</p>
+              <p>#{needs_review ? "OpenAPI не содержит достаточно информации для безопасной генерации. Мы не угадываем критический смысл финансовых полей и статусов." : "Все критические решения разрешены — можно перейти к предпросмотру и генерации."}</p>
             </div>
-            <div class="review-hero-status">#{status_pill(needs_review ? "REVIEW REQUIRED" : "READY", needs_review ? "review" : "ready")}<strong>#{needs_review ? "Только unresolved semantics" : "Blueprint разрешён"}</strong></div>
+            <div class="review-hero-status">#{status_pill(needs_review ? "REVIEW REQUIRED" : "READY", needs_review ? "review" : "ready")}<strong>#{needs_review ? "Нерешённые вопросы" : "Blueprint разрешён"}</strong></div>
           </section>
-          #{needs_review ? "<div class=\"review-progress\"><div><strong>#{decisions.length} решения требуют подтверждения</strong><span>Шаг 1 из #{decisions.length}</span></div><div class=\"progress-track\"><span style=\"width: #{(100.0 / decisions.length).round(1)}%\"></span></div><small>После подтверждения следующий unresolved вопрос откроется автоматически.</small></div>" : ""}
+          #{needs_review ? "<div class=\"review-progress\"><div><strong>#{decisions.length} решения требуют подтверждения</strong><span>Шаг 1 из #{decisions.length}</span></div><div class=\"progress-track\"><span style=\"width: #{(100.0 / decisions.length).round(1)}%\"></span></div><small>После подтверждения автоматически откроется следующий нерешённый вопрос.</small></div>" : ""}
           #{decisions.empty? ? happy_review_card(summary, workspace) : review_decision_card(workspace, active_decision, 1, decisions.length)}
           #{needs_review && decisions.length > 1 ? review_queue(decisions.drop(1), 2) : ""}
         HTML
@@ -244,9 +244,9 @@ module ProviderCompiler
           unresolved = workspace.unresolved_decisions
           unresolved_list = unresolved.map { |decision| unresolved_list_item(decision) }.join
           content = <<~HTML
-            <div class="page-heading"><span class="eyebrow accent">PREVIEW</span><h1>Предпросмотр преобразований</h1><p>Здесь будут показаны реальные request, response и webhook transformations из Blueprint.</p></div>
+            <div class="page-heading"><span class="eyebrow accent">ПРЕДПРОСМОТР</span><h1>Предпросмотр преобразований</h1><p>Здесь будут показаны реальные запрос, ответ и преобразование webhook из Blueprint.</p></div>
             <section class="blocked-workflow">
-              <div><span class="blocked-icon" aria-hidden="true">!</span><div><h2>Предпросмотр станет доступен после проверки</h2><p>#{unresolved.length} решения ещё не подтверждены. Это ожидаемый safety gate, а не ошибка приложения.</p></div></div>
+              <div><span class="blocked-icon" aria-hidden="true">!</span><div><h2>Предпросмотр станет доступен после проверки</h2><p>#{unresolved.length} решения ещё не подтверждены. Это ожидаемая защитная остановка, а не ошибка приложения.</p></div></div>
               <ul class="unresolved-list">#{unresolved_list}</ul>
               <a class="button button-primary" href="/workspace/#{workspace.id}/review">Проверить #{unresolved.length} решения</a>
             </section>
@@ -258,7 +258,7 @@ module ProviderCompiler
         content = <<~HTML
           <div class="page-heading">
             <h1>Предпросмотр преобразований</h1>
-            <p>Используются те же Blueprint и runtime-семантика, что и в сгенерированном адаптере.</p>
+            <p>Используются те же Provider Blueprint и runtime-правила, что и в сгенерированном адаптере.</p>
           </div>
           <nav class="tabs" aria-label="Тип предпросмотра">
             #{preview_tab(workspace, "request", "Запрос", kind)}
@@ -275,9 +275,9 @@ module ProviderCompiler
           unresolved = workspace.unresolved_decisions
           unresolved_list = unresolved.map { |decision| unresolved_list_item(decision) }.join
           content = <<~HTML
-            <div class="page-heading"><span class="eyebrow accent">GENERATION</span><h1>Генерация недоступна</h1><p>Сначала разрешите критические semantics — после этого появятся Ruby adapter, документация и fixtures.</p></div>
+            <div class="page-heading"><span class="eyebrow accent">ГЕНЕРАЦИЯ</span><h1>Генерация недоступна</h1><p>Сначала подтвердите критические решения — после этого появятся Ruby adapter, документация и fixtures.</p></div>
             <section class="blocked-workflow">
-              <div><span class="blocked-icon" aria-hidden="true">!</span><div><h2>Осталось подтвердить #{unresolved.length} решений</h2><p>Ожидаемый Review state не считается ошибкой.</p></div></div>
+              <div><span class="blocked-icon" aria-hidden="true">!</span><div><h2>Осталось подтвердить #{unresolved.length} решений</h2><p>Режим проверки — ожидаемый этап, а не ошибка приложения.</p></div></div>
               <ul class="unresolved-list">#{unresolved_list}</ul>
               <a class="button button-primary" href="/workspace/#{workspace.id}/review">Перейти к проверке</a>
             </section>
@@ -293,10 +293,10 @@ module ProviderCompiler
         content = <<~HTML
           <div class="page-heading split-heading generation-hero">
             <div>
-              <span class="eyebrow accent">GENERATION</span>
+              <span class="eyebrow accent">ГЕНЕРАЦИЯ</span>
               <h1>#{workspace.generated? ? "✓ Интеграция сгенерирована" : "Готово к генерации"}</h1>
               <p>#{generation_subtitle(workspace, verification)}</p>
-              <div class="generation-summary"><strong>#{workspace.generated? ? Web::ARTIFACTS.length : Web::ARTIFACTS.length} файлов #{workspace.generated? ? "создано" : "будет создано"}</strong><span>#{workspace.generated? ? "Verification выполнена" : "#{workspace.blueprint["decisions"].length} из #{workspace.blueprint["decisions"].length} решений разрешены"}</span></div>
+              <div class="generation-summary"><strong>#{workspace.generated? ? Web::ARTIFACTS.length : Web::ARTIFACTS.length} файлов #{workspace.generated? ? "создано" : "будет создано"}</strong><span class="generation-check-note">#{workspace.generated? ? (verification && verification["passed"] ? "Обязательные проверки пройдены" : "Обязательная проверка не пройдена") : "#{workspace.blueprint["decisions"].length} из #{workspace.blueprint["decisions"].length} решений разрешены"}</span></div>
             </div>
             #{workspace.generated? ? "" : '<form method="post" action="/workspace/' + workspace.id + '/generate"><button class="button button-primary" type="submit">Сгенерировать интеграцию</button></form>'}
           </div>
@@ -434,14 +434,14 @@ module ProviderCompiler
 
       def semantic_area_rows(blueprint, decisions)
         areas = [
-          ["Операции", decision_prefix_accept?(decisions, "operation:"), "HTTP endpoints → create_request / fetch_status"],
+          ["Операции", decision_prefix_accept?(decisions, "operation:"), "HTTP-пути → create_request / fetch_status"],
           ["Авторизация", decision_outcome(decisions, "auth:security-schemes") == "ACCEPT", auth_summary(blueprint)],
           ["Деньги", blueprint.dig("money", "decision") == "ACCEPT", money_summary(blueprint.fetch("money"))],
           ["Статусы", status_ready?(blueprint), Array(blueprint["statuses"]).length.positive? ? "Сопоставление со Space Payments" : "Статусы не найдены"],
           ["Webhook", blueprint.dig("webhook", "decision") == "ACCEPT", webhook_summary(blueprint.fetch("webhook"))],
           ["Сопоставление полей", Array(blueprint["field_mappings"]).all? { |item| item["decision"] == "ACCEPT" }, "Канонические поля запроса и ответа"],
-          ["Идемпотентность", decision_outcome(decisions, "idempotency:header") == "ACCEPT", "Header и retry policy"],
-          ["Ошибки", decision_outcome(decisions, "errors:provider-model") == "ACCEPT", "HTTP/provider error rules"]
+          ["Идемпотентность", decision_outcome(decisions, "idempotency:header") == "ACCEPT", "Заголовок и правила повторов"],
+          ["Ошибки", decision_outcome(decisions, "errors:provider-model") == "ACCEPT", "Правила ошибок HTTP и провайдера"]
         ]
         areas.map do |label, ready, summary|
           state = ready ? "Определено" : "Требует подтверждения"
@@ -549,7 +549,7 @@ module ProviderCompiler
         when "money:amount-units"
           candidate_unit = decision.dig("candidate", "provider_unit")
           candidate_scale = decision.dig("candidate", "request_conversion", "scale")
-          "Space Payments: major RUB → provider unit: #{candidate_unit == "UNKNOWN" ? "не определена" : candidate_unit || "не определена"}; scale: #{candidate_scale || "не определён"}. Подтвердите оба значения."
+          "Space Payments: major RUB → единица провайдера: #{candidate_unit == "UNKNOWN" ? "не определена" : candidate_unit || "не определена"}; масштаб: #{candidate_scale || "не определён"}. Подтвердите оба значения."
         when "status:provider-map"
           status_mapping_rows(Array(decision["candidate"]))
         when "fields:create-request"
@@ -557,9 +557,9 @@ module ProviderCompiler
         when "webhook:signature"
           candidate = decision["candidate"] || {}
           webhook = workspace&.blueprint&.fetch("webhook", {}) || {}
-          "Endpoint: #{webhook["endpoint"] || "не определён"} · Header: #{webhook.dig("signature", "header") || "не определён"} · #{candidate["algorithm"] || "алгоритм не подтверждён"} · encoding: #{candidate["encoding"] || "не определён"}."
+          "Endpoint: #{webhook["endpoint"] || "не определён"} · заголовок: #{webhook.dig("signature", "header") || "не определён"} · #{candidate["algorithm"] || "алгоритм не подтверждён"} · кодировка: #{candidate["encoding"] || "не определена"}."
         when "idempotency:header"
-          "OpenAPI не показывает обязательный header. Подтвердите отсутствие или укажите имя header."
+          "OpenAPI не показывает обязательный заголовок. Подтвердите его отсутствие или укажите имя заголовка."
         else
           h(rationale_summary(decision["rationale"]))
         end
@@ -574,11 +574,11 @@ module ProviderCompiler
                          candidate_unit = %w[minor major].include?(candidate["provider_unit"].to_s) ? candidate["provider_unit"].to_s : nil
                          unit = nil
                          scale = nil
-                         <<~HTML
+                          <<~HTML
                            <label class="input-label">Единица провайдера<select name="provider_unit" required><option value="">Выберите значение</option><option value="minor"#{unit == "minor" ? " selected" : ""}>minor — минимальные единицы</option><option value="major"#{unit == "major" ? " selected" : ""}>major — основные единицы</option></select></label>
-                           <small class="proposal-note">Предложение системы: #{candidate_unit ? "provider unit: #{candidate_unit}" : "единица не определена"} · это не подтверждённый выбор.</small>
+                            <small class="proposal-note">Предложение системы: #{candidate_unit ? "единица провайдера: #{candidate_unit}" : "единица не определена"} · это не подтверждённый выбор.</small>
                            <label class="input-label">Подразделение<input name="provider_subunit" value="" placeholder="Например, kopecks" required></label>
-                           <label class="input-label">Scale<input name="scale" value="#{h(scale)}" placeholder="Выберите scale" inputmode="numeric" required></label>
+                            <label class="input-label">Масштаб пересчёта (scale)<input name="scale" value="#{h(scale)}" placeholder="Укажите масштаб" inputmode="numeric" required></label>
                            <small class="form-helper">Для RUB обычно 100 копеек = 1 рубль, но подтвердите значение по документации провайдера.</small>
                          HTML
                        when "status:provider-map"
@@ -592,12 +592,12 @@ module ProviderCompiler
                        when "webhook:signature"
                          candidate_encoding = %w[base64 hex].include?(decision.dig("candidate", "encoding").to_s) ? decision.dig("candidate", "encoding").to_s : nil
                          webhook_resolution_input(candidate_encoding)
-                       when "idempotency:header"
-                         idempotency_resolution_input(decision.dig("candidate", "header"))
+                        when "idempotency:header"
+                          idempotency_resolution_input(decision.dig("candidate", "header"))
                        else
-                         '<p class="muted">Для этого решения нужен отдельный provider-specific input. Generation остаётся недоступной.</p>'
+                          '<p class="muted">Для этого решения нужен отдельный ввод по провайдеру. Генерация остаётся недоступной.</p>'
                        end
-        action = form_content.include?("provider-specific input") ? "" : %(<form class="resolution-form" method="post" action="/workspace/#{workspace.id}/review"><input type="hidden" name="decision_id" value="#{h(id)}">#{form_content}<button class="button button-primary" type="submit">#{h(resolution_action_label(id))}</button></form>)
+        action = form_content.include?("отдельный ввод по провайдеру") ? "" : %(<form class="resolution-form" method="post" action="/workspace/#{workspace.id}/review"><input type="hidden" name="decision_id" value="#{h(id)}">#{form_content}<button class="button button-primary" type="submit">#{h(resolution_action_label(id))}</button></form>)
         action
       end
 
@@ -636,7 +636,7 @@ module ProviderCompiler
                             options = [["identity", "Без пересчёта"], ["money_to_provider", "major → minor"], ["provider_to_money", "minor → major"]].map do |value, label|
                               %(<option value="#{value}"#{transform == value ? " selected" : ""}>#{label}</option>)
                             end.join
-                            %(<label class="input-label">Преобразование<select name="field_#{index}_transform" required><option value="">Выберите преобразование</option>#{options}</select></label><label class="input-label">Factor<input name="field_#{index}_factor" value="#{h(factor)}" placeholder="Например, 100" inputmode="decimal" required></label><small class="proposal-note">#{unresolved ? "Предложение системы: преобразование зависит от подтверждённой единицы суммы." : "Значение определено из OpenAPI."}</small>)
+                            %(<label class="input-label">Преобразование<select name="field_#{index}_transform" required><option value="">Выберите преобразование</option>#{options}</select></label><label class="input-label">Коэффициент пересчёта (factor)<input name="field_#{index}_factor" value="#{h(factor)}" placeholder="Например, 100" inputmode="decimal" required></label><small class="proposal-note">#{unresolved ? "Предложение системы: преобразование зависит от подтверждённой единицы суммы." : "Значение определено из OpenAPI."}</small>)
                           else
                             %(<input type="hidden" name="field_#{index}_transform" value="identity"><input type="hidden" name="field_#{index}_factor" value="1">)
                           end
@@ -652,15 +652,16 @@ module ProviderCompiler
       def webhook_resolution_input(encoding)
         <<~HTML
           <input type="hidden" name="webhook_raw_body" value="true">
-          <small class="proposal-note">Предложение системы: #{encoding || "encoding не определён"} · это не подтверждённый выбор.</small>
-          <label class="input-label">Ваш выбор · encoding<select name="webhook_encoding" required><option value="">Выберите encoding</option><option value="hex">hex</option><option value="base64">base64</option></select></label>
+          <small class="proposal-note">Предложение системы: #{encoding || "кодировка не определена"} · это не подтверждённый выбор.</small>
+          <label class="input-label">Ваш выбор · кодировка (encoding)<select name="webhook_encoding" required><option value="">Выберите кодировку</option><option value="hex">hex</option><option value="base64">base64</option></select></label>
         HTML
       end
 
       def idempotency_resolution_input(header)
         <<~HTML
-          <label class="input-label">Решение<select name="idempotency_mode"><option value="none">Header отсутствует</option><option value="header">Используется header</option></select></label>
-          <label class="input-label">Имя header<input name="idempotency_header" value="#{h(header)}"></label>
+          <small class="proposal-note">Предложение системы: #{header ? "найден заголовок #{h(header)}" : "обязательный заголовок не найден"} · это не подтверждённый выбор.</small>
+          <label class="input-label">Ваш выбор<select name="idempotency_mode" required><option value="">Выберите вариант</option><option value="none">Заголовок отсутствует</option><option value="header">Используется заголовок</option></select></label>
+          <label class="input-label">Имя заголовка<input name="idempotency_header" value="" placeholder="Например, Idempotency-Key"></label>
         HTML
       end
 
@@ -679,7 +680,7 @@ module ProviderCompiler
         when "idempotency:header" then value["header"] ? "#{value["header"]}; обязательность: #{value["spec_required"]}" : "Параметр идемпотентности не найден."
         when "fields:create-request" then "#{Array(value).length} сопоставлений полей сохранено."
         when "constraints:create-request" then "#{Array(value).length} ограничений запроса сохранено."
-        when "errors:provider-model" then "#{Array(value).length} HTTP/provider error rules сохранено."
+        when "errors:provider-model" then "Сохранено правил ошибок HTTP и провайдера: #{Array(value).length}."
         else "Детали решения доступны в технических подробностях."
         end
       end
@@ -753,10 +754,10 @@ module ProviderCompiler
         return rationale_summary(decision["rationale"]) if decision && decision["rationale"]
 
         case decision_id
-        when "idempotency:header" then "OpenAPI-факт и отдельная adapter policy показывают, как обрабатывать повторные запросы."
-        when "fields:create-request" then "Эти соответствия определяют, какие поля проходят между Space Payments и provider API."
-        when "constraints:create-request" then "Ограничения сохраняются для проверки generated request."
-        when "errors:provider-model" then "HTTP и provider error rules определяют безопасную обработку ошибок."
+        when "idempotency:header" then "Факт OpenAPI и отдельная политика адаптера показывают, как обрабатывать повторные запросы."
+        when "fields:create-request" then "Эти соответствия определяют, какие поля проходят между Space Payments и API провайдера."
+        when "constraints:create-request" then "Ограничения сохраняются для проверки сгенерированного запроса."
+        when "errors:provider-model" then "Правила ошибок HTTP и провайдера определяют безопасную обработку ошибок."
         else "Техническое объяснение доступно в деталях решения."
         end
       end
@@ -764,15 +765,15 @@ module ProviderCompiler
       def review_impact(decision_id)
         {
           "money:amount-units" => "Ошибка преобразования изменит сумму выплаты.",
-          "status:provider-map" => "Неверный mapping может преждевременно подтвердить или отклонить операцию.",
-          "fields:create-request" => "Неверное поле или transform отправит provider неправильные данные.",
+          "status:provider-map" => "Неверное сопоставление может преждевременно подтвердить или отклонить операцию.",
+          "fields:create-request" => "Неверное поле или преобразование отправит провайдеру неправильные данные.",
           "webhook:signature" => "Неверная проверка подписи может принять поддельный callback.",
-          "idempotency:header" => "Неверная retry policy может создать повторную выплату."
-        }.fetch(decision_id.to_s, "Неподтверждённое решение может сделать generated adapter небезопасным.")
+          "idempotency:header" => "Неверные правила повторов могут создать повторную выплату."
+        }.fetch(decision_id.to_s, "Неподтверждённое решение может сделать сгенерированный адаптер небезопасным.")
       end
 
       def review_proposal_explanation(decision)
-        "Предложение собрано из доступных фактов OpenAPI, профиля Space Payments и case evidence; подтвердите только те значения, которые соответствуют provider documentation."
+          "Предложение собрано из доступных фактов OpenAPI, профиля Space Payments и материалов кейса; подтвердите только значения, которые соответствуют документации провайдера."
       end
 
       def preview_content(workspace, kind, result)
@@ -806,8 +807,8 @@ module ProviderCompiler
         <<~HTML
           <div class="preview-grid preview-request-flow">
             <section class="card host-input-card"><span class="eyebrow accent">SPACE PAYMENTS</span><h2>Создание выплаты</h2><p>Входные данные канонического контракта</p><form method="post" action="/workspace/#{workspace.id}/preview"><input type="hidden" name="kind" value="request">#{input_field("amount", operation["amount"])}#{input_field("currency", operation["currency"])}#{input_field("external_id", operation["external_id"])}#{input_field("recipient_type", operation.dig("recipient", "type"))}#{input_field("recipient_phone", operation.dig("recipient", "phone"))}#{input_field("recipient_bank_code", operation.dig("recipient", "bank_code"))}<button class="button button-primary" type="submit">Запустить предпросмотр</button></form></section>
-            <section class="card transformation-card"><span class="eyebrow accent">ПРЕОБРАЗОВАНИЕ</span><h2>Что изменится</h2><p>Разрешённый Provider Blueprint</p><span class="label">operation.amount</span><strong class="big-value">#{h(operation["amount"])} #{h(operation["currency"])}</strong><span class="down-arrow">↓</span><span class="conversion-pill">#{h(conversion_label(conversion))}</span><strong class="factor">#{h(conversion_factor_label(conversion))}</strong><span class="down-arrow">↓</span>#{result_value}<div class="divider"></div><span class="label">Доказательное преобразование</span><small>источник: Blueprint.money · field mapping</small></section>
-            <section class="card provider-request-card"><span class="eyebrow accent">PROVIDER API</span><h2>Запрос провайдеру</h2><div class="request-line">#{method_pill(workspace.blueprint.dig("endpoints", 0, "method"))}<code>#{h(workspace.blueprint.dig("endpoints", 0, "path"))}</code></div>#{request ? json_block(request) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы построить реальный запрос через сгенерированный адаптер.</p>'}<small>Авторизация: #{h(workspace.blueprint.dig("auth", "strategy", "name"))} · Idempotency-Key, если доступен</small></section>
+             <section class="card transformation-card"><span class="eyebrow accent">ПРЕОБРАЗОВАНИЕ</span><h2>Что изменится</h2><p>Разрешённый Provider Blueprint</p><span class="label">operation.amount</span><strong class="big-value">#{h(operation["amount"])} #{h(operation["currency"])}</strong><span class="down-arrow">↓</span><span class="conversion-pill">#{h(conversion_label(conversion))}</span><strong class="factor">#{h(conversion_factor_label(conversion))}</strong><span class="down-arrow">↓</span>#{result_value}<div class="divider"></div><span class="label">Основание преобразования</span><small>Источник: Blueprint.money и сопоставление полей</small></section>
+             <section class="card provider-request-card"><span class="eyebrow accent">PROVIDER API</span><h2>Запрос провайдеру</h2><div class="request-line">#{method_pill(workspace.blueprint.dig("endpoints", 0, "method"))}<code>#{h(workspace.blueprint.dig("endpoints", 0, "path"))}</code></div>#{request ? json_block(request) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы построить реальный запрос через сгенерированный адаптер.</p>'}<small>Авторизация: #{h(workspace.blueprint.dig("auth", "strategy", "name"))} · Idempotency-Key — если он доступен</small></section>
           </div>
         HTML
       end
@@ -834,12 +835,12 @@ module ProviderCompiler
         callback_status = callback && callback["status"]
         callback_action = callback && callback["action"]
         mapping = if result
-                    %(<strong>#{h(event)}</strong><span class="down-arrow">↓</span><span class="conversion-pill">HMAC-SHA256 verified</span><span class="down-arrow">↓</span><span class="conversion-pill">#{h(callback_status)}</span><strong class="provider-value">#{h(callback_action || "none")}</strong><span>терминальное событие: #{callback && callback["terminal"] ? "да" : "нет"}</span>)
+                    %(<strong>#{h(event)}</strong><span class="down-arrow">↓</span><span class="conversion-pill">HMAC-SHA256: подпись проверена</span><span class="down-arrow">↓</span><span class="conversion-pill">#{h(callback_status)}</span><strong class="provider-value">#{h(callback_action || "нет")}</strong><span>терминальное событие: #{callback && callback["terminal"] ? "да" : "нет"}</span>)
                   else
                     %(<strong class="pending-value">Ожидает запуска</strong><span>Событие и действие появятся после запуска</span>)
                   end
         <<~HTML
-          <div class="preview-grid webhook-grid"><section class="card code-card"><span class="eyebrow accent">PROVIDER EVENT</span><h2>Входящий webhook</h2><p>Payload и модель подписи; секрет не показывается</p>#{result ? json_block("event" => result["event"], "signature_model" => result["signature_model"]) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы проверить webhook.</p>'}#{result ? "" : preview_button(workspace, "webhook")}</section><section class="card transformation-card"><span class="eyebrow accent">PIPELINE</span><h2>Проверка и mapping</h2><p>Поведение сгенерированного адаптера</p>#{mapping}</section><section class="card code-card"><span class="eyebrow accent">SPACE PAYMENTS</span><h2>Действие системы</h2><p>Канонический результат callback</p>#{result ? json_block(result["result"]) : '<p class="empty-hint">Результат появится после запуска предпросмотра.</p>'}</section></div>
+          <div class="preview-grid webhook-grid"><section class="card code-card"><span class="eyebrow accent">СОБЫТИЕ ПРОВАЙДЕРА</span><h2>Входящий webhook</h2><p>Данные события и модель подписи; секрет не показывается</p>#{result ? json_block("event" => result["event"], "signature_model" => result["signature_model"]) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы проверить webhook.</p>'}#{result ? "" : preview_button(workspace, "webhook")}</section><section class="card transformation-card"><span class="eyebrow accent">ПРОВЕРКА АДАПТЕРА</span><h2>Проверка и сопоставление</h2><p>Поведение сгенерированного адаптера</p>#{mapping}</section><section class="card code-card"><span class="eyebrow accent">SPACE PAYMENTS</span><h2>Действие системы</h2><p>Канонический результат callback</p>#{result ? json_block(result["result"]) : '<p class="empty-hint">Результат появится после запуска предпросмотра.</p>'}</section></div>
         HTML
       end
 
@@ -864,12 +865,25 @@ module ProviderCompiler
       def verification_panel(workspace, verification)
         checks = [
           ["Синтаксис Ruby", verification.fetch("syntax").all? { |item| item["passed"] }],
-          ["Contract smoke", verification.dig("smoke", "passed")]
+          ["Контрактная проверка", verification.dig("smoke", "passed")]
         ]
         preview_checks = [["Проекция запроса", workspace.preview_results.key?("request") ? true : nil], ["Проекция ответа и статусов", workspace.preview_results.key?("response") ? true : nil], ["Поведение webhook", workspace.preview_results.key?("webhook") ? true : nil]]
-        all_checks = checks + preview_checks
         <<~HTML
-          <section class="card verification-card"><h2>Проверка результата</h2><p class="card-intro">Показываются только реально выполненные checks. Не запущено — не равно ошибке.</p><div class="verification-grid">#{all_checks.map { |name, passed| verification_row(name, passed) }.join}</div><details class="technical-details"><summary>Технический результат</summary>#{json_block(verification)}</details></section>
+          <section class="card verification-card">
+            <h2>Проверка сгенерированной интеграции</h2>
+            <p class="card-intro">Здесь показаны обязательные проверки генерации. Незапущенный сценарий предпросмотра не является ошибкой.</p>
+            <div class="verification-section verification-required">
+              <h3>Обязательные проверки</h3>
+              <div class="verification-grid">#{checks.map { |name, passed| verification_row(name, passed) }.join}</div>
+              <div class="verification-result #{verification["passed"] ? "passed" : "failed"}">#{verification["passed"] ? "✓ Интеграция проверена" : "Проверка интеграции не пройдена"}</div>
+            </div>
+            <div class="verification-section verification-optional">
+              <h3>Проверенные сценарии предпросмотра</h3>
+              <p>Эти сценарии запускаются вручную на экране «Предпросмотр» и не влияют на обязательную проверку генерации.</p>
+              <div class="verification-grid">#{preview_checks.map { |name, passed| verification_row(name, passed) }.join}</div>
+            </div>
+            <details class="technical-details"><summary>Технический результат</summary>#{json_block(verification)}</details>
+          </section>
         HTML
       end
 
@@ -884,8 +898,8 @@ module ProviderCompiler
           ["Статусы", status_ready?(workspace.blueprint), :readiness],
           ["Webhook", workspace.blueprint.dig("webhook", "decision") == "ACCEPT", :readiness],
           ["Сопоставление полей", Array(workspace.blueprint["field_mappings"]).all? { |item| item["decision"] == "ACCEPT" }, :readiness],
-          ["Сгенерированный Ruby", generated ? workspace.verification.dig("syntax", 0, "passed") : nil, :verification],
-          ["Runtime smoke", generated ? workspace.verification.dig("smoke", "passed") : nil, :verification]
+          ["Сгенерированный Ruby-адаптер", generated ? workspace.verification.dig("syntax", 0, "passed") : nil, :verification],
+          ["Проверка runtime", generated ? workspace.verification.dig("smoke", "passed") : nil, :verification]
         ]
         rows.map { |name, ready, kind| readiness_row(name, ready, kind) }.join
       end
@@ -999,7 +1013,7 @@ module ProviderCompiler
         return "Blueprint разрешён для детерминированной генерации." unless workspace.generated?
 
         if verification && verification["passed"]
-          "Ruby-сервис, документация и fixtures успешно созданы и прошли обязательные проверки."
+          "Ruby-сервис, документация и fixtures успешно созданы; обязательные проверки пройдены."
         else
           "Артефакты созданы, но одна или несколько обязательных проверок не пройдены."
         end

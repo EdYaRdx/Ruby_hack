@@ -501,3 +501,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .verification-grid { grid-template-columns: 1fr; }
   .artifact-tabs-secondary { grid-template-columns: 1fr; }
 }
+
+/* GOAL 5.7 polish: separate mandatory verification from optional preview runs. */
+.generation-check-note { color: var(--green); font-weight: 700; }
+.verification-section { margin-top: 20px; padding: 17px 18px; border: 1px solid var(--border); border-radius: 11px; background: #fbfcfe; }
+.verification-section h3 { margin: 0; font-size: 14px; line-height: 20px; }
+.verification-section .verification-grid { margin-top: 9px; }
+.verification-required { border-color: #cfe8d8; background: #f8fcf9; }
+.verification-optional { border-color: #dfe3ed; background: #fafbfc; }
+.verification-optional > p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.verification-result { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 700; }
+.verification-result.passed { color: var(--green); }
+.verification-result.failed { color: var(--red); }

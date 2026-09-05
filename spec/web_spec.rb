@@ -73,14 +73,14 @@ RSpec.describe ProviderCompiler::Web::Application do
     response = call("GET", "/")
 
     expect(response.status).to eq(200)
-    expect(response.body).to include("Рабочая панель интеграций", "Анализировать спецификацию", "1. Спецификация", "5. Генерация", "Только OpenAPI", "эталонный resolved сценарий", "Дополнительные provider-specific правила не подмешиваются автоматически.")
+    expect(response.body).to include("Рабочая панель интеграций", "Анализировать спецификацию", "1. Спецификация", "5. Генерация", "Только OpenAPI", "с подтверждёнными правилами", "Дополнительные правила провайдера не подмешиваются автоматически.")
     expect(response.body).not_to include("Analyze specification", "Load NovaPay example")
   end
 
   it "keeps NovaPay spec-only and resolved demos visibly distinct" do
     response = call("GET", "/")
 
-    expect(response.body).to include("NovaPay — только OpenAPI", "Запустить spec-only", "NovaPay — эталонный resolved сценарий", "Открыть resolved пример")
+    expect(response.body).to include("NovaPay — только OpenAPI", "Запустить анализ по OpenAPI", "NovaPay — с подтверждёнными правилами", "Открыть подтверждённый пример")
 
     spec_only = call("POST", "/demo", body: "demo=novapay_spec_only")
     resolved = call("POST", "/demo", body: "demo=novapay")
@@ -91,12 +91,32 @@ RSpec.describe ProviderCompiler::Web::Application do
     expect(store.fetch(workspace_id(resolved)).blueprint.fetch("decision")).to eq("ACCEPT")
   end
 
+  it "labels HeliosPay as a confirmed-rules demo rather than a spec-only result" do
+    response = call("GET", "/")
+
+    expect(response.body).to include("HeliosPay — с подтверждёнными правилами", "Независимый провайдер с другой структурой API", "ГОТОВО К ГЕНЕРАЦИИ")
+    expect(response.body).not_to include("HeliosPay</strong><span>Ещё один независимый provider")
+  end
+
+  it "keeps the user-facing copy Russian and avoids stale UI jargon" do
+    homepage = call("GET", "/").body
+    expect(homepage).not_to include("safety feature", "readiness states", "business semantics", "resolved knowledge modes")
+
+    response = call("POST", "/demo", body: "demo=novapay_spec_only")
+    id = workspace_id(response)
+    review = call("GET", "/workspace/#{id}/review").body
+    blocked_preview = call("GET", "/workspace/#{id}/preview").body
+
+    expect(review).not_to include("unresolved semantics", "SAFETY REVIEW")
+    expect(blocked_preview).not_to include("safety gate", "Review state")
+  end
+
   it "keeps money, status and webhook proposals distinct from user choices" do
     response = call("POST", "/demo", body: "demo=novapay_spec_only")
     id = workspace_id(response)
 
     money_review = call("GET", "/workspace/#{id}/review").body
-    expect(money_review).to include("Предложение системы: provider unit: minor")
+    expect(money_review).to include("Предложение системы: единица провайдера: minor")
     expect(money_review).not_to include('value="minor" selected', 'value="100"')
 
     call("POST", "/workspace/#{id}/review", body: "decision_id=money%3Aamount-units&provider_unit=minor&provider_subunit=kopecks&scale=100")
@@ -126,7 +146,7 @@ RSpec.describe ProviderCompiler::Web::Application do
     call("POST", "/workspace/#{id}/review", body: field_values)
 
     webhook_review = call("GET", "/workspace/#{id}/review").body
-    expect(webhook_review).to include("Предложение системы: encoding не определён", "Выберите encoding")
+    expect(webhook_review).to include("Предложение системы: кодировка не определена", "Выберите кодировку")
     expect(webhook_review).not_to include('value="hex" selected', 'value="base64" selected')
   end
 
@@ -137,7 +157,7 @@ RSpec.describe ProviderCompiler::Web::Application do
 
     expect(response.status).to eq(303)
     expect(analysis.status).to eq(200)
-    expect(analysis.body).to include("getPayoutStatus", "Анализ OpenAPI завершён", "Что система определила", "Эталонный resolved сценарий", "Идемпотентность", "Профиль кейса", "Конфликты", "OpenAPI pointer")
+    expect(analysis.body).to include("getPayoutStatus", "Анализ OpenAPI завершён", "Что система определила", "Сценарий с подтверждёнными правилами", "Идемпотентность", "Профиль кейса", "Конфликты", "OpenAPI pointer")
     expect(analysis.body).not_to include("Reference case mode", "Почему?")
     expect(analysis.body).not_to include('<details class="technical-details" open')
     expect(store.fetch(id).blueprint.fetch("decision")).to eq("ACCEPT")
@@ -286,7 +306,7 @@ RSpec.describe ProviderCompiler::Web::Application do
     id = workspace_id(response)
     page = call("GET", "/workspace/#{id}/generate")
 
-    expect(page.body).to include("Готово к генерации", "ГОТОВО К ГЕНЕРАЦИИ", "Сгенерировать интеграцию", "Сгенерированный Ruby", "Runtime smoke", "НЕ ЗАПУЩЕНО")
+    expect(page.body).to include("Готово к генерации", "ГОТОВО К ГЕНЕРАЦИИ", "Сгенерировать интеграцию", "Сгенерированный Ruby-адаптер", "Проверка runtime", "НЕ ЗАПУЩЕНО")
     expect(page.body).not_to include("ПРОВЕРЕНО", "READY", "VERIFIED")
   end
 
@@ -298,9 +318,20 @@ RSpec.describe ProviderCompiler::Web::Application do
     artifact = call("GET", "/workspace/#{id}/artifact?name=service.rb")
 
     expect(generated.status).to eq(303)
-    expect(page.body).to include("ПРОВЕРЕНО", "Интеграция сгенерирована", "service.rb", "Runtime smoke", "ПРОЙДЕНО")
+    expect(page.body).to include("ПРОВЕРЕНО", "Интеграция сгенерирована", "6 файлов создано", "Обязательные проверки пройдены", "Обязательные проверки", "Проверенные сценарии предпросмотра", "Интеграция проверена", "service.rb", "Проверка runtime", "ПРОЙДЕНО")
     expect(artifact.body).to include("class NovapayService")
     expect(store.fetch(id).verification.dig("syntax", 0, "passed")).to be(true)
+  end
+
+  it "separates mandatory generation checks from optional preview scenarios" do
+    response = call("POST", "/demo", body: "demo=novapay")
+    id = workspace_id(response)
+    call("POST", "/workspace/#{id}/generate")
+    page = call("GET", "/workspace/#{id}/generate").body
+
+    expect(page).to include("Проверка сгенерированной интеграции", "Обязательные проверки", "Проверенные сценарии предпросмотра", "не влияют на обязательную проверку генерации")
+    expect(page).not_to include("Contract smoke", "Runtime smoke")
+    expect(page).to include("НЕ ЗАПУЩЕНО")
   end
 
   it "does not present READY or VERIFIED when a real verification result fails" do
