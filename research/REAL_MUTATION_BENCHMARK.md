@@ -1,5 +1,7 @@
 # GOAL 3: реальный mutation benchmark
 
+> HISTORICAL SNAPSHOT — this detailed GOAL 3 benchmark record is retained for research history. It is not the current product metric source; use [docs/BENCHMARK.md](../docs/BENCHMARK.md), [GOAL_5_RESULT.md](GOAL_5_RESULT.md), and [spec_only_novapay_report.json](spec_only_novapay_report.json) for current evidence.
+
 Date: 2026-09-04
 
 ## Методика

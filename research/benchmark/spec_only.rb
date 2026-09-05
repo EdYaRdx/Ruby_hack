@@ -11,6 +11,7 @@ require "yaml"
 $LOAD_PATH.unshift(File.expand_path("../../lib", __dir__))
 require "provider_compiler"
 require_relative "semantic_comparator"
+require_relative "metrics"
 require_relative "run"
 
 module SpecOnlyBenchmark
@@ -33,6 +34,8 @@ module SpecOnlyBenchmark
     results = cases.map do |id, expected|
       execute_case(id, expected, source, work_dir)
     end
+    baseline = baseline_report
+    aggregate = aggregate(results)
     report = {
       "schema_version" => 1,
       "benchmark" => "novapay_spec_only_mutations",
@@ -40,8 +43,13 @@ module SpecOnlyBenchmark
       "source" => "fixtures/novapay_provider_api.yaml",
       "ground_truth" => "research/benchmark/spec_only_mutations.yml",
       "methodology" => "hand-authored mutation -> empty-defaults pipeline -> independent semantic comparator",
+      "baseline" => baseline,
       "cases" => results,
-      "aggregate" => aggregate(results)
+      "aggregate" => aggregate,
+      "metrics" => {
+        "baseline" => baseline.fetch("metrics"),
+        "mutation_lane" => aggregate.fetch("metrics")
+      }
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
     File.write(OUTPUT_PATH, JSON.pretty_generate(report) + "\n", encoding: "UTF-8")
@@ -60,6 +68,7 @@ module SpecOnlyBenchmark
     pipeline = ProviderCompiler::Pipeline.new(spec_path: spec_path, profile_path: PROFILE_PATH, defaults_path: EMPTY_DEFAULTS_PATH)
     blueprint = pipeline.blueprint
     actual_decision = blueprint.fetch("decision")
+    summary = pipeline.manifest.to_h.fetch("summary")
     validation = SemanticBenchmark::Comparator.new.compare(
       expected_decision: expected.fetch("expected_decision"),
       expected_case: expected,
@@ -72,7 +81,8 @@ module SpecOnlyBenchmark
       "mutation" => expected.fetch("mutation"),
       "expected_decision" => expected.fetch("expected_decision"),
       "actual_decision" => actual_decision,
-      "summary" => pipeline.manifest.to_h.fetch("summary"),
+      "summary" => summary,
+      "metrics" => BenchmarkMetrics.from_manifest_summary(summary),
       "money_decision" => blueprint.dig("money", "decision"),
       "webhook_decision" => blueprint.dig("webhook", "decision"),
       "validation" => validation,
@@ -86,6 +96,26 @@ module SpecOnlyBenchmark
       "actual_decision" => "COMPILER_ERROR",
       "error" => e.message,
       "passed" => false
+    }
+  end
+
+  def baseline_report
+    pipeline = ProviderCompiler::Pipeline.new(spec_path: SOURCE_PATH, profile_path: PROFILE_PATH, defaults_path: EMPTY_DEFAULTS_PATH)
+    summary = pipeline.manifest.to_h.fetch("summary")
+    {
+      "source" => "fixtures/novapay_provider_api.yaml",
+      "profile" => "profiles/space_payments_v1.yml",
+      "defaults" => "none",
+      "decision" => pipeline.blueprint.fetch("decision"),
+      "summary" => summary,
+      "generation_attempted" => false,
+      "metrics" => BenchmarkMetrics.from_manifest_summary(
+        summary,
+        total_specs: 1,
+        fully_auto_ready_specs: 0,
+        critical_false_accepts: 0,
+        unsafe_generation_attempts: 0
+      )
     }
   end
 
@@ -120,6 +150,25 @@ module SpecOnlyBenchmark
     critical_false_accepts = results.select do |item|
       item["expected_decision"] != "ACCEPT" && item["actual_decision"] == "ACCEPT"
     end
+    total_decisions = results.sum { |item| item.dig("summary", "decisions").to_i }
+    accepted_decisions = results.sum { |item| item.dig("summary", "accepted").to_i }
+    review_required_decisions = results.sum { |item| item.dig("summary", "review_required").to_i }
+    blocking_entries = results.sum { |item| item.dig("summary", "blocking").to_i }
+    fully_auto_ready_specs = results.count do |item|
+      item.dig("summary", "review_required").to_i.zero? && item.dig("summary", "blocking").to_i.zero?
+    end
+    metrics = BenchmarkMetrics.from_manifest_summary(
+      {
+        "decisions" => total_decisions,
+        "accepted" => accepted_decisions,
+        "review_required" => review_required_decisions,
+        "blocking" => blocking_entries
+      },
+      total_specs: total,
+      fully_auto_ready_specs: fully_auto_ready_specs,
+      critical_false_accepts: critical_false_accepts.length,
+      unsafe_generation_attempts: 0
+    )
     {
       "cases_total" => total,
       "cases_passed" => passed,
@@ -136,6 +185,7 @@ module SpecOnlyBenchmark
       "semantic_accept_accuracy" => percentage(results.count { |item| item.dig("validation", "semantic_pass") && item["expected_decision"] == "ACCEPT" }, results.count { |item| item["expected_decision"] == "ACCEPT" }),
       "critical_false_accept_count" => critical_false_accepts.length,
       "critical_false_accept_cases" => critical_false_accepts.map { |item| item.fetch("case_id") },
+      "metrics" => metrics,
       "formula" => {
         "automatic_accept_rate" => "ACCEPT decisions / total cases",
         "safe_decision_coverage" => "independently passed cases / total cases",

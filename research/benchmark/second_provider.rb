@@ -12,6 +12,7 @@ require "yaml"
 $LOAD_PATH.unshift(File.expand_path("../../lib", __dir__))
 require "provider_compiler"
 require_relative "semantic_comparator"
+require_relative "metrics"
 
 module SecondProviderBenchmark
   ROOT = File.expand_path("../..", __dir__)
@@ -61,7 +62,17 @@ module SecondProviderBenchmark
         "decision_accuracy" => percentage(cases.count { |item| item.dig("actual", "semantic_validation", "decision_pass") }, cases.length),
         "semantic_accuracy" => percentage(cases.count { |item| item.dig("actual", "semantic_validation", "semantic_pass") }, cases.length),
         "safe_decision_coverage" => percentage(cases.count { |item| item["passed"] }, cases.length),
-        "behavioral_vector_pass_rate" => behavioral_vector_pass_rate(cases)
+        "behavioral_vector_pass_rate" => behavioral_vector_pass_rate(cases),
+        "metrics" => {
+          "levels" => cases.to_h { |item| [item.fetch("level"), item.fetch("actual").fetch("metrics")] },
+          "formulas" => {
+            "decision_automation_rate" => "accepted_decisions / total_decisions per level",
+            "review_rate" => "review_required_decisions / total_decisions per level",
+            "fully_auto_ready_rate" => "specs_with_zero_review_and_zero_blocking / total_specs per level",
+            "critical_false_accepts" => "unsafe ACCEPTs for hand-authored critical cases",
+            "unsafe_generation_attempts" => "generation attempts while a critical decision is unresolved"
+          }
+        }
       }
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
@@ -80,6 +91,7 @@ module SecondProviderBenchmark
     }
     pipeline = ProviderCompiler::Pipeline.new(spec_path: SPEC_PATH, profile_path: PROFILE_PATH, defaults_path: defaults_path)
     blueprint = pipeline.blueprint
+    summary = pipeline.manifest.to_h.fetch("summary")
     actual = {
       "decision" => blueprint.fetch("decision"),
       "operations" => blueprint.fetch("operations").map { |item| item.slice("operation_id", "canonical", "method", "path") },
@@ -89,7 +101,7 @@ module SecondProviderBenchmark
       "statuses" => blueprint.fetch("statuses"),
       "webhook" => blueprint.fetch("webhook"),
       "idempotency" => blueprint.fetch("idempotency"),
-      "manifest" => pipeline.manifest.to_h.fetch("summary")
+      "manifest" => summary
     }
     actual["generation"] = generation_status(pipeline, blueprint, defaults_path, level)
     semantic_validation = SemanticBenchmark::Comparator.new.compare(
@@ -104,12 +116,21 @@ module SecondProviderBenchmark
       actual["behavioral_vectors"] = run_behavioral_vectors(actual.dig("generation", "output_dir"), behavioral_vectors)
     end
     passed = semantic_validation.fetch("passed") && (!actual.key?("behavioral_vectors") || actual.fetch("behavioral_vectors").fetch("passed"))
+    critical_false_accept = actual.fetch("decision") == "ACCEPT" && (expected != "ACCEPT" || !semantic_validation.fetch("semantic_pass") || !semantic_validation.fetch("safety_pass") || actual.dig("behavioral_vectors", "passed") == false)
+    unsafe_generation_attempts = actual.dig("generation", "status") != "not_attempted" && expected != "ACCEPT" ? 1 : 0
+    actual["metrics"] = BenchmarkMetrics.from_manifest_summary(
+      summary,
+      total_specs: 1,
+      fully_auto_ready_specs: actual.fetch("decision") == "ACCEPT" && summary.fetch("review_required").zero? && summary.fetch("blocking").zero? ? 1 : 0,
+      critical_false_accepts: critical_false_accept ? 1 : 0,
+      unsafe_generation_attempts: unsafe_generation_attempts
+    )
     {
       "level" => level,
       "expected" => { "decision" => expected },
       "actual" => actual,
       "passed" => passed,
-      "critical_false_accept" => actual.fetch("decision") == "ACCEPT" && (expected != "ACCEPT" || !semantic_validation.fetch("semantic_pass") || !semantic_validation.fetch("safety_pass") || actual.dig("behavioral_vectors", "passed") == false)
+      "critical_false_accept" => critical_false_accept
     }
   rescue ProviderCompiler::Error, ProviderCompiler::ValidationError, Psych::Exception, Errno::ENOENT => e
     {

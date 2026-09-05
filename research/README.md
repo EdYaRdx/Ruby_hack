@@ -15,10 +15,8 @@ research, benchmark corpus и исторические записи решени
 
 `REFERENCE_GROUND_TRUTH.md`, `GROUND_TRUTH_CORRECTIONS.md`,
 `PROVIDER_BLUEPRINT_V1.md`, `RULE_PRECEDENCE.md`, `ARCHITECTURE_INVARIANTS.md`,
-`ARCHITECTURE_RED_TEAM.md`, `REAL_MUTATION_BENCHMARK.md`,
-`SEMANTIC_BENCHMARK_VALIDATION.md`, `SECOND_PROVIDER_VALIDATION.md` и
-`GOAL_4_4_RESULT.md`, `GOAL_4_5_RESULT.md` содержат
-актуальные technical evidence. Их aggregate-метрики всё равно публикуются
+`ARCHITECTURE_RED_TEAM.md` и `SECOND_PROVIDER_VALIDATION.md` содержат
+актуальные supporting evidence. Их aggregate-метрики всё равно публикуются
 канонически через [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
 
 ## Исторические и плановые материалы
@@ -31,13 +29,19 @@ research, benchmark corpus и исторические записи решени
 Они не описывают автоматически текущий runtime; перед использованием сверяйте
 их с README и `docs/`.
 
+Подробные snapshots GOAL 3 и GOAL 4 (`REAL_MUTATION_BENCHMARK.md`,
+`SEMANTIC_BENCHMARK_VALIDATION.md`, `GOAL_4_4_RESULT.md`,
+`GOAL_4_5_RESULT.md`) также относятся к historical evidence и явно помечены
+как superseded. Для текущих чисел используйте `docs/BENCHMARK.md` и
+`NOVAPAY_SPEC_ONLY_BASELINE.md`.
+
 ## GOAL 3: артефакты реальной проверки
 
-- [SEMANTIC_BENCHMARK_VALIDATION.md](SEMANTIC_BENCHMARK_VALIDATION.md) — независимый semantic comparator, safety rules и metrics GOAL 3.5.
-- [GOAL_3_5_SCORECARD.md](GOAL_3_5_SCORECARD.md) — scorecard и итоговый verdict GOAL 3.5.
-- [REAL_MUTATION_BENCHMARK.md](REAL_MUTATION_BENCHMARK.md) — реальный mutation run из 37 кейсов, baseline/final metrics, taxonomy ошибок и safety gate.
+- [SEMANTIC_BENCHMARK_VALIDATION.md](SEMANTIC_BENCHMARK_VALIDATION.md) — historical snapshot независимого semantic comparator GOAL 3.5.
+- [GOAL_3_5_SCORECARD.md](GOAL_3_5_SCORECARD.md) — historical scorecard и итоговый verdict GOAL 3.5.
+- [REAL_MUTATION_BENCHMARK.md](REAL_MUTATION_BENCHMARK.md) — historical mutation run из 37 кейсов, baseline/final metrics, taxonomy ошибок и safety gate.
 - [SECOND_PROVIDER_VALIDATION.md](SECOND_PROVIDER_VALIDATION.md) — независимый провайдер Aurora Transfers, pure-generic и resolved levels.
-- [GOAL_4_5_RESULT.md](GOAL_4_5_RESULT.md) — explainability UX polish, Review happy path и regression evidence.
+- [GOAL_4_5_RESULT.md](GOAL_4_5_RESULT.md) — historical explainability UX polish, Review happy path и regression evidence.
 - [GOAL_3_SCORECARD.md](GOAL_3_SCORECARD.md) — scorecard и итоговый verdict GOAL 3.
 - [benchmark/run.rb](benchmark/run.rb) — mutation runner текущего Ruby compiler; возвращает ненулевой код при critical false ACCEPT.
 - [benchmark/second_provider.rb](benchmark/second_provider.rb) — runner независимого провайдера.
@@ -99,7 +103,9 @@ NovaPay fixture: это воспроизводимый mutation corpus, а не 
 и описана в `SECOND_PROVIDER_VALIDATION.md`.
 ## Goal 5 evidence
 
+- [`GOAL_5_2_RESULT.md`](GOAL_5_2_RESULT.md) — final pre-push repository audit, documentation/UI review, and regression verdict.
 - [`GOAL_5_RESULT.md`](GOAL_5_RESULT.md) — final spec-only hardening and generator report.
+- [`NOVAPAY_SPEC_ONLY_BASELINE.md`](NOVAPAY_SPEC_ONLY_BASELINE.md) — official NovaPay spec-only decision-level and spec-level metrics.
 - [`spec_only_novapay_report.json`](spec_only_novapay_report.json) — NovaPay with empty defaults.
 - [`benchmark/spec_only.rb`](benchmark/spec_only.rb) — independent spec-only mutation lane.
 - [`benchmark/third_provider.rb`](benchmark/third_provider.rb) — blind HeliosPay validation.

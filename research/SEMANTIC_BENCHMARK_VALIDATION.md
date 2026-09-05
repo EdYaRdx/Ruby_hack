@@ -1,5 +1,7 @@
 # GOAL 3.5: независимая semantic benchmark validation
 
+> HISTORICAL SNAPSHOT — this GOAL 3.5 checkpoint predates the current GOAL 5.1 metric terminology and regression baseline. Current judge-facing evidence is maintained in [docs/BENCHMARK.md](../docs/BENCHMARK.md), [GOAL_5_RESULT.md](GOAL_5_RESULT.md), [NOVAPAY_SPEC_ONLY_BASELINE.md](NOVAPAY_SPEC_ONLY_BASELINE.md), and [spec_only_novapay_report.json](spec_only_novapay_report.json).
+
 Date: 2026-09-04
 
 ## Область проверки

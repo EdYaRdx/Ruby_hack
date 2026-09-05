@@ -15,6 +15,7 @@ RSpec.describe "submission documentation" do
       docs/DOCS_POLICY.md
       docs/GLOSSARY.md
       THIRD_PARTY.md
+      research/NOVAPAY_SPEC_ONLY_BASELINE.md
       examples/novapay/provider_api.yaml
       examples/novapay/provider_blueprint.json
       examples/novapay/review_manifest.json
@@ -30,7 +31,21 @@ RSpec.describe "submission documentation" do
   it "contains generated markers for dynamic status" do
     expect(File.read(File.join(ROOT, "README.md"))).to include("BEGIN GENERATED: PROJECT_STATUS")
     expect(File.read(File.join(ROOT, "README.md"))).to include("BEGIN GENERATED: CAPABILITIES")
+    expect(File.read(File.join(ROOT, "README.md"))).to include("BEGIN GENERATED: JUDGE_METRICS")
     expect(File.read(File.join(ROOT, "docs", "BENCHMARK.md"))).to include("BEGIN GENERATED: BENCHMARK")
+    expect(File.read(File.join(ROOT, "research", "NOVAPAY_SPEC_ONLY_BASELINE.md"))).to include("BEGIN GENERATED: NOVAPAY_SPEC_ONLY_BASELINE")
+  end
+
+  it "documents separate decision automation, readiness and safety metrics" do
+    readme = File.read(File.join(ROOT, "README.md"), encoding: "UTF-8")
+    benchmark = File.read(File.join(ROOT, "docs", "BENCHMARK.md"), encoding: "UTF-8")
+
+    expect(readme).to include("Decision automation")
+    expect(readme).to include("Fully auto-ready")
+    expect(readme).to include("Critical false ACCEPTs")
+    expect(benchmark).to include("decision_automation_rate")
+    expect(benchmark).to include("fully_auto_ready_rate")
+    expect(benchmark).to include("unsafe_generation_attempts")
   end
 
   it "does not leak local Windows paths or attachment locations" do

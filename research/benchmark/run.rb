@@ -15,6 +15,7 @@ require "yaml"
 $LOAD_PATH.unshift(File.expand_path("../../lib", __dir__))
 require "provider_compiler"
 require_relative "semantic_comparator"
+require_relative "metrics"
 
 module RealMutationBenchmark
   ROOT = File.expand_path("../..", __dir__)
@@ -226,6 +227,11 @@ module RealMutationBenchmark
     end
     generation_attempts = results.select { |item| item.dig("actual", "generation", "status") && item.dig("actual", "generation", "status") != "not_attempted" }
     syntax_entries = generation_attempts.flat_map { |item| Array(item.dig("actual", "generation", "verification", "syntax")) }
+    unsafe_generation_attempts = results.count do |item|
+      item.dig("actual", "generation", "status") &&
+        item.dig("actual", "generation", "status") != "not_attempted" &&
+        item.dig("expected", "effective_decision") != "ACCEPT"
+    end
     area_accuracy = results.group_by { |item| item.dig("expected", "area") }.transform_values do |items|
       percentage(items.count { |item| item.dig("actual", "semantic_validation", "passed") }, items.length)
     end
@@ -261,6 +267,24 @@ module RealMutationBenchmark
       "critical_false_accept_count" => critical_false_accepts.length,
       "critical_false_accept_cases" => critical_false_accepts.map { |item| item.fetch("case_id") },
       "critical_false_accept_rate" => percentage(critical_false_accepts.length, results.count { |item| item.dig("expected", "critical") }),
+      "metrics" => {
+        "benchmark_level" => {
+          "total_cases" => total,
+          "passed_cases" => passed,
+          "generation_attempts" => generation_attempts.length,
+          "generation_passes" => generation_attempts.count { |item| item.dig("actual", "generation", "status") == "passed" }
+        },
+        "safety" => {
+          "critical_false_accepts" => critical_false_accepts.length,
+          "unsafe_generation_attempts" => unsafe_generation_attempts
+        },
+        "formulas" => {
+          "benchmark_pass_rate" => "passed_cases / total_cases",
+          "generation_success_rate" => "generation_passes / generation_attempts",
+          "critical_false_accepts" => "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts" => "generation attempts while a critical decision is unresolved"
+        }
+      },
       "generation_pass_count" => generation_attempts.count { |item| item.dig("actual", "generation", "status") == "passed" },
       "generation_attempt_count" => generation_attempts.length,
       "generation_success_rate" => percentage(generation_attempts.count { |item| item.dig("actual", "generation", "status") == "passed" }, generation_attempts.length),

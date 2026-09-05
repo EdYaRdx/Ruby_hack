@@ -12,6 +12,7 @@ require "yaml"
 $LOAD_PATH.unshift(File.expand_path("../../lib", __dir__))
 require "provider_compiler"
 require_relative "semantic_comparator"
+require_relative "metrics"
 
 module ThirdProviderBenchmark
   ROOT = File.expand_path("../..", __dir__)
@@ -44,7 +45,17 @@ module ThirdProviderBenchmark
         "levels_passed" => [spec_only, resolved].count { |item| item["passed"] },
         "spec_only" => spec_only,
         "resolved" => resolved,
-        "critical_false_accept_count" => [spec_only, resolved].count { |item| item["critical_false_accept"] }
+        "critical_false_accept_count" => [spec_only, resolved].count { |item| item["critical_false_accept"] },
+        "metrics" => {
+          "levels" => [spec_only, resolved].to_h { |item| [item.fetch("level"), item.fetch("metrics")] },
+          "formulas" => {
+            "decision_automation_rate" => "accepted_decisions / total_decisions per level",
+            "review_rate" => "review_required_decisions / total_decisions per level",
+            "fully_auto_ready_rate" => "specs_with_zero_review_and_zero_blocking / total_specs per level",
+            "critical_false_accepts" => "unsafe ACCEPTs for hand-authored critical cases",
+            "unsafe_generation_attempts" => "generation attempts while a critical decision is unresolved"
+          }
+        }
       }
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
@@ -77,16 +88,26 @@ module ThirdProviderBenchmark
                    run_behavioral_vectors(generation.fetch("output_dir"), vectors)
                  end
     passed = validation.fetch("passed") && (!behavioral || behavioral.fetch("passed"))
+    summary = pipeline.manifest.to_h.fetch("summary")
+    critical_false_accept = pipeline.blueprint.fetch("decision") == "ACCEPT" && (ground_truth.fetch("expected_decision") != "ACCEPT" || !validation.fetch("semantic_pass") || !validation.fetch("safety_pass") || behavioral&.fetch("passed") == false)
+    unsafe_generation_attempts = generation && generation.fetch("status") != "not_attempted" && ground_truth.fetch("expected_decision") != "ACCEPT" ? 1 : 0
     {
       "level" => level,
       "expected_decision" => ground_truth.fetch("expected_decision"),
       "actual_decision" => pipeline.blueprint.fetch("decision"),
-      "summary" => pipeline.manifest.to_h.fetch("summary"),
+      "summary" => summary,
+      "metrics" => BenchmarkMetrics.from_manifest_summary(
+        summary,
+        total_specs: 1,
+        fully_auto_ready_specs: pipeline.blueprint.fetch("decision") == "ACCEPT" && summary.fetch("review_required").zero? && summary.fetch("blocking").zero? ? 1 : 0,
+        critical_false_accepts: critical_false_accept ? 1 : 0,
+        unsafe_generation_attempts: unsafe_generation_attempts
+      ),
       "semantic_validation" => validation,
       "generation" => generation || { "status" => "not_attempted" },
       "behavioral_vectors" => behavioral,
       "passed" => passed,
-      "critical_false_accept" => pipeline.blueprint.fetch("decision") == "ACCEPT" && (ground_truth.fetch("expected_decision") != "ACCEPT" || !validation.fetch("semantic_pass") || !validation.fetch("safety_pass") || behavioral&.fetch("passed") == false)
+      "critical_false_accept" => critical_false_accept
     }
   rescue ProviderCompiler::Error, ProviderCompiler::ValidationError, ProviderCompiler::BlueprintValidationError => e
     {

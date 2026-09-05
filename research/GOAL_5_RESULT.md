@@ -106,21 +106,35 @@ status.
 
 ## SPEC-ONLY NOVAPAY
 
-Total decisions: 7 cases
+Official baseline (one run of `fixtures/novapay_provider_api.yaml` with no
+provider defaults):
 
-ACCEPT: 0
+- Total decisions: 14
+- Accepted: 10
+- REVIEW_REQUIRED: 4
+- Blocking entries: 3
+- Decision-level automation: 10/14 = 71.4%
+- Review rate: 4/14 = 28.6%
+- Fully auto-ready: 0/1 = 0.0%
+- Critical false ACCEPTs: 0
+- Unsafe generation attempts: 0
 
-REVIEW_REQUIRED: 7
+The official specification supports automatic facts such as operation paths,
+request/response fields and provider auth where explicitly documented. Status
+business outcomes and part of webhook semantics remain review concerns. The
+spec-only run does not generate an adapter.
 
-UNKNOWN: 0
+Mutation lane (seven spec-only cases):
 
-BLOCKING: 17 decision entries across the lane
-
-Automatic accept rate: 0.0%; safe decision coverage
-100.0%. This is an honest result of the official spec-only input: status
-business outcomes and part of webhook semantics are not fully documented.
-
-Critical false ACCEPTs: 0
+- Total decisions: 98
+- Accepted: 74
+- REVIEW_REQUIRED: 24
+- Blocking entries: 17
+- Decision-level automation: 74/98 = 75.5%
+- Review rate: 24/98 = 24.5%
+- Fully auto-ready: 0/7 = 0.0%
+- Critical false ACCEPTs: 0
+- Unsafe generation attempts: 0
 
 The machine-readable result is [`spec_only_novapay_report.json`](spec_only_novapay_report.json).
 
@@ -131,9 +145,11 @@ Name: HeliosPay
 Ground truth authored before run: YES
 
 Spec-only decision: `REVIEW_REQUIRED` (13 decisions: 11 accepted, 2 review,
-0 blocking)
+0 blocking); decision automation 11/13 = 84.6%; fully auto-ready 0/1.
 
 Resolved generation: PASS
+
+Resolved decision automation: 13/13 = 100.0%; fully auto-ready 1/1.
 
 Runtime verification: PASS
 
@@ -141,23 +157,25 @@ Resolved behavioral vectors: 4/4
 
 ## BENCHMARK
 
-Reference mutation: 37/37
+Reference mutation: 37/37 adversarial mutations of one reference provider
+domain, not 37 providers.
 
-Reference metrics: automatic accept rate 48.6%; safe decision coverage 100.0%;
-semantic accept accuracy 100.0%; critical false ACCEPTs 0.
+Reference metrics: decision-only legacy accept rate 48.6%; safe decision
+coverage 100.0%; semantic ACCEPT accuracy 100.0%; critical false ACCEPTs 0.
 
 Spec-only mutation: 7 cases
 
-Spec-only automation coverage: 0.0% automatic accept rate; 100.0% safe decision
-coverage; critical false ACCEPTs 0.
+Spec-only decision automation is reported separately above. It must not be
+confused with full-spec auto-ready status.
 
 Do not combine these metrics.
 
 ## AURORA
 
-Spec-only: REVIEW_REQUIRED
+Spec-only: REVIEW_REQUIRED (14 decisions: 12 accepted, 2 review, 1 blocking;
+decision automation 85.7%; fully auto-ready 0/1)
 
-Resolved: ACCEPT
+Resolved: ACCEPT (14/14 accepted; fully auto-ready 1/1)
 
 Semantic: 100.0%
 
@@ -176,7 +194,7 @@ Third provider: PASS (HeliosPay)
 
 ## REGRESSION
 
-RSpec: 72 examples, 0 failures after the final regression run.
+RSpec: 77 examples, 0 failures after the final regression run.
 
 Web smoke: PASS
 

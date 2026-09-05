@@ -1,5 +1,7 @@
 # GOAL 4.4 — UX Simplification + Official NovaPay Upload Fix
 
+> HISTORICAL SNAPSHOT — superseded by GOAL 5 and GOAL 5.1. This document records the former GOAL 4.4 checkpoint and is not the current product behavior or current metric source. See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md), [docs/BENCHMARK.md](../docs/BENCHMARK.md), [GOAL_5_RESULT.md](GOAL_5_RESULT.md), and [NOVAPAY_SPEC_ONLY_BASELINE.md](NOVAPAY_SPEC_ONLY_BASELINE.md).
+
 ## GOAL 4.4 RESULT
 
 Готово. Web Workbench сохраняет существующую semantic pipeline и safety gate,

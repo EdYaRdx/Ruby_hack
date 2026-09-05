@@ -5,6 +5,46 @@
   "source": "fixtures/novapay_provider_api.yaml",
   "ground_truth": "research/benchmark/spec_only_mutations.yml",
   "methodology": "hand-authored mutation -> empty-defaults pipeline -> independent semantic comparator",
+  "baseline": {
+    "source": "fixtures/novapay_provider_api.yaml",
+    "profile": "profiles/space_payments_v1.yml",
+    "defaults": "none",
+    "decision": "REVIEW_REQUIRED",
+    "summary": {
+      "decisions": 14,
+      "blocking": 3,
+      "review_required": 4,
+      "accepted": 10
+    },
+    "generation_attempted": false,
+    "metrics": {
+      "decision_level": {
+        "total_decisions": 14,
+        "accepted_decisions": 10,
+        "review_required_decisions": 4,
+        "unknown_decisions": 0,
+        "blocking_entries": 3,
+        "decision_automation_rate": 71.4,
+        "review_rate": 28.6
+      },
+      "spec_level": {
+        "total_specs": 1,
+        "fully_auto_ready_specs": 0,
+        "fully_auto_ready_rate": 0.0
+      },
+      "safety": {
+        "critical_false_accepts": 0,
+        "unsafe_generation_attempts": 0
+      },
+      "formulas": {
+        "decision_automation_rate": "accepted_decisions / total_decisions",
+        "review_rate": "review_required_decisions / total_decisions",
+        "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+        "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+        "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+      }
+    }
+  },
   "cases": [
     {
       "case_id": "S01",
@@ -16,6 +56,33 @@
         "blocking": 3,
         "review_required": 4,
         "accepted": 10
+      },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 10,
+          "review_required_decisions": 4,
+          "unknown_decisions": 0,
+          "blocking_entries": 3,
+          "decision_automation_rate": 71.4,
+          "review_rate": 28.6
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
       },
       "money_decision": "REVIEW_REQUIRED",
       "webhook_decision": "REVIEW_REQUIRED",
@@ -224,6 +291,33 @@
         "review_required": 2,
         "accepted": 12
       },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 12,
+          "review_required_decisions": 2,
+          "unknown_decisions": 0,
+          "blocking_entries": 1,
+          "decision_automation_rate": 85.7,
+          "review_rate": 14.3
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
+      },
       "money_decision": "ACCEPT",
       "webhook_decision": "REVIEW_REQUIRED",
       "validation": {
@@ -380,6 +474,33 @@
         "review_required": 4,
         "accepted": 10
       },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 10,
+          "review_required_decisions": 4,
+          "unknown_decisions": 0,
+          "blocking_entries": 3,
+          "decision_automation_rate": 71.4,
+          "review_rate": 28.6
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
+      },
       "money_decision": "REVIEW_REQUIRED",
       "webhook_decision": "REVIEW_REQUIRED",
       "validation": {
@@ -495,6 +616,33 @@
         "review_required": 2,
         "accepted": 12
       },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 12,
+          "review_required_decisions": 2,
+          "unknown_decisions": 0,
+          "blocking_entries": 1,
+          "decision_automation_rate": 85.7,
+          "review_rate": 14.3
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
+      },
       "money_decision": "ACCEPT",
       "webhook_decision": "REVIEW_REQUIRED",
       "validation": {
@@ -590,6 +738,33 @@
         "review_required": 4,
         "accepted": 10
       },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 10,
+          "review_required_decisions": 4,
+          "unknown_decisions": 0,
+          "blocking_entries": 3,
+          "decision_automation_rate": 71.4,
+          "review_rate": 28.6
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
+      },
       "money_decision": "REVIEW_REQUIRED",
       "webhook_decision": "REVIEW_REQUIRED",
       "validation": {
@@ -676,6 +851,33 @@
         "blocking": 3,
         "review_required": 4,
         "accepted": 10
+      },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 10,
+          "review_required_decisions": 4,
+          "unknown_decisions": 0,
+          "blocking_entries": 3,
+          "decision_automation_rate": 71.4,
+          "review_rate": 28.6
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
       },
       "money_decision": "REVIEW_REQUIRED",
       "webhook_decision": "REVIEW_REQUIRED",
@@ -766,6 +968,33 @@
         "review_required": 4,
         "accepted": 10
       },
+      "metrics": {
+        "decision_level": {
+          "total_decisions": 14,
+          "accepted_decisions": 10,
+          "review_required_decisions": 4,
+          "unknown_decisions": 0,
+          "blocking_entries": 3,
+          "decision_automation_rate": 71.4,
+          "review_rate": 28.6
+        },
+        "spec_level": {
+          "total_specs": 1,
+          "fully_auto_ready_specs": 0,
+          "fully_auto_ready_rate": 0.0
+        },
+        "safety": {
+          "critical_false_accepts": 0,
+          "unsafe_generation_attempts": 0
+        },
+        "formulas": {
+          "decision_automation_rate": "accepted_decisions / total_decisions",
+          "review_rate": "review_required_decisions / total_decisions",
+          "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+          "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+          "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+        }
+      },
       "money_decision": "REVIEW_REQUIRED",
       "webhook_decision": "REVIEW_REQUIRED",
       "validation": {
@@ -843,11 +1072,94 @@
     "semantic_accept_accuracy": null,
     "critical_false_accept_count": 0,
     "critical_false_accept_cases": [],
+    "metrics": {
+      "decision_level": {
+        "total_decisions": 98,
+        "accepted_decisions": 74,
+        "review_required_decisions": 24,
+        "unknown_decisions": 0,
+        "blocking_entries": 17,
+        "decision_automation_rate": 75.5,
+        "review_rate": 24.5
+      },
+      "spec_level": {
+        "total_specs": 7,
+        "fully_auto_ready_specs": 0,
+        "fully_auto_ready_rate": 0.0
+      },
+      "safety": {
+        "critical_false_accepts": 0,
+        "unsafe_generation_attempts": 0
+      },
+      "formulas": {
+        "decision_automation_rate": "accepted_decisions / total_decisions",
+        "review_rate": "review_required_decisions / total_decisions",
+        "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+        "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+        "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+      }
+    },
     "formula": {
       "automatic_accept_rate": "ACCEPT decisions / total cases",
       "safe_decision_coverage": "independently passed cases / total cases",
       "decision_accuracy": "decision comparator passes / total cases",
       "critical_false_accepts": "ACCEPT where hand-authored expected decision is not ACCEPT"
+    }
+  },
+  "metrics": {
+    "baseline": {
+      "decision_level": {
+        "total_decisions": 14,
+        "accepted_decisions": 10,
+        "review_required_decisions": 4,
+        "unknown_decisions": 0,
+        "blocking_entries": 3,
+        "decision_automation_rate": 71.4,
+        "review_rate": 28.6
+      },
+      "spec_level": {
+        "total_specs": 1,
+        "fully_auto_ready_specs": 0,
+        "fully_auto_ready_rate": 0.0
+      },
+      "safety": {
+        "critical_false_accepts": 0,
+        "unsafe_generation_attempts": 0
+      },
+      "formulas": {
+        "decision_automation_rate": "accepted_decisions / total_decisions",
+        "review_rate": "review_required_decisions / total_decisions",
+        "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+        "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+        "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+      }
+    },
+    "mutation_lane": {
+      "decision_level": {
+        "total_decisions": 98,
+        "accepted_decisions": 74,
+        "review_required_decisions": 24,
+        "unknown_decisions": 0,
+        "blocking_entries": 17,
+        "decision_automation_rate": 75.5,
+        "review_rate": 24.5
+      },
+      "spec_level": {
+        "total_specs": 7,
+        "fully_auto_ready_specs": 0,
+        "fully_auto_ready_rate": 0.0
+      },
+      "safety": {
+        "critical_false_accepts": 0,
+        "unsafe_generation_attempts": 0
+      },
+      "formulas": {
+        "decision_automation_rate": "accepted_decisions / total_decisions",
+        "review_rate": "review_required_decisions / total_decisions",
+        "fully_auto_ready_rate": "specs_with_zero_review_and_zero_blocking / total_specs",
+        "critical_false_accepts": "unsafe ACCEPTs for hand-authored critical cases",
+        "unsafe_generation_attempts": "generation attempts while a critical decision is unresolved"
+      }
     }
   }
 }

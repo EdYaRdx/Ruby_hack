@@ -163,14 +163,14 @@ currency semantics, система не выбирает молча `×100` ил
 результатов проверок. Он обновляется командой `bin/update_docs`.
 
 <!-- BEGIN GENERATED: CAPABILITIES -->
-- Загрузка и проверка OpenAPI, локальные references и source fingerprinting: присутствует `lib/provider_compiler/core.rb`.
-- Анализ с учётом evidence, Review Manifest и Provider Blueprint: реализации analyzer/profile/blueprint присутствуют.
-- Детерминированная Ruby-проекция и verification: реализация generator присутствует.
-- Канонический пример NovaPay: 7 файлов в `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
-- Независимая semantic validation: benchmark NovaPay и сравнение Aurora входят в сгенерированный статус выше.
-- Live provider calls не реализованы; Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
+- OpenAPI ingestion, local reference resolution and source fingerprinting are implemented in `lib/provider_compiler/core.rb`.
+- Evidence-aware analysis, Review Manifest and Provider Blueprint are implemented across the analyzer/profile/blueprint layers.
+- Deterministic Ruby projection and verification are implemented by the generator and verification layers.
+- Canonical NovaPay example: 7 files in `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
+- Independent semantic validation: the NovaPay mutation benchmark and Aurora/Helios comparisons are included in the generated status below.
+- Live provider calls are not implemented; the Web UI Demo Workbench is implemented in `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` and `web/public/`.
 
-Для обновления снимка запустите `ruby bin/update_docs`.
+Run `ruby bin/update_docs` to refresh this snapshot.
 <!-- END GENERATED: CAPABILITIES -->
 
 ## CLI
@@ -352,9 +352,10 @@ preserved extra operations. Для него отдельно заданы semant
 behavioral vectors; decision equality сама по себе не считается доказательством.
 
 Подробная методика и определения метрик находятся в
-[`docs/BENCHMARK.md`](docs/BENCHMARK.md), а материалы независимой проверки — в
-[`research/SEMANTIC_BENCHMARK_VALIDATION.md`](research/SEMANTIC_BENCHMARK_VALIDATION.md)
-и [`research/SECOND_PROVIDER_VALIDATION.md`](research/SECOND_PROVIDER_VALIDATION.md).
+[`docs/BENCHMARK.md`](docs/BENCHMARK.md). Исторический comparator record — в
+[`research/SEMANTIC_BENCHMARK_VALIDATION.md`](research/SEMANTIC_BENCHMARK_VALIDATION.md),
+а supporting validation второго провайдера — в
+[`research/SECOND_PROVIDER_VALIDATION.md`](research/SECOND_PROVIDER_VALIDATION.md).
 
 ## Статус проверки
 
@@ -362,18 +363,37 @@ behavioral vectors; decision equality сама по себе не считает
 runner-ов и текущего запуска RSpec. Числа не копируются вручную.
 
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
-**Текущая проверка (сгенерировано автоматически)**
+**Current verification snapshot (generated)**
 
-- RSpec: 72 examples, failures: 0.
-- Mutation benchmark NovaPay: безопасно пройдено 37/37; decision_accuracy: 100.0%; safe_decision_coverage: 100.0%.
-- automatic_accept_rate: 48.6%; review_required_rate: 40.5%; unknown_rate: 10.8%.
-- semantic_accept_accuracy: 100.0%; critical_false_accept_count: 0.
-- Aurora: levels 3/3, behavioral vectors 4/4; semantic_accuracy: 100.0%.
-- NovaPay spec-only lane: 7/7 safe; automatic_accept_rate: 0.0%; critical_false_accepts: 0.
-- HeliosPay: levels 2/2; resolved behavioral vectors 4/4.
+- RSpec: 77 examples, failures: 0.
+- Reference mutation benchmark: 37/37 adversarial mutations of one reference provider domain; semantic accuracy: 100.0%; critical false ACCEPTs: 0.
+- NovaPay official spec-only baseline: decision automation 10/14 (71.4%); review rate 4/14 (28.6%); fully auto-ready 0/1 (0.0%); false ACCEPTs 0; unsafe generation attempts 0.
+- NovaPay spec-only mutation lane: decision automation 74/98 (75.5%); review rate 24/98 (24.5%); fully auto-ready 0/7 (0.0%); false ACCEPTs 0; unsafe generation attempts 0.
+- Aurora spec-only: decision automation 12/14 (85.7%); fully auto-ready 0/1 (0.0%). Aurora resolved: 1/1 (100.0%); behavioral vectors 4/4.
+- HeliosPay spec-only: decision automation 11/13 (84.6%); fully auto-ready 0/1 (0.0%). Resolved: 1/1 (100.0%); behavioral vectors 4/4.
 
-Для обновления блока запустите `ruby bin/update_docs`.
+Run `ruby bin/update_docs` to refresh this snapshot from the benchmark and RSpec outputs.
 <!-- END GENERATED: PROJECT_STATUS -->
+
+## Judge-facing metrics
+
+Decision automation measures accepted decisions. Fully auto-ready measures
+complete specifications with zero `REVIEW_REQUIRED` decisions and zero
+blocking entries. These are different metrics; safety is reported separately.
+Safety includes Critical false ACCEPTs and unsafe generation attempts.
+
+<!-- BEGIN GENERATED: JUDGE_METRICS -->
+| Lane | Decision automation | Review rate | Fully auto-ready | Safety |
+|---|---:|---:|---:|---|
+| NovaPay official spec-only | 10/14 (71.4%) | 4/14 (28.6%) | 0/1 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+| NovaPay spec-only mutation lane (7 cases) | 74/98 (75.5%) | 24/98 (24.5%) | 0/7 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+| Aurora spec-only | 12/14 (85.7%) | 2/14 (14.3%) | 0/1 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+| Aurora resolved | 14/14 (100.0%) | 0/14 (0.0%) | 1/1 (100.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+| HeliosPay spec-only | 11/13 (84.6%) | 2/13 (15.4%) | 0/1 (0.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+| HeliosPay resolved | 13/13 (100.0%) | 0/13 (0.0%) | 1/1 (100.0%) | false ACCEPTs 0; unsafe generation attempts 0 |
+
+Decision automation is an accepted-decision metric, not a readiness claim. Full-spec auto-ready means a complete spec has zero `REVIEW_REQUIRED` decisions and zero blocking entries. Blocking is reported separately because one decision may produce multiple blocking entries. The benchmark also reports generation/runtime gates where generation is attempted.
+<!-- END GENERATED: JUDGE_METRICS -->
 
 Регрессионное покрытие UI находится в [`spec/web_spec.rb`](spec/web_spec.rb).
 
