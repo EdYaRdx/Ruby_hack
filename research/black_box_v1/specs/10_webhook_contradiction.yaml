@@ -1,0 +1,67 @@
+openapi: 3.0.3
+info:
+  title: Eventide Payout API
+  version: 1.0.0
+components:
+  securitySchemes:
+    Key:
+      type: apiKey
+      in: header
+      name: X-Eventide-Key
+  schemas:
+    Event:
+      type: object
+      properties:
+        event:
+          type: string
+          enum: [payout.completed, payout.failed]
+        status:
+          type: string
+          enum: [completed, failed]
+        id: { type: string }
+paths:
+  /payouts:
+    post:
+      operationId: createPayout
+      security: [{ Key: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  description: Amount in minor units (cents).
+                  x-minor-unit-scale: 100
+                recipient: { type: string }
+      responses:
+        '201': { description: Created }
+  /payouts/{payout_id}:
+    get:
+      operationId: getPayoutState
+      security: [{ Key: [] }]
+      parameters:
+        - { name: payout_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: State
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+  /events:
+    post:
+      operationId: receivePayoutEvent
+      description: Signed webhook. Verify HMAC-SHA256 over the raw body. The signature is hex encoded.
+      parameters:
+        - name: X-Eventide-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of the raw body, encoded as hex.
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Event' }
+      responses:
+        '202': { description: Accepted }

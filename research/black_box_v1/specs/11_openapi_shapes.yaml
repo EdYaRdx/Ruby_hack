@@ -1,0 +1,49 @@
+openapi: 3.0.3
+info:
+  title: Xml Edge API
+  version: 1.0.0
+components:
+  securitySchemes:
+    Key:
+      type: apiKey
+      in: header
+      name: X-Xml-Key
+  schemas:
+    Common:
+      type: object
+      properties:
+        amount: { type: number }
+    Create:
+      allOf:
+        - $ref: '#/components/schemas/Common'
+        - type: object
+          properties:
+            recipient: { type: string }
+    Result:
+      oneOf:
+        - type: object
+          properties: { status: { type: string, enum: [completed] } }
+        - type: object
+          properties: { status: { type: string, enum: [failed] } }
+    Alternative:
+      anyOf:
+        - type: string
+        - type: integer
+paths:
+  /orders:
+    post:
+      operationId: createOrder
+      security: [{ Key: [] }]
+      requestBody:
+        content:
+          application/xml:
+            schema: { $ref: '#/components/schemas/Create' }
+      responses:
+        '201': { description: Created }
+      callbacks:
+        orderEvents:
+          '{$request.body#/callbackUrl}':
+            post:
+              operationId: callbackOrder
+              description: Order callback
+              responses: { '202': { description: Accepted } }

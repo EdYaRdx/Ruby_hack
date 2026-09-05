@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: Northstar Funds API
+  version: 1.2.0
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+paths:
+  /funds:
+    post:
+      operationId: initiateFundMove
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: Amount in major USD units.
+                recipient: { type: string }
+      responses:
+        '201': { description: Fund created }
+  /funds/{fund_id}/state:
+    get:
+      operationId: getFundState
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: fund_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: State
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [queued, settled] }
+  /limits:
+    get:
+      operationId: getLimits
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Limits }

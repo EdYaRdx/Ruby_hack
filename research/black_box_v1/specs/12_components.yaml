@@ -1,0 +1,17 @@
+CreateTransfer:
+  type: object
+  properties:
+    amount:
+      type: integer
+      description: Amount in minor units (cents).
+      x-minor-unit-scale: 100
+    recipient: { type: string }
+Transfer:
+  type: object
+  properties:
+    id: { type: string }
+    status: { type: string, enum: [queued, settled] }
+    amount:
+      type: integer
+      description: Amount in minor units (cents).
+      x-minor-unit-scale: 100

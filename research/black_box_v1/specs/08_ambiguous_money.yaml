@@ -1,0 +1,29 @@
+openapi: 3.0.3
+info:
+  title: River Account API
+  version: 1.0.0
+components:
+  securitySchemes:
+    Access:
+      type: apiKey
+      in: query
+      name: access
+paths:
+  /transactions:
+    post:
+      operationId: createTransaction
+      security: [{ Access: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                money:
+                  type: object
+                  properties:
+                    value: { type: number }
+                    currency: { type: string, enum: [EUR] }
+                recipient: { type: string }
+      responses:
+        '201': { description: Created }

@@ -1,0 +1,57 @@
+openapi: 3.0.3
+info:
+  title: Birch Remittance API
+  version: 3.1.0
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+  schemas:
+    Result:
+      type: object
+      properties:
+        id: { type: string }
+        state: { type: string, enum: [processing, completed, failed] }
+        money:
+          type: object
+          description: Money amount in major USD units.
+          properties:
+            value: { type: string, description: Decimal major amount }
+            currency: { type: string, enum: [USD] }
+paths:
+  /remittances:
+    post:
+      operationId: createRemittance
+      security: [{ Bearer: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                money:
+                  type: object
+                  description: Money amount in major USD units.
+                  properties:
+                    value: { type: string, description: Decimal major amount }
+                    currency: { type: string, enum: [USD] }
+                beneficiary: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }
+  /remittances/{remittance_id}:
+    get:
+      operationId: getRemittanceState
+      security: [{ Bearer: [] }]
+      parameters:
+        - { name: remittance_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: State
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Result' }

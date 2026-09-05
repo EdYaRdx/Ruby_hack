@@ -1,0 +1,25 @@
+{
+  "corpus_version": 1,
+  "created_at": "2026-09-05T23:36:26.6094551Z",
+  "host_profile": "profiles/space_payments_v1.yml",
+  "ground_truth": {
+    "path": "ground_truth.yml",
+    "sha256": "191922f44b62f2d65ef433ee8e9c60ec3023f70d9ab5e747d60120c1f3c7598b"
+  },
+  "cases": [
+    { "id": "01_header_create", "spec": "specs/01_header_create.yaml", "sha256": "57972f8cb94386847a951c0b80f4b774b0f256b41d19b7f242127181df585ca7" },
+    { "id": "02_query_202", "spec": "specs/02_query_202.yaml", "sha256": "d058c8aa734ec837ddd630f2917e066ea5d3e1d1e4927925e1f5771c9ebc046c" },
+    { "id": "03_bearer_polling", "spec": "specs/03_bearer_polling.yaml", "sha256": "2906d90689da1d7a65a28167d5d36e0eee6af83b94a20ea2379ffc842f512345" },
+    { "id": "04_unsupported_auth", "spec": "specs/04_unsupported_auth.yaml", "sha256": "4eac6a1666e3845a7e9f3218d2aea5401968bec54d050bed6e17cf7d39fd8acf" },
+    { "id": "05_missing_operation_id", "spec": "specs/05_missing_operation_id.yaml", "sha256": "950927301aa90154b3e8606c86b28d2c6ca6373e55eb6376fafb040539141892" },
+    { "id": "06_nested_major", "spec": "specs/06_nested_major.yaml", "sha256": "57eb6800a4c1e891374a92525f35b138c3ee2c4cb8a39fe126667c7da2b099d7" },
+    { "id": "07_scale_1000", "spec": "specs/07_scale_1000.yaml", "sha256": "b7f6c4cd3c5a54a91aaf8161fb9f3c22d76e09d37f9eb18f51aac9fdc854a478" },
+    { "id": "08_ambiguous_money", "spec": "specs/08_ambiguous_money.yaml", "sha256": "91848944b9ddd45235cd40dedc60db80b8953fcb54f43da9d3cc15ef1bdc045e" },
+    { "id": "09_required_parameters", "spec": "specs/09_required_parameters.yaml", "sha256": "e35385b28b7775b3ef9fb3d7d5cce293e3492b27918aa10402a4c87a6598aa90" },
+    { "id": "10_webhook_contradiction", "spec": "specs/10_webhook_contradiction.yaml", "sha256": "c075324401e9fecb50403e2581f48f063be64b14fec182570d777b92fe04b2a4" },
+    { "id": "11_openapi_shapes", "spec": "specs/11_openapi_shapes.yaml", "sha256": "5094cc91d8b5162e5aadddd778dc702db1cb06653abc66c61709a3ed63b2e26c" },
+    { "id": "12_local_refs", "spec": "specs/12_local_refs.yaml", "sha256": "630f8db3050f460acb3fdd9e531495a162d630ad6b10fbc516871af59ca2d857", "resolved_local_inputs": [
+      { "path": "specs/12_components.yaml", "sha256": "02c2ffd62b573c269d49ba1c6bd3bcf711a7102d769f7f69ebc8fef45d2df948" }
+    ] }
+  ]
+}

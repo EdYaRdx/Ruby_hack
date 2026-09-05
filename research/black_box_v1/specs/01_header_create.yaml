@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: Cedar Money API
+  version: 1.0.0
+servers:
+  - url: https://api.cedar.example/v1
+components:
+  securitySchemes:
+    ClientKey:
+      type: apiKey
+      in: header
+      name: X-Client-Key
+  schemas:
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        status:
+          type: string
+          enum: [accepted, rejected]
+        amount:
+          type: integer
+          description: Amount in minor units (cents).
+          x-minor-unit-scale: 100
+        currency: { type: string, enum: [USD] }
+paths:
+  /payments:
+    post:
+      operationId: createPayment
+      security: [{ ClientKey: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional key for safe retries.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, recipient]
+              properties:
+                amount:
+                  type: integer
+                  description: Amount in minor units (cents).
+                  x-minor-unit-scale: 100
+                recipient: { type: string }
+                currency: { type: string, enum: [USD] }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+  /payments/{payment_id}:
+    get:
+      operationId: readPaymentStatus
+      security: [{ ClientKey: [] }]
+      parameters:
+        - { name: payment_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Current payment status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }

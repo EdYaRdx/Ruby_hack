@@ -1,0 +1,47 @@
+openapi: 3.0.3
+info:
+  title: Variable Route API
+  version: 1.0.0
+servers:
+  - url: https://{region}.route.example/{version}
+    variables:
+      region: { default: sandbox }
+      version: { default: v1 }
+components:
+  securitySchemes:
+    Token:
+      type: http
+      scheme: bearer
+paths:
+  /transfers:
+    post:
+      operationId: initiateRouteTransfer
+      security: [{ Token: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: './12_components.yaml#/CreateTransfer' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: './12_components.yaml#/Transfer' }
+  /transfers/{transfer_id}:
+    get:
+      operationId: inspectRouteTransfer
+      security: [{ Token: [] }]
+      parameters:
+        - { name: transfer_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: State
+          content:
+            application/json:
+              schema: { $ref: './12_components.yaml#/Transfer' }
+  /limits:
+    get:
+      operationId: readRouteLimits
+      security: [{ Token: [] }]
+      responses:
+        '200': { description: Limits }

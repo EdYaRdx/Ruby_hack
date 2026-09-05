@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: Plain Ledger API
+  version: 1.0.0
+components:
+  securitySchemes:
+    Key:
+      type: apiKey
+      in: header
+      name: X-Ledger-Key
+paths:
+  /withdrawals:
+    post:
+      security: [{ Key: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: Amount in major EUR units.
+                recipient: { type: string }
+      responses:
+        '201': { description: Created }
+  /withdrawals/{withdrawal_id}/status:
+    get:
+      security: [{ Key: [] }]
+      parameters:
+        - { name: withdrawal_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [pending, completed, failed] }

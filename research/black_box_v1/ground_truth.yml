@@ -1,0 +1,159 @@
+corpus_version: 1
+host_profile: profiles/space_payments_v1.yml
+cases:
+  - id: 01_header_create
+    spec: specs/01_header_create.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [api_key_header, create_201, provider_status, minor_money_100, optional_idempotency]
+    semantic:
+      operation:
+        create_request: { operation_id: createPayment, method: POST, path: /payments }
+        fetch_status: { operation_id: readPaymentStatus, method: GET, path: '/payments/{payment_id}' }
+      auth: { kind: api_key, transport: header, name: X-Client-Key }
+      money:
+        host: { field: operation.amount, currency: RUB, unit: major }
+        provider: { request_field: request.amount, unit: minor, scale: 100 }
+        request_conversion: { direction: major_to_minor, operation: multiply, factor: 100 }
+      idempotency: { header: Idempotency-Key, spec_required: false }
+      unsupported: []
+  - id: 02_query_202
+    spec: specs/02_query_202.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [api_key_query, create_202_without_status]
+    semantic:
+      operation:
+        create_request: { operation_id: submitTransfer, method: POST, path: /transfers, success_statuses: ['202'] }
+        fetch_status: { operation_id: lookupTransferState, method: GET, path: '/transfers/{transfer_id}' }
+      auth: { kind: api_key, transport: query, name: access_token }
+      money: { host: { unit: major, currency: RUB }, provider: { unit: major, scale: 1 } }
+  - id: 03_bearer_polling
+    spec: specs/03_bearer_polling.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [bearer, polling_only, extra_operation]
+    semantic:
+      operation:
+        create_request: { operation_id: initiateFundMove, method: POST, path: /funds }
+        fetch_status: { operation_id: getFundState, method: GET, path: '/funds/{fund_id}/state' }
+      auth: { kind: bearer, transport: header, name: Authorization, scheme: Bearer }
+      webhook: { mode: polling_only }
+      extra_operations:
+        - { operation_id: getLimits, method: GET, path: /limits, kind: EXTRA_OPERATION, preserved: true, blocking: false }
+  - id: 04_unsupported_auth
+    spec: specs/04_unsupported_auth.yaml
+    expected_decision: UNKNOWN
+    generation_ready: false
+    coverage: [unsupported_auth_scheme]
+    semantic:
+      auth: { unsupported: true, scheme_type: oauth2 }
+      unsupported:
+        - { feature: oauth2, severity: BLOCKING }
+  - id: 05_missing_operation_id
+    spec: specs/05_missing_operation_id.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [missing_operation_id]
+    semantic:
+      operation:
+        create_request: { operation_id: null, method: POST, path: /withdrawals }
+        fetch_status: { operation_id: null, method: GET, path: '/withdrawals/{withdrawal_id}/status' }
+      auth: { kind: api_key, transport: header, name: X-Ledger-Key }
+      unsupported:
+        - { feature: missing_operation_id, severity: REVIEW_REQUIRED }
+  - id: 06_nested_major
+    spec: specs/06_nested_major.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [nested_request_money, nested_response_money, major_scale_1]
+    semantic:
+      operation:
+        create_request: { operation_id: createRemittance, method: POST, path: /remittances }
+        fetch_status: { operation_id: getRemittanceState, method: GET, path: '/remittances/{remittance_id}' }
+      auth: { kind: bearer, transport: header, name: Authorization, scheme: Bearer }
+      money:
+        host: { field: operation.amount, currency: RUB, unit: major }
+        provider: { request_field: request.money.value, response_field: response.money.value, unit: major, scale: 1 }
+        request_conversion: { direction: same_unit, operation: identity, factor: 1 }
+  - id: 07_scale_1000
+    spec: specs/07_scale_1000.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [minor_scale_1000]
+    semantic:
+      operation:
+        create_request: { operation_id: makePayment, method: POST, path: /payments }
+        fetch_status: { operation_id: readPaymentState, method: GET, path: '/payments/{payment_id}/status' }
+      auth: { kind: api_key, transport: header, name: X-Millstone-Key }
+      money:
+        host: { unit: major, currency: RUB }
+        provider: { request_field: request.amount, unit: minor, scale: 1000 }
+        request_conversion: { direction: major_to_minor, operation: multiply, factor: 1000 }
+  - id: 08_ambiguous_money
+    spec: specs/08_ambiguous_money.yaml
+    expected_decision: UNKNOWN
+    generation_ready: false
+    coverage: [ambiguous_money_scale]
+    semantic:
+      auth: { kind: api_key, transport: query, name: access }
+      money:
+        host: { field: operation.amount, currency: RUB, unit: major }
+        provider: { request_field: request.money.value, unit: UNKNOWN, scale: null }
+        unresolved: true
+      safety:
+        forbid_resolved: [money.provider.unit, money.request_conversion.factor]
+  - id: 09_required_parameters
+    spec: specs/09_required_parameters.yaml
+    expected_decision: UNKNOWN
+    generation_ready: false
+    coverage: [required_query_parameter, required_header_parameter, optional_query_parameter]
+    semantic:
+      operation: { create_request: { operation_id: createDisbursement, method: POST, path: /disbursements } }
+      auth: { kind: api_key, transport: header, name: X-Harbor-Key }
+      required_parameters:
+        - { in: query, name: tenant, source: unresolved, generation_impact: BLOCKING }
+        - { in: header, name: X-Region, source: unresolved, generation_impact: BLOCKING }
+      optional_parameters: [{ in: query, name: trace }]
+  - id: 10_webhook_contradiction
+    spec: specs/10_webhook_contradiction.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [explicit_webhook, hmac_sha256, event_status_contradiction]
+    semantic:
+      operation:
+        create_request: { operation_id: createPayout, method: POST, path: /payouts }
+        fetch_status: { operation_id: getPayoutState, method: GET, path: '/payouts/{payout_id}' }
+        process_callback: { operation_id: receivePayoutEvent, method: POST, path: /events }
+      auth: { kind: api_key, transport: header, name: X-Eventide-Key }
+      webhook:
+        endpoint: POST /events
+        algorithm: HMAC-SHA256
+        header: X-Eventide-Signature
+        input: raw_body
+        encoding: hex
+        contradiction_vector: { event: payout.completed, status: failed, expected: reject_or_review }
+  - id: 11_openapi_shapes
+    spec: specs/11_openapi_shapes.yaml
+    expected_decision: UNKNOWN
+    generation_ready: false
+    coverage: [unsupported_media_type, allOf, oneOf, anyOf, callback_shape]
+    semantic:
+      auth: { kind: api_key, transport: header, name: X-Xml-Key }
+      unsupported:
+        - { feature: application_xml_request, severity: BLOCKING }
+        - { feature: callback_without_signature, severity: REVIEW_REQUIRED }
+  - id: 12_local_refs
+    spec: specs/12_local_refs.yaml
+    expected_decision: REVIEW_REQUIRED
+    generation_ready: false
+    coverage: [local_multi_file_ref, server_variables, extra_operation]
+    semantic:
+      operation:
+        create_request: { operation_id: initiateRouteTransfer, method: POST, path: /transfers }
+        fetch_status: { operation_id: inspectRouteTransfer, method: GET, path: '/transfers/{transfer_id}' }
+      auth: { kind: bearer, transport: header, name: Authorization, scheme: Bearer }
+      money:
+        provider: { request_field: request.amount, unit: minor, scale: 100 }
+      extra_operations:
+        - { operation_id: readRouteLimits, method: GET, path: /limits, kind: EXTRA_OPERATION, preserved: true, blocking: false }

@@ -1,0 +1,29 @@
+openapi: 3.0.3
+info:
+  title: Oak Settlement API
+  version: 1.0.0
+components:
+  securitySchemes:
+    OAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.oak.example/token
+          scopes: { settle: Settle payments }
+paths:
+  /settlements:
+    post:
+      operationId: createSettlement
+      security: [{ OAuth: [settle] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: Amount in major USD units.
+                recipient: { type: string }
+      responses:
+        '201': { description: Created }

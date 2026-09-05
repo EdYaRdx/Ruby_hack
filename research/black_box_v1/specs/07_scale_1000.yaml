@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: Millstone Payments API
+  version: 1.0.0
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-Millstone-Key
+  schemas:
+    PaymentState:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [processing, settled, declined] }
+        amount:
+          type: integer
+          description: Amount in minor units (mills).
+          minor_unit_scale: 1000
+paths:
+  /payments:
+    post:
+      operationId: makePayment
+      security: [{ ApiKey: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  description: Amount in minor units (mills).
+                  minor_unit_scale: 1000
+                recipient: { type: string }
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentState' }
+  /payments/{payment_id}/status:
+    get:
+      operationId: readPaymentState
+      security: [{ ApiKey: [] }]
+      parameters:
+        - { name: payment_id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: State
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentState' }

@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: Harbor Disbursements API
+  version: 1.0.0
+components:
+  securitySchemes:
+    Key:
+      type: apiKey
+      in: header
+      name: X-Harbor-Key
+paths:
+  /disbursements:
+    post:
+      operationId: createDisbursement
+      security: [{ Key: [] }]
+      parameters:
+        - name: tenant
+          in: query
+          required: true
+          schema: { type: string }
+        - name: X-Region
+          in: header
+          required: true
+          schema: { type: string }
+        - name: trace
+          in: query
+          required: false
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: Amount in major USD units.
+                recipient: { type: string }
+      responses:
+        '201': { description: Created }
