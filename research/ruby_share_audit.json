@@ -41,7 +41,7 @@
         },
         {
           "path": "bin/update_docs",
-          "loc": 178
+          "loc": 179
         },
         {
           "path": "bin/update_examples",
@@ -96,7 +96,7 @@
           "loc": 1118
         }
       ],
-      "loc": 5868
+      "loc": 5869
     },
     "other_participant_source": {
       "files": [
@@ -111,7 +111,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 6422,
+    "total_source_loc": 6423,
     "ruby_share_percent": 91.4
   },
   "production_plus_tests": {
@@ -131,7 +131,7 @@
         },
         {
           "path": "bin/update_docs",
-          "loc": 178
+          "loc": 179
         },
         {
           "path": "bin/update_examples",
@@ -286,7 +286,7 @@
           "loc": 396
         }
       ],
-      "loc": 8385
+      "loc": 8386
     },
     "other_participant_source": {
       "files": [
@@ -301,7 +301,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 8939,
+    "total_source_loc": 8940,
     "ruby_share_percent": 93.8
   }
 }
