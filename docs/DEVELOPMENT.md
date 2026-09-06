@@ -2,7 +2,7 @@
 
 ## Предварительные условия и локальный запуск
 
-Gemspec требует Ruby `>= 3.0`; текущий checkout проверен на Ruby 4.0.6 и
+Gemspec требует Ruby `>= 3.3`; CI matrix проверяет Ruby 3.3, а текущий checkout проверен на Ruby 4.0.6 и
 Bundler 2.5.22. Виртуальное окружение не нужно: зависимости устанавливаются
 Bundler-ом в обычный Ruby environment.
 
@@ -53,7 +53,14 @@ ruby bin/update_docs
 `review_manifest.json`, включая `decision`, `blocking` и `generation_ready`, но
 не создаёт `service.rb`, fixtures, integration documentation или smoke harness.
 `generate` сначала выполняет `validate_blueprint!`; при unresolved critical
-semantics runtime artifacts не создаются.
+semantics runtime artifacts не создаются. Для ACCEPT `generate` также создаёт
+`INTEGRATION_READINESS.md` и `integration_readiness.json`.
+
+Подтверждённые Review decisions экспортируются в versioned
+`provider_overrides.yml` командой `export-review` и применяются через
+`--overrides`. Override проверяется по spec fingerprint, root hash, profile и
+известным decision ids; устаревшее или credential-containing решение
+отклоняется. Web UI экспортирует и импортирует тот же формат.
 
 ## Правила проектирования
 

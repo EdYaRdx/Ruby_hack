@@ -111,3 +111,11 @@ validation Aurora проводится отдельно и описана в `SE
 - [`benchmark/spec_only.rb`](benchmark/spec_only.rb) — независимый spec-only mutation lane.
 - [`benchmark/third_provider.rb`](benchmark/third_provider.rb) — независимая проверка HeliosPay.
 - [`../fixtures/heliospay_ground_truth.yml`](../fixtures/heliospay_ground_truth.yml) — подготовленная авторами ground truth третьего провайдера.
+
+## GOAL 6.2: release-grade acceptance
+
+- [`RELEASE_ENGINEERING_RESULT.md`](RELEASE_ENGINEERING_RESULT.md) — clean gem install, package audit, platform matrix and generated-adapter E2E.
+- [`PERSISTED_REVIEW_RESULT.md`](PERSISTED_REVIEW_RESULT.md) — versioned Review export/import, fingerprint/profile guards and Web coverage.
+- [`FINAL_EXTERNAL_AUDIT.md`](FINAL_EXTERNAL_AUDIT.md) — clean-room red-team findings and remaining external blockers.
+- [`FINAL_RUBRIC_SCORE.md`](FINAL_RUBRIC_SCORE.md) — conservative expert, technical jury and industry scorecards.
+- [`PREPROD_ACCEPTANCE.md`](PREPROD_ACCEPTANCE.md) — explicit preproduction gates and verdict.

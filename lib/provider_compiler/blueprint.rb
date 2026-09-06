@@ -19,7 +19,7 @@ module ProviderCompiler
   class ReviewManifest
     attr_reader :data
 
-    def initialize(source:, decisions:, blueprint_status:)
+    def initialize(source:, decisions:, blueprint_status:, override: nil)
       hashes = decisions.map(&:to_h)
       blocking = hashes.count { |item| item["severity"] == "BLOCKING" }
       review = hashes.count { |item| item["outcome"] == "REVIEW_REQUIRED" }
@@ -27,6 +27,7 @@ module ProviderCompiler
         "schema_version" => 1,
         "source" => source,
         "blueprint_status" => blueprint_status,
+        "review_override" => override ? { "status" => "APPLIED", "spec_fingerprint" => override.to_h["spec_fingerprint"], "decisions" => override.decisions.map { |item| item["decision_id"] } } : { "status" => "NONE" },
         "summary" => { "decisions" => hashes.length, "blocking" => blocking, "review_required" => review, "accepted" => hashes.count { |item| item["outcome"] == "ACCEPT" } },
         "decisions" => hashes
       )

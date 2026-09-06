@@ -233,9 +233,10 @@ module ProviderCompiler
             <div class="review-hero-status">#{status_pill(needs_review ? "REVIEW REQUIRED" : "READY", needs_review ? "review" : "ready")}<strong>#{needs_review ? "Нерешённые вопросы" : "Blueprint разрешён"}</strong></div>
           </section>
           #{needs_review ? "<div class=\"review-progress\"><div><strong>#{decisions.length} решения требуют подтверждения</strong><span>Шаг 1 из #{decisions.length}</span></div><div class=\"progress-track\"><span style=\"width: #{(100.0 / decisions.length).round(1)}%\"></span></div><small>После подтверждения автоматически откроется следующий нерешённый вопрос.</small></div>" : ""}
-          #{decisions.empty? ? happy_review_card(summary, workspace) : review_decision_card(workspace, active_decision, 1, decisions.length)}
-          #{needs_review && decisions.length > 1 ? review_queue(decisions.drop(1), 2) : ""}
-        HTML
+           #{decisions.empty? ? happy_review_card(summary, workspace) : review_decision_card(workspace, active_decision, 1, decisions.length)}
+           #{needs_review && decisions.length > 1 ? review_queue(decisions.drop(1), 2) : ""}
+           <section class="card review-storage"><h2>Review decisions</h2><p>Confirmed decisions can be exported as a versioned local override. Applying the file later is allowed only for the same spec fingerprint and compatible host profile.</p><p><a class="button button-secondary" href="/workspace/#{workspace.id}/review/export">Export confirmed decisions</a></p><form method="post" action="/workspace/#{workspace.id}/review/import" enctype="multipart/form-data"><label class="input-label">Import provider_overrides.yml<input type="file" name="override_file" accept=".yml,.yaml" required></label><button class="button button-secondary" type="submit">Import Review decisions</button></form></section>
+         HTML
         layout(workspace, active: "review", title: workspace_title(workspace), subtitle: workspace_subtitle(workspace), state: display_state(workspace), content: content)
       end
 
@@ -846,7 +847,7 @@ module ProviderCompiler
 
       def artifact_panel(workspace, artifact)
         primary = %w[service.rb INTEGRATION.md fixtures.json]
-        advanced = %w[provider_blueprint.json review_manifest.json contract_smoke.rb]
+        advanced = %w[provider_blueprint.json review_manifest.json contract_smoke.rb INTEGRATION_READINESS.md integration_readiness.json]
         tab_group = lambda do |names|
           names.map do |name|
           active = artifact && artifact["name"] == name ? "active" : ""

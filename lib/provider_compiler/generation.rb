@@ -780,7 +780,7 @@ module ProviderCompiler
   end
 
   class DeterministicGenerator
-    def generate(blueprint, manifest, output_dir, examples: {}, spec_document: nil)
+    def generate(blueprint, manifest, output_dir, examples: {}, spec_document: nil, readiness: nil)
       FileUtils.mkdir_p(output_dir)
       fixture_data = fixtures(blueprint, examples, spec_document: spec_document)
       files = {
@@ -792,7 +792,8 @@ module ProviderCompiler
         "contract_smoke.rb" => smoke_harness(blueprint, fixture_data)
       }
       files.each { |name, content| File.write(File.join(output_dir, name), content, mode: "w", encoding: "UTF-8") }
-      files.keys.map { |name| File.join(output_dir, name) }
+      readiness_files = readiness ? IntegrationReadiness.write(output_dir, readiness) : []
+      files.keys.map { |name| File.join(output_dir, name) } + readiness_files
     end
 
     private

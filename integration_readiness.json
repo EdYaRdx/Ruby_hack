@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "provider": { "name": "NovaPay", "slug": "novapay", "version": "1.0.0" },
+  "spec_fingerprint": "sha256:2b6ad1db111691c80f3b098d76d69896fc88c7b0859f9a17af725325dbbbda77",
+  "root_document_sha256": "415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551",
+  "host_profile": { "name": "space_payments_v1", "version": 1, "class_name": "Provider::BaseService" },
+  "operations": {
+    "found": 5,
+    "canonical": [
+      { "canonical": "create_request", "operation_id": "createPayout", "method": "POST", "path": "/payouts" },
+      { "canonical": "fetch_status", "operation_id": "getPayoutStatus", "method": "GET", "path": "/payouts/{payout_id}" },
+      { "canonical": "process_callback", "operation_id": "payoutWebhook", "method": "POST", "path": "/webhooks/payout" }
+    ],
+    "extra": [
+      { "operation_id": "cancelPayout", "kind": "EXTRA_OPERATION", "path": "/payouts/{payout_id}/cancel", "preserved": true, "blocking": false },
+      { "operation_id": "getBalance", "kind": "EXTRA_OPERATION", "path": "/balance", "preserved": true, "blocking": false }
+    ]
+  },
+  "semantics": {
+    "auth": { "selected": "ApiKeyAuth", "kind": "api_key", "transport": "header", "name": "X-API-Key" },
+    "money": {
+      "host": { "field": "operation.amount", "currency": "RUB", "unit": "major", "evidence_source": "BASE_SERVICE_PROFILE" },
+      "provider": { "field": "request.amount", "response_field": "response.amount", "currency": "RUB", "unit": "minor", "subunit": "kopecks", "scale": 100, "evidence_sources": ["SPEC_DESCRIPTION", "CASE_DEFAULT"] },
+      "request_conversion": { "direction": "major_to_minor", "operation": "multiply", "factor": 100, "scale": 100 },
+      "response_conversion": { "direction": "minor_to_major", "operation": "divide", "factor": 0.01, "scale": 100 }
+    },
+    "statuses": { "pending": "in_progress", "processing": "in_progress", "completed": "approved", "failed": "rejected", "cancelled": "rejected" },
+    "webhook": { "endpoint": "POST /webhooks/payout", "algorithm": "HMAC-SHA256", "header": "X-NovaPay-Signature", "input": "raw_body", "encoding": "hex" },
+    "idempotency": { "header": "Idempotency-Key", "spec_required": false, "adapter_policy": "if_available", "adapter_policy_provenance": "ADAPTER_POLICY" }
+  },
+  "decisions": { "total": 14, "automatic_accept": 14, "review_required": 0, "unknown": 0, "blocking": 0, "human_confirmed": 0 },
+  "generation": { "generation_ready": true, "generated": true, "verification_passed": true },
+  "ready": true,
+  "limitations": [
+    "Production Provider::BaseService and its client/result classes are not included in this checkout",
+    "Linux CI and Ruby 3.3 execution are configured but were not observed locally"
+  ]
+}

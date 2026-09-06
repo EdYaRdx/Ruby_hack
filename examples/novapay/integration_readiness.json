@@ -1,0 +1,720 @@
+{
+  "schema_version": 1,
+  "provider": {
+    "name": "NovaPay",
+    "slug": "novapay",
+    "version": "1.0.0"
+  },
+  "spec_fingerprint": "sha256:2b6ad1db111691c80f3b098d76d69896fc88c7b0859f9a17af725325dbbbda77",
+  "root_document_sha256": "415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551",
+  "host_profile": {
+    "name": "space_payments_v1",
+    "version": 1,
+    "class_name": "Provider::BaseService",
+    "required_methods": [
+      "check_conditions",
+      "create_request",
+      "process_callback",
+      "fetch_status"
+    ],
+    "request_method_semantics": "logical_action",
+    "canonical_operations": [
+      "create",
+      "status",
+      "callback"
+    ],
+    "money": {},
+    "callback_actions": {
+      "approved": "approve_operation",
+      "rejected": "reject_operation",
+      "in_progress": null
+    },
+    "check_conditions": {
+      "call_super": true
+    },
+    "failure_contract": {
+      "arguments": [
+        "status",
+        "code",
+        "message"
+      ],
+      "validation_status": 422,
+      "validation_code": "validation_error"
+    }
+  },
+  "operations": {
+    "found": 5,
+    "canonical": [
+      {
+        "canonical": "create_request",
+        "operation_id": "createPayout",
+        "method": "POST",
+        "path": "/payouts",
+        "success_statuses": [
+          "201"
+        ],
+        "decision": {
+          "decision_id": "operation:createpayout",
+          "outcome": "ACCEPT",
+          "severity": "INFO",
+          "candidate": "create_request",
+          "evidence": [
+            {
+              "source": "SPEC_FACT",
+              "locations": [
+                "#/paths/~1payouts/post"
+              ],
+              "excerpt": "createPayout — Создать выплату",
+              "note": null
+            }
+          ],
+          "conflicts": [],
+          "rationale": "operationId/path/method provide a deterministic operation candidate"
+        }
+      },
+      {
+        "canonical": "fetch_status",
+        "operation_id": "getPayoutStatus",
+        "method": "GET",
+        "path": "/payouts/{payout_id}",
+        "success_statuses": [
+          "200"
+        ],
+        "decision": {
+          "decision_id": "operation:getpayoutstatus",
+          "outcome": "ACCEPT",
+          "severity": "INFO",
+          "candidate": "fetch_status",
+          "evidence": [
+            {
+              "source": "SPEC_FACT",
+              "locations": [
+                "#/paths/~1payouts~1{payout_id}/get"
+              ],
+              "excerpt": "getPayoutStatus — Получить статус выплаты",
+              "note": null
+            }
+          ],
+          "conflicts": [],
+          "rationale": "status text/path/response evidence identifies a status read"
+        }
+      },
+      {
+        "canonical": "process_callback",
+        "operation_id": "payoutWebhook",
+        "method": "POST",
+        "path": "/webhooks/payout",
+        "success_statuses": [
+          "200"
+        ],
+        "decision": {
+          "decision_id": "operation:payoutwebhook",
+          "outcome": "ACCEPT",
+          "severity": "INFO",
+          "candidate": "process_callback",
+          "evidence": [
+            {
+              "source": "SPEC_FACT",
+              "locations": [
+                "#/paths/~1webhooks~1payout/post"
+              ],
+              "excerpt": "payoutWebhook — Webhook уведомление о смене статуса",
+              "note": null
+            }
+          ],
+          "conflicts": [],
+          "rationale": "webhook/callback evidence identifies a callback operation"
+        }
+      }
+    ],
+    "extra": [
+      {
+        "operation_id": "cancelPayout",
+        "method": "POST",
+        "path": "/payouts/{payout_id}/cancel",
+        "success_statuses": [
+          "200"
+        ],
+        "kind": "EXTRA_OPERATION",
+        "preserved": true,
+        "blocking": false,
+        "canonical_binding": "none_unless_profile_declares_cancelpayout"
+      },
+      {
+        "operation_id": "getBalance",
+        "method": "GET",
+        "path": "/balance",
+        "success_statuses": [
+          "200"
+        ],
+        "kind": "EXTRA_OPERATION",
+        "preserved": true,
+        "blocking": false,
+        "canonical_binding": "none_unless_profile_declares_balance"
+      }
+    ]
+  },
+  "semantics": {
+    "auth": {
+      "schemes": [
+        {
+          "name": "ApiKeyAuth",
+          "type": "apiKey",
+          "in": "header",
+          "parameter_name": "X-API-Key",
+          "scheme": null,
+          "decision": "ACCEPT",
+          "strategy": {
+            "kind": "api_key",
+            "transport": "header",
+            "name": "X-API-Key"
+          }
+        }
+      ],
+      "selected": "ApiKeyAuth",
+      "strategy": {
+        "kind": "api_key",
+        "transport": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "money": {
+      "host": {
+        "field": "operation.amount",
+        "currency": "RUB",
+        "unit": "major",
+        "representation": "major",
+        "source": "BASE_SERVICE_PROFILE",
+        "evidence_source": "BASE_SERVICE_PROFILE",
+        "evidence": [
+          {
+            "source": "BASE_SERVICE_PROFILE",
+            "locations": [
+              "profile#/canonical_amount"
+            ],
+            "excerpt": "operation.amount is major RUB",
+            "note": null
+          }
+        ]
+      },
+      "provider": {
+        "field": "request.amount",
+        "response_field": "response.amount",
+        "currency": "RUB",
+        "unit": "minor",
+        "representation": "minor",
+        "subunit": "kopecks",
+        "unit_name": "kopecks",
+        "scale": 100,
+        "scale_source": "CASE_DEFAULT",
+        "source": [
+          "SPEC_DESCRIPTION",
+          "CASE_DEFAULT"
+        ],
+        "evidence_sources": [
+          "SPEC_DESCRIPTION",
+          "CASE_DEFAULT"
+        ],
+        "evidence": [
+          {
+            "source": "SPEC_DESCRIPTION",
+            "locations": [
+              "#/paths/~1payouts/post/requestBody/content/application~1json/schema/properties/amount/description"
+            ],
+            "excerpt": "Сумма в копейках",
+            "note": null
+          },
+          {
+            "source": "CASE_DEFAULT",
+            "locations": [
+              "organizer_case_qa.money"
+            ],
+            "excerpt": "provider amount unit and subunit",
+            "note": null
+          }
+        ],
+        "field_candidates": [
+          "amount"
+        ],
+        "nested_money_candidate": false
+      },
+      "request_conversion": {
+        "status": "resolved",
+        "direction": "major_to_minor",
+        "operation": "multiply",
+        "factor": 100,
+        "factor_decimal": "100",
+        "scale": 100
+      },
+      "response_conversion": {
+        "status": "resolved",
+        "direction": "minor_to_major",
+        "operation": "divide",
+        "factor": 0.01,
+        "factor_decimal": "0.01",
+        "scale": 100
+      },
+      "decision": "ACCEPT"
+    },
+    "statuses": [
+      {
+        "provider_value": "pending",
+        "canonical_value": "in_progress",
+        "evidence_sources": [
+          "SPEC_FACT",
+          "CASE_DEFAULT"
+        ],
+        "decision": "ACCEPT"
+      },
+      {
+        "provider_value": "processing",
+        "canonical_value": "in_progress",
+        "evidence_sources": [
+          "SPEC_FACT",
+          "CASE_DEFAULT"
+        ],
+        "decision": "ACCEPT"
+      },
+      {
+        "provider_value": "completed",
+        "canonical_value": "approved",
+        "evidence_sources": [
+          "SPEC_FACT",
+          "CASE_DEFAULT"
+        ],
+        "decision": "ACCEPT"
+      },
+      {
+        "provider_value": "failed",
+        "canonical_value": "rejected",
+        "evidence_sources": [
+          "SPEC_FACT",
+          "CASE_DEFAULT"
+        ],
+        "decision": "ACCEPT"
+      },
+      {
+        "provider_value": "cancelled",
+        "canonical_value": "rejected",
+        "evidence_sources": [
+          "SPEC_FACT",
+          "CASE_DEFAULT"
+        ],
+        "decision": "ACCEPT"
+      }
+    ],
+    "fields": [
+      {
+        "canonical_path": "operation.amount",
+        "provider_path": "request.amount",
+        "direction": "request",
+        "transform": "multiply",
+        "factor": 100,
+        "required": true,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      },
+      {
+        "canonical_path": "operation.currency",
+        "provider_path": "request.currency",
+        "direction": "request",
+        "transform": "identity",
+        "factor": 1,
+        "required": true,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      },
+      {
+        "canonical_path": "operation.external_id",
+        "provider_path": "request.external_id",
+        "direction": "request",
+        "transform": "identity",
+        "factor": 1,
+        "required": true,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      },
+      {
+        "canonical_path": "operation.recipient",
+        "provider_path": "request.recipient",
+        "direction": "request",
+        "transform": "identity",
+        "factor": 1,
+        "required": true,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      },
+      {
+        "canonical_path": "operation.provider_operation_id",
+        "provider_path": "response.id",
+        "direction": "response",
+        "transform": "identity",
+        "factor": 1,
+        "required": false,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      },
+      {
+        "canonical_path": "operation.status",
+        "provider_path": "response.status",
+        "direction": "response",
+        "transform": "status_map",
+        "factor": 1,
+        "required": false,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      },
+      {
+        "canonical_path": "operation.amount",
+        "provider_path": "response.amount",
+        "direction": "response",
+        "transform": "divide",
+        "factor": 0.01,
+        "required": false,
+        "provenance": "SPEC_FACT",
+        "decision": "ACCEPT"
+      }
+    ],
+    "webhook": {
+      "endpoint": "POST /webhooks/payout",
+      "signature": {
+        "algorithm": "HMAC-SHA256",
+        "header": "X-NovaPay-Signature",
+        "required": true,
+        "input": "raw_body",
+        "encoding": "hex"
+      },
+      "events": {
+        "payout.completed": "approved",
+        "payout.failed": "rejected",
+        "payout.processing": "in_progress",
+        "payout.cancelled": "rejected"
+      },
+      "identifier_field": "payout_id",
+      "raw_body_required": true,
+      "decision": "ACCEPT"
+    },
+    "idempotency": {
+      "header": "Idempotency-Key",
+      "spec_required": false,
+      "spec_evidence_source": "SPEC_FACT",
+      "adapter_policy": {
+        "send_header": "if_available",
+        "provenance": "ADAPTER_POLICY"
+      },
+      "retry_policy": {
+        "name": "preserve_same_key",
+        "provenance": "ADAPTER_POLICY"
+      }
+    },
+    "errors": [
+      {
+        "operation_id": "createPayout",
+        "http_status": "201",
+        "provider_codes": [],
+        "canonical_category": "unknown_provider_error",
+        "retryable": false,
+        "description": "Выплата создана",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "400",
+        "provider_codes": [],
+        "canonical_category": "validation_error",
+        "retryable": false,
+        "description": "Некорректный запрос",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "401",
+        "provider_codes": [
+          {
+            "code": "unauthorized",
+            "known_to_schema": false,
+            "category": "unauthorized",
+            "retryable": false,
+            "action": "refresh_credentials_or_review",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "unauthorized",
+        "retryable": false,
+        "description": "Невалидный API-ключ",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "402",
+        "provider_codes": [
+          {
+            "code": "insufficient_balance",
+            "known_to_schema": false,
+            "category": "insufficient_balance",
+            "retryable": false,
+            "action": "review_provider_balance",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "insufficient_balance",
+        "retryable": false,
+        "description": "Недостаточно средств на балансе провайдера",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "409",
+        "provider_codes": [],
+        "canonical_category": "conflict",
+        "retryable": false,
+        "description": "Дубликат по idempotency key",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "422",
+        "provider_codes": [
+          {
+            "code": "validation_error",
+            "known_to_schema": false,
+            "category": "validation_error",
+            "retryable": false,
+            "action": "correct_request",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "validation_error",
+        "retryable": false,
+        "description": "Ошибка валидации",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "429",
+        "provider_codes": [
+          {
+            "code": "rate_limit_exceeded",
+            "known_to_schema": false,
+            "category": "rate_limit_exceeded",
+            "retryable": true,
+            "action": "retry_after_with_same_idempotency_key",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "rate_limit_exceeded",
+        "retryable": true,
+        "description": "Превышен лимит запросов",
+        "retry_after_header": "Retry-After",
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "createPayout",
+        "http_status": "500",
+        "provider_codes": [],
+        "canonical_category": "internal_error",
+        "retryable": false,
+        "description": "Внутренняя ошибка провайдера",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "getPayoutStatus",
+        "http_status": "200",
+        "provider_codes": [],
+        "canonical_category": "unknown_provider_error",
+        "retryable": false,
+        "description": "Статус выплаты",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "getPayoutStatus",
+        "http_status": "401",
+        "provider_codes": [
+          {
+            "code": "unauthorized",
+            "known_to_schema": false,
+            "category": "unauthorized",
+            "retryable": false,
+            "action": "refresh_credentials_or_review",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "unauthorized",
+        "retryable": false,
+        "description": "Невалидный API-ключ",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "getPayoutStatus",
+        "http_status": "404",
+        "provider_codes": [
+          {
+            "code": "not_found",
+            "known_to_schema": false,
+            "category": "not_found",
+            "retryable": false,
+            "action": "review_identifier",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "not_found",
+        "retryable": false,
+        "description": "Выплата не найдена",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "cancelPayout",
+        "http_status": "200",
+        "provider_codes": [],
+        "canonical_category": "unknown_provider_error",
+        "retryable": false,
+        "description": "Выплата отменена",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "cancelPayout",
+        "http_status": "409",
+        "provider_codes": [
+          {
+            "code": "invalid_status",
+            "known_to_schema": false,
+            "category": "conflict",
+            "retryable": false,
+            "action": "inspect_existing_operation",
+            "unknown_code_policy": "preserve_and_review"
+          }
+        ],
+        "canonical_category": "conflict",
+        "retryable": false,
+        "description": "Невозможно отменить в текущем статусе",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "payoutWebhook",
+        "http_status": "200",
+        "provider_codes": [],
+        "canonical_category": "unknown_provider_error",
+        "retryable": false,
+        "description": "Webhook принят",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      },
+      {
+        "operation_id": "getBalance",
+        "http_status": "200",
+        "provider_codes": [],
+        "canonical_category": "unknown_provider_error",
+        "retryable": false,
+        "description": "Текущий баланс",
+        "retry_after_header": null,
+        "evidence_sources": [
+          "SPEC_FACT",
+          "SPEC_EXAMPLE"
+        ]
+      }
+    ]
+  },
+  "decisions": {
+    "counts": {
+      "total_semantic_decisions": 14,
+      "automatic_accept_count": 14,
+      "review_count": 0,
+      "unknown_count": 0,
+      "blocking_count": 0,
+      "human_decisions_supplied": 0,
+      "unsupported_critical_features": 0
+    },
+    "spec_derived": 14,
+    "human_confirmed": 0,
+    "case_defaults": 3,
+    "adapter_policy": 1
+  },
+  "generation_ready": true,
+  "generated": true,
+  "verification": {
+    "passed": true,
+    "syntax": [
+      {
+        "path": "examples/novapay/service.rb",
+        "passed": true,
+        "stdout": "Syntax OK\n",
+        "stderr": ""
+      },
+      {
+        "path": "examples/novapay/contract_smoke.rb",
+        "passed": true,
+        "stdout": "Syntax OK\n",
+        "stderr": ""
+      }
+    ],
+    "smoke": {
+      "passed": true,
+      "stdout": "contract smoke passed\n",
+      "stderr": ""
+    }
+  },
+  "required_runtime_configuration": [
+    "NOVAPAY_BASE_URL (optional sandbox default)",
+    "provider API credential passed to generated service"
+  ],
+  "known_limitations": [
+    "Production Provider::BaseService and its client/result classes are not included in this checkout",
+    "Webhook secret and API credentials are runtime configuration, never persisted in Review overrides"
+  ],
+  "stale_override": null,
+  "ready": true
+}

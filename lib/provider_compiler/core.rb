@@ -9,6 +9,7 @@ require "openssl"
 require "open3"
 require "optparse"
 require "rbconfig"
+require "time"
 require "yaml"
 
 module ProviderCompiler

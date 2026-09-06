@@ -1,7 +1,6 @@
 {
   "schema_version": 1,
   "corpus": "research/black_box_v1",
-  "implementation_commit": "7257a89d44b3ba541902f0912613c5dd6aa5faf0",
   "cases": [
     {
       "case_id": "01_header_create",
@@ -151,15 +150,15 @@
     {
       "case_id": "02_query_202",
       "expected_decision": "REVIEW_REQUIRED",
-      "actual_decision": "UNKNOWN",
+      "actual_decision": "REVIEW_REQUIRED",
       "generation": {
         "status": "not_attempted"
       },
       "manifest_summary": {
-        "decisions": 11,
-        "blocking": 2,
-        "review_required": 2,
-        "accepted": 8
+        "decisions": 12,
+        "blocking": 1,
+        "review_required": 3,
+        "accepted": 9
       },
       "semantic_checks": [
         {
@@ -254,36 +253,36 @@
       "safety_checks": [
         {
           "name": "decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         },
         {
           "name": "review.decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         }
       ],
-      "passed": false,
+      "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 8,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 1,\n  \"review_required\": 3,\n  \"accepted\": 9,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
-      "failure_class": "semantic_or_decision_mismatch"
+      "failure_class": null
     },
     {
       "case_id": "03_bearer_polling",
       "expected_decision": "REVIEW_REQUIRED",
-      "actual_decision": "UNKNOWN",
+      "actual_decision": "REVIEW_REQUIRED",
       "generation": {
         "status": "not_attempted"
       },
       "manifest_summary": {
         "decisions": 12,
-        "blocking": 2,
-        "review_required": 2,
+        "blocking": 1,
+        "review_required": 3,
         "accepted": 9
       },
       "semantic_checks": [
@@ -393,24 +392,24 @@
       "safety_checks": [
         {
           "name": "decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         },
         {
           "name": "review.decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         }
       ],
-      "passed": false,
+      "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 9,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 1,\n  \"review_required\": 3,\n  \"accepted\": 9,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
-      "failure_class": "semantic_or_decision_mismatch"
+      "failure_class": null
     },
     {
       "case_id": "04_unsupported_auth",
@@ -420,9 +419,9 @@
         "status": "not_attempted"
       },
       "manifest_summary": {
-        "decisions": 10,
-        "blocking": 3,
-        "review_required": 2,
+        "decisions": 11,
+        "blocking": 4,
+        "review_required": 3,
         "accepted": 6
       },
       "semantic_checks": [
@@ -437,6 +436,12 @@
           "passed": true,
           "expected": "oauth2",
           "actual": "oauth2"
+        },
+        {
+          "name": "unsupported.oauth2",
+          "passed": true,
+          "expected": "BLOCKING",
+          "actual": "BLOCKING"
         }
       ],
       "safety_checks": [
@@ -456,7 +461,7 @@
       "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 10,\n  \"blocking\": 3,\n  \"review_required\": 2,\n  \"accepted\": 6,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 4,\n  \"review_required\": 3,\n  \"accepted\": 6,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
       "failure_class": null
@@ -464,14 +469,14 @@
     {
       "case_id": "05_missing_operation_id",
       "expected_decision": "REVIEW_REQUIRED",
-      "actual_decision": "UNKNOWN",
+      "actual_decision": "REVIEW_REQUIRED",
       "generation": {
         "status": "not_attempted"
       },
       "manifest_summary": {
         "decisions": 11,
-        "blocking": 2,
-        "review_required": 2,
+        "blocking": 1,
+        "review_required": 3,
         "accepted": 8
       },
       "semantic_checks": [
@@ -533,24 +538,24 @@
       "safety_checks": [
         {
           "name": "decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         },
         {
           "name": "review.decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         }
       ],
-      "passed": false,
+      "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 8,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 1,\n  \"review_required\": 3,\n  \"accepted\": 8,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
-      "failure_class": "semantic_or_decision_mismatch"
+      "failure_class": null
     },
     {
       "case_id": "06_nested_major",
@@ -959,9 +964,9 @@
         "status": "not_attempted"
       },
       "manifest_summary": {
-        "decisions": 10,
-        "blocking": 2,
-        "review_required": 2,
+        "decisions": 11,
+        "blocking": 3,
+        "review_required": 3,
         "accepted": 7
       },
       "semantic_checks": [
@@ -1003,21 +1008,21 @@
         },
         {
           "name": "required_parameters.query.tenant",
-          "passed": false,
+          "passed": true,
           "expected": "BLOCKING",
-          "actual": null
+          "actual": "BLOCKING"
         },
         {
           "name": "required_parameters.header.X-Region",
-          "passed": false,
+          "passed": true,
           "expected": "BLOCKING",
-          "actual": null
+          "actual": "BLOCKING"
         },
         {
           "name": "optional_parameters.query.trace",
-          "passed": false,
+          "passed": true,
           "expected": true,
-          "actual": false
+          "actual": true
         }
       ],
       "safety_checks": [
@@ -1034,13 +1039,13 @@
           "actual": true
         }
       ],
-      "passed": false,
+      "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 10,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 7,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 3,\n  \"review_required\": 3,\n  \"accepted\": 7,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
-      "failure_class": "semantic_or_decision_mismatch"
+      "failure_class": null
     },
     {
       "case_id": "10_webhook_contradiction",
@@ -1050,9 +1055,9 @@
         "status": "not_attempted"
       },
       "manifest_summary": {
-        "decisions": 12,
-        "blocking": 1,
-        "review_required": 4,
+        "decisions": 13,
+        "blocking": 2,
+        "review_required": 5,
         "accepted": 8
       },
       "semantic_checks": [
@@ -1176,7 +1181,7 @@
       "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 1,\n  \"review_required\": 4,\n  \"accepted\": 8,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 13,\n  \"blocking\": 2,\n  \"review_required\": 5,\n  \"accepted\": 8,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
       "failure_class": null
@@ -1189,9 +1194,9 @@
         "status": "not_attempted"
       },
       "manifest_summary": {
-        "decisions": 11,
-        "blocking": 4,
-        "review_required": 4,
+        "decisions": 12,
+        "blocking": 5,
+        "review_required": 5,
         "accepted": 5
       },
       "semantic_checks": [
@@ -1212,6 +1217,18 @@
           "passed": true,
           "expected": "X-Xml-Key",
           "actual": "X-Xml-Key"
+        },
+        {
+          "name": "unsupported.application_xml_request",
+          "passed": true,
+          "expected": "BLOCKING",
+          "actual": "BLOCKING"
+        },
+        {
+          "name": "unsupported.callback_without_signature",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
         }
       ],
       "safety_checks": [
@@ -1231,7 +1248,7 @@
       "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 4,\n  \"review_required\": 4,\n  \"accepted\": 5,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 5,\n  \"review_required\": 5,\n  \"accepted\": 5,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
       "failure_class": null
@@ -1239,14 +1256,14 @@
     {
       "case_id": "12_local_refs",
       "expected_decision": "REVIEW_REQUIRED",
-      "actual_decision": "UNKNOWN",
+      "actual_decision": "REVIEW_REQUIRED",
       "generation": {
         "status": "not_attempted"
       },
       "manifest_summary": {
         "decisions": 12,
-        "blocking": 1,
-        "review_required": 1,
+        "blocking": 0,
+        "review_required": 2,
         "accepted": 10
       },
       "semantic_checks": [
@@ -1368,33 +1385,33 @@
       "safety_checks": [
         {
           "name": "decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         },
         {
           "name": "review.decision",
-          "passed": false,
+          "passed": true,
           "expected": "REVIEW_REQUIRED",
-          "actual": "UNKNOWN"
+          "actual": "REVIEW_REQUIRED"
         }
       ],
-      "passed": false,
+      "passed": true,
       "compiler": {
         "exit_status": 0,
-        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 1,\n  \"review_required\": 1,\n  \"accepted\": 10,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 0,\n  \"review_required\": 2,\n  \"accepted\": 10,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
         "stderr": ""
       },
-      "failure_class": "semantic_or_decision_mismatch"
+      "failure_class": null
     }
   ],
   "aggregate": {
     "cases_total": 12,
-    "cases_passed": 7,
+    "cases_passed": 12,
     "decision_automation_rate": 0.0,
-    "review_rate": 33.3,
-    "unknown_rate": 66.7,
-    "safe_semantic_accuracy": 58.3,
+    "review_rate": 66.7,
+    "unknown_rate": 33.3,
+    "safe_semantic_accuracy": 100.0,
     "fully_auto_ready_rate": 0.0,
     "generation_success_rate": 0.0,
     "runtime_vector_rate": 0.0,

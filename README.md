@@ -171,7 +171,7 @@ amount:
 - Загрузка OpenAPI, разрешение локальных ссылок и fingerprint источника реализованы в `lib/provider_compiler/core.rb`.
 - Анализ с учётом доказательств, `Review Manifest` и `Provider Blueprint` реализованы в слоях analyzer/profile/blueprint.
 - Детерминированная Ruby-проекция и проверка результата реализованы в слоях generator и verification.
-- Канонический пример NovaPay: 7 файлов в `examples/novapay/` (`INTEGRATION.md`, `contract_smoke.rb`, `fixtures.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
+- Канонический пример NovaPay: 9 файлов в `examples/novapay/` (`INTEGRATION.md`, `INTEGRATION_READINESS.md`, `contract_smoke.rb`, `fixtures.json`, `integration_readiness.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
 - Независимая проверка семантики: benchmark мутаций NovaPay и сравнения Aurora/Helios включены в сгенерированный статус ниже.
 - Реальные вызовы провайдера не реализованы; локальный Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
@@ -204,7 +204,7 @@ ruby bin/provider_compiler inspect --spec path/to/provider.yaml `
 сгенерированный `fixtures.json` сохраняет provenance и остаётся побайтно
 детерминированным.
 
-Требуется Ruby >= 3.0. Текущий checkout проверен на Ruby 4.0.6 и Bundler 2.5.22.
+Требуется Ruby >= 3.3. CI проверяет Ruby 3.3; текущий checkout дополнительно проверен на Ruby 4.0.6 и Bundler 2.5.22.
 
 ```powershell
 bundle install
@@ -215,6 +215,38 @@ ruby bin/provider_compiler analyze
 ruby bin/provider_compiler generate --out tmp/generated
 ruby bin/provider_compiler verify --out tmp/generated
 ```
+
+### Persisted Review и readiness
+
+Подтверждённые человеком решения можно экспортировать в версионируемый
+`provider_overrides.yml` и применить повторно:
+
+```powershell
+ruby bin/provider_compiler export-review `
+  --spec path/to/provider.yaml `
+  --profile profiles/space_payments_v1.yml `
+  --defaults path/to/provider_defaults.yml `
+  --resolutions path/to/resolutions.yml `
+  --review-output provider_overrides.yml
+
+ruby bin/provider_compiler generate `
+  --spec path/to/provider.yaml `
+  --profile profiles/space_payments_v1.yml `
+  --defaults path/to/provider_defaults.yml `
+  --overrides provider_overrides.yml `
+  --out tmp/generated
+```
+
+Override содержит `spec_fingerprint`, hash корневого документа, profile/version
+и только решения с provenance `HUMAN_CONFIRMED`. Изменённая спецификация,
+несовместимый profile, неизвестный decision id или credential-like поле приводят
+к отказу, а не к тихому применению старого решения. Web UI предоставляет те же
+операции через Review: `Export decisions` и `Import decisions`.
+
+`generate` дополнительно создаёт `INTEGRATION_READINESS.md` и
+`integration_readiness.json`. Это отчёт по фактическим Blueprint, verification,
+decision counts, extra operations, runtime configuration и ограничениям; он не
+заменяет внешний staging acceptance.
 
 `inspect` выводит сводку решения. `analyze` создаёт только machine-readable
 `provider_blueprint.json` и `review_manifest.json`; для `REVIEW_REQUIRED` или
@@ -291,7 +323,7 @@ tmp/analyzed/
 └── review_manifest.json
 ```
 
-Команда `generate` создаёт шесть файлов в каталоге результата:
+Команда `generate` создаёт восемь файлов в каталоге результата:
 
 ```text
 tmp/generated/
@@ -300,7 +332,9 @@ tmp/generated/
 ├── fixtures.json
 ├── provider_blueprint.json
 ├── review_manifest.json
-└── contract_smoke.rb
+├── contract_smoke.rb
+├── INTEGRATION_READINESS.md
+└── integration_readiness.json
 ```
 
 - `service.rb` — сгенерированный адаптер `Provider::BaseService`;
@@ -308,7 +342,9 @@ tmp/generated/
 - `fixtures.json` — примеры request/response/webhook;
 - `provider_blueprint.json` — разрешённый контракт интеграции;
 - `review_manifest.json` — доказательства и решения;
-- `contract_smoke.rb` — исполняемый runtime smoke test.
+- `contract_smoke.rb` — исполняемый runtime smoke test;
+- `INTEGRATION_READINESS.md` / `integration_readiness.json` — фактический
+  readiness report для человека и автоматизации.
 
 Канонический `examples/novapay/` дополнительно хранит копию входного
 `provider_api.yaml`, поэтому там семь файлов. Сгенерированные артефакты следует
@@ -394,7 +430,7 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущий снимок проверки (сгенерировано)**
 
-- RSpec: 98 примеров, ошибок: 0.
+- RSpec: 106 примеров, ошибок: 0.
 - Reference mutation benchmark: 37/37 adversarial-мутаций одного домена эталонного провайдера; точность семантики: 100.0%; критических ложных ACCEPT: 0.
 - Официальный NovaPay spec-only baseline: автоматизация решений 10/14 (71.4%); доля review 4/14 (28.6%); полностью готовых автоматически 0/1 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
 - NovaPay spec-only mutation lane: автоматизация решений 74/98 (75.5%); доля review 24/98 (24.5%); полностью готовых автоматически 0/7 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
@@ -463,9 +499,10 @@ docs/                   актуальная инженерная докумен
 
 ## Проверка и CI
 
-Workflow [`CI`](.github/workflows/ci.yml) выполняет RSpec, аудит синтаксиса Ruby,
-аудит доли Ruby, reference benchmark, NovaPay spec-only benchmark, проверки
-Aurora и HeliosPay, оба детерминированных updater-а и `git diff --check`. Он не
+Workflow [`CI`](.github/workflows/ci.yml) запускается на Windows и Linux для Ruby
+3.3 и 4.0 и выполняет RSpec, аудит синтаксиса Ruby, аудит доли Ruby, reference
+benchmark, NovaPay spec-only benchmark, frozen black-box benchmark, проверки
+Aurora и HeliosPay, сборку gem, оба детерминированных updater-а и `git diff --check`. Он не
 использует credentials, live provider API или browser; кроме checkout и
 установки gems, проверки работают offline.
 
@@ -499,8 +536,8 @@ production credentials и deployment не входят в scope.
 
 Доля Ruby измеряется по написанным участниками строкам исходного кода: пустые и
 содержащие только комментарии строки исключены; сгенерированные примеры, данные,
-документация и зависимости не считаются. Текущий результат только для production — `92.8%`, production + tests —
-`94.3%`. Методология и machine-readable evidence находятся в
+документация и зависимости не считаются. Текущий результат только для production — `90.1%`, production + tests —
+`92.9%`. Методология и machine-readable evidence находятся в
 [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) и
 [`research/ruby_share_audit.json`](research/ruby_share_audit.json).
 

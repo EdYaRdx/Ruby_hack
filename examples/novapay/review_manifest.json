@@ -80,6 +80,9 @@
     }
   },
   "blueprint_status": "ACCEPT",
+  "review_override": {
+    "status": "NONE"
+  },
   "summary": {
     "decisions": 14,
     "blocking": 0,

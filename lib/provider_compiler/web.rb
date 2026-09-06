@@ -15,6 +15,8 @@ module ProviderCompiler
     MAX_UPLOAD_BYTES = 5 * 1024 * 1024
     ALLOWED_EXTENSIONS = %w[.yaml .yml .json].freeze
     ARTIFACTS = %w[service.rb INTEGRATION.md fixtures.json provider_blueprint.json review_manifest.json contract_smoke.rb].freeze
+    READINESS_ARTIFACTS = %w[INTEGRATION_READINESS.md integration_readiness.json].freeze
+    ALL_ARTIFACTS = (ARTIFACTS + READINESS_ARTIFACTS).freeze
 
     DEMOS = {
       "novapay" => {
@@ -75,6 +77,7 @@ module ProviderCompiler
         @base_defaults_data = Util.deep_dup(CaseDefaults.load(defaults_path).data)
         @defaults_data = Util.deep_dup(@base_defaults_data)
         @resolutions = {}
+        @review_override_data = nil
         @generated_dir = File.join(root_dir, "generated")
         @runtime_dir = File.join(root_dir, "runtime")
         @preview_results = {}
@@ -87,7 +90,7 @@ module ProviderCompiler
       end
 
       def analyze!
-        @pipeline = Pipeline.new(spec_path: spec_path, profile_path: profile_path, defaults_path: defaults_path, defaults_data: @defaults_data)
+        @pipeline = Pipeline.new(spec_path: spec_path, profile_path: profile_path, defaults_path: defaults_path, defaults_data: @review_override_data ? @base_defaults_data : @defaults_data, overrides_data: @review_override_data)
         @preview_results.clear
         @fixture_data = nil
         @verification = nil
@@ -134,6 +137,7 @@ module ProviderCompiler
         override = resolution_override(decision_id.to_s, params)
         @resolutions[decision_id.to_s] = override
         @defaults_data = merge_defaults(@base_defaults_data, @resolutions.values)
+        @review_override_data = nil
         FileUtils.rm_rf(generated_dir) if File.directory?(generated_dir)
         FileUtils.rm_rf(runtime_dir) if File.directory?(runtime_dir)
         analyze!
@@ -146,6 +150,7 @@ module ProviderCompiler
         FileUtils.rm_rf(generated_dir) if File.exist?(generated_dir)
         DeterministicGenerator.new.generate(blueprint, manifest, generated_dir, examples: defaults.examples, spec_document: pipeline.source_document.resolved)
         @verification = Verification.new.verify(generated_dir)
+        IntegrationReadiness.write(generated_dir, IntegrationReadiness.build(pipeline, generated: true, verification: @verification))
         @generated = true
         self
       end
@@ -154,8 +159,23 @@ module ProviderCompiler
         @generated && File.file?(File.join(generated_dir, "service.rb"))
       end
 
+      def export_review(path)
+        ReviewExporter.write(path, source_document: pipeline.source_document, profile: profile, provider_name: blueprint.dig("provider", "name"), resolutions: @resolutions.to_a)
+      end
+
+      def import_review!(path)
+        override = ReviewOverride.load(path)
+        override.validate_against!(pipeline.source_document, profile, known_decision_ids: Array(blueprint["decisions"]).map { |item| item.fetch("decision_id") })
+        @review_override_data = override.to_h
+        @resolutions = override.decisions.to_h { |item| [item.fetch("decision_id"), item.fetch("value")] }
+        @defaults_data = ReviewDefaults.merge(@base_defaults_data, @resolutions.values)
+        FileUtils.rm_rf(generated_dir) if File.directory?(generated_dir)
+        FileUtils.rm_rf(runtime_dir) if File.directory?(runtime_dir)
+        analyze!
+      end
+
       def artifact(name)
-        raise Error, "unknown artifact" unless ARTIFACTS.include?(name)
+        raise Error, "unknown artifact" unless ALL_ARTIFACTS.include?(name)
         raise Error, "artifacts have not been generated" unless generated?
 
         File.read(File.join(generated_dir, name), encoding: "UTF-8")
@@ -167,7 +187,7 @@ module ProviderCompiler
         buffer = StringIO.new
         gzip = Zlib::GzipWriter.new(buffer)
         Gem::Package::TarWriter.new(gzip) do |tar|
-          ARTIFACTS.each do |name|
+          ALL_ARTIFACTS.each do |name|
             path = File.join(generated_dir, name)
             data = File.binread(path)
             tar.add_file_simple(name, 0o644, data.bytesize) { |file| file.write(data) }
@@ -527,7 +547,12 @@ module ProviderCompiler
         if request.request_method == "GET"
           case action
           when "analysis" then response.body = Renderer.new.analysis_page(workspace, request.query["decision"])
-          when "review" then response.body = Renderer.new.review_page(workspace)
+          when "review"
+            if tail == "export"
+              download_review_override(workspace, response)
+            else
+              response.body = Renderer.new.review_page(workspace)
+            end
           when "preview" then response.body = Renderer.new.preview_page(workspace, request.query["kind"] || "request")
           when "generate" then response.body = Renderer.new.generate_page(workspace, request.query["artifact"])
           when "artifact" then download_artifact(workspace, request, response)
@@ -537,10 +562,20 @@ module ProviderCompiler
         elsif request.request_method == "POST"
           case action
           when "review"
-            fields = form_fields(request)
-            decision_id = fields.fetch("decision_id")
-            workspace.resolve!(decision_id, fields)
-            redirect(response, "/workspace/#{workspace.id}/review")
+            if tail == "import"
+              fields = form_fields(request)
+              upload = fields.fetch("override_file")
+              raise ValidationError, ["choose a provider_overrides.yml file"] unless upload.is_a?(Hash) && upload["data"]
+              path = File.join(workspace.root_dir, "imported_provider_overrides.yml")
+              File.binwrite(path, upload.fetch("data"))
+              workspace.import_review!(path)
+              redirect(response, "/workspace/#{workspace.id}/review")
+            else
+              fields = form_fields(request)
+              decision_id = fields.fetch("decision_id")
+              workspace.resolve!(decision_id, fields)
+              redirect(response, "/workspace/#{workspace.id}/review")
+            end
           when "preview"
             fields = form_fields(request)
             workspace.preview!(fields.fetch("kind", "request"), fields)
@@ -570,6 +605,12 @@ module ProviderCompiler
         response["Content-Type"] = "application/gzip"
         response["Content-Disposition"] = %(attachment; filename="#{Util.slug(workspace.blueprint.dig("provider", "name"))}-artifacts.tar.gz")
         response.body = workspace.bundle
+      end
+
+      def download_review_override(workspace, response)
+        response["Content-Type"] = "application/yaml; charset=UTF-8"
+        response["Content-Disposition"] = %(attachment; filename="provider_overrides.yml")
+        response.body = YAML.dump(ReviewExporter.build(source_document: workspace.pipeline.source_document, profile: workspace.profile, provider_name: workspace.blueprint.dig("provider", "name"), resolutions: workspace.resolutions.to_a).to_h)
       end
 
       def form_fields(request)
