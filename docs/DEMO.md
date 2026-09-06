@@ -57,12 +57,41 @@ kopecks, request conversion — `×100`. `Idempotency-Key` имеет
 Нажмите подтверждённый пример NovaPay и откройте Preview:
 
 ```text
+SPACE PAYMENTS INPUT
+operation.amount = 1500.50 RUB
+operation.payout_requisite["sbp"]["phone"] = 79001234567
+request_method = sbp  (логический способ выплаты)
+        ↓
+BLUEPRINT TRANSFORMATION
+        ↓
+PROVIDER REQUEST
+POST /payouts
+recipient.type = sbp; recipient.phone = 79001234567
+
 1500.50 RUB → provider amount 150050 kopecks
 completed → approved → approve_operation
 ```
 
 Покажите request, response/status и completed webhook с
-`X-NovaPay-Signature`, `HMAC-SHA256`, raw body и hex.
+`X-NovaPay-Signature`, `HMAC-SHA256`, raw body и hex. Объясните, что
+`request_method=sbp` — логический host method, а `POST /payouts` — provider
+HTTP transport.
+
+Provider response id нормализуется в `success(result: { id: ... })`. Provider id
+сохраняется платформой Space Payments; generated service не владеет persistence
+операции или её состоянием.
+
+Для status preview покажите также границу действий:
+
+```text
+completed → approved → approve_operation
+failed    → rejected → reject_operation
+pending/processing → in_progress → terminal helper не вызывается
+```
+
+Для callback отдельно проговорите: подпись считается по исходному `raw body`.
+Система не пересобирает JSON для HMAC; если raw body отсутствует, проверка
+должна завершаться fail-closed.
 
 ## 5. Generation — artifacts и обязательные проверки
 

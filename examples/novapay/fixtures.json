@@ -11,10 +11,35 @@
           "bank_name": "Сбербанк"
         }
       },
-      "idempotency_key": "key-1"
+      "idempotency_key": "key-1",
+      "request_method": "sbp"
     },
     "expected_provider_amount": 1500000,
-    "expected_http_status": 201
+    "expected_http_status": 201,
+    "expected_host_result": {
+      "result": {
+        "id": "np_abc123"
+      }
+    }
+  },
+  "card_request": {
+    "operation": {
+      "amount": 15000.0,
+      "currency": "RUB",
+      "id": "op_card123",
+      "request_method": "card",
+      "payout_requisite": {
+        "card_number": "4111111111111111",
+        "phone": "79001234567"
+      }
+    },
+    "expected_provider_amount": 1500000,
+    "expected_http_status": 201,
+    "expected_host_result": {
+      "result": {
+        "id": "np_card123"
+      }
+    }
   },
   "fetch_status": {
     "response": {

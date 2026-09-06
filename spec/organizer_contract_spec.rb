@@ -212,7 +212,8 @@ RSpec.describe "organizer contract alignment" do
       files = ProviderCompiler::DeterministicGenerator.new.generate(review_pipeline.blueprint, review_pipeline.manifest, File.join(directory, "review"))
       expect(files.map { |path| File.basename(path) }).to contain_exactly("provider_blueprint.json", "review_manifest.json", "INTEGRATION.md")
       expect(File).not_to exist(File.join(directory, "review", "service.rb"))
-      expect(File.read(File.join(directory, "review", "INTEGRATION.md"), encoding: "UTF-8")).to include("iban")
+      integration_doc = File.read(File.join(directory, "review", "INTEGRATION.md"), encoding: "UTF-8")
+      expect(integration_doc).to include("iban", "required: `true`", "host source: `operation.payout_requisite`")
     end
   end
 

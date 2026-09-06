@@ -19,6 +19,23 @@ API провайдера с контрактом Space Payments, формиру�
 | Безопасность | критическая неоднозначность → генерация заблокирована |
 | Runtime | Ruby, детерминированная работа, без нейросетей |
 
+## Контракт Space Payments
+
+Текущий `space_payments_v1` profile использует host operation со следующими
+границами: `operation.id`, `operation.amount` и
+`operation.payout_requisite` (JSONB/hash). SBP-реквизиты находятся в
+`operation.payout_requisite["sbp"]`, карточные — в
+`operation.payout_requisite["card_number"]`; плоские top-level
+`recipient_phone`/`bank_code`/`card_number` не гарантируются. `request_method`
+(`sbp`, `card`) — логический способ выплаты, не HTTP method и не `create`.
+Успешный create возвращает `success(result: { id: provider_operation_id })`;
+Provider operation id сохраняет Space Payments, а не generated service. Ошибки
+используют
+`failure(code, i18n_key)`, статусы — `approve_operation`/`reject_operation`, а
+неизвестные обязательные mappings проходят Review и fail-closed блокируют
+unsafe generation. Полная граница контракта — в
+[`docs/ORGANIZER_CONTRACT.md`](docs/ORGANIZER_CONTRACT.md).
+
 ## Проблема
 
 Space Payments регулярно подключает новых платёжных провайдеров. Ручная
@@ -486,7 +503,7 @@ runner-ов и текущего запуска RSpec. Числа не копир
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
 **Текущий снимок проверки (сгенерировано)**
 
-- RSpec: 133 примеров, ошибок: 0.
+- RSpec: 135 примеров, ошибок: 0.
 - Reference mutation benchmark: 37/37 adversarial-мутаций одного домена эталонного провайдера; точность семантики: 100.0%; критических ложных ACCEPT: 0.
 - Официальный NovaPay spec-only baseline: автоматизация решений 10/14 (71.4%); доля review 4/14 (28.6%); полностью готовых автоматически 0/1 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
 - NovaPay spec-only mutation lane: автоматизация решений 74/98 (75.5%); доля review 24/98 (24.5%); полностью готовых автоматически 0/7 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
@@ -546,6 +563,9 @@ runner-ов и текущего запуска RSpec. Числа не копир
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — текущая архитектура и
   инварианты;
+- [`docs/ORGANIZER_CONTRACT.md`](docs/ORGANIZER_CONTRACT.md) — актуальная граница
+  host operation, результата, статусов и реквизитов;
+- [`docs/JURY_FAQ.md`](docs/JURY_FAQ.md) — краткие ответы для демонстрации жюри;
 - [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — методика, формулы и актуальные
   результаты;
 - [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — фактическая матрица

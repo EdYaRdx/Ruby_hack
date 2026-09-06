@@ -73,7 +73,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 1077
+          "loc": 1134
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -93,10 +93,10 @@
         },
         {
           "path": "lib/provider_compiler/web_renderer.rb",
-          "loc": 1107
+          "loc": 1118
         }
       ],
-      "loc": 5677
+      "loc": 5745
     },
     "other_participant_source": {
       "files": [
@@ -111,8 +111,8 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 6231,
-    "ruby_share_percent": 91.1
+    "total_source_loc": 6299,
+    "ruby_share_percent": 91.2
   },
   "production_plus_tests": {
     "ruby": {
@@ -163,7 +163,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 1077
+          "loc": 1134
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -183,7 +183,7 @@
         },
         {
           "path": "lib/provider_compiler/web_renderer.rb",
-          "loc": 1107
+          "loc": 1118
         },
         {
           "path": "spec/analyzers_spec.rb",
@@ -199,7 +199,7 @@
         },
         {
           "path": "spec/documentation_spec.rb",
-          "loc": 92
+          "loc": 116
         },
         {
           "path": "spec/generator_spec.rb",
@@ -223,7 +223,7 @@
         },
         {
           "path": "spec/organizer_contract_spec.rb",
-          "loc": 205
+          "loc": 206
         },
         {
           "path": "spec/persisted_review_spec.rb",
@@ -279,10 +279,10 @@
         },
         {
           "path": "spec/web_spec.rb",
-          "loc": 393
+          "loc": 396
         }
       ],
-      "loc": 8068
+      "loc": 8164
     },
     "other_participant_source": {
       "files": [
@@ -297,7 +297,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 8622,
+    "total_source_loc": 8718,
     "ruby_share_percent": 93.6
   }
 }

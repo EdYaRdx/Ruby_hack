@@ -863,6 +863,12 @@ module ProviderCompiler
           operation["external_id"] ||= "preview-operation"
           operation["recipient"] ||= { "type" => "recipient" }
         end
+        logical_method = operation["request_method"]
+        host_snapshot = %w[id amount payout_requisite].each_with_object({}) do |key, snapshot|
+          snapshot[key] = operation[key] if operation.key?(key)
+        end
+        host_snapshot["request_method"] = logical_method if logical_method
+        provider_preview_id = workspace.preview_fixtures.dig("fetch_status", "response", "id") || "preview-provider-operation"
         request = result && result["provider_request"]
         money = workspace.blueprint.fetch("money")
         conversion = result && result["conversion"] || money.fetch("request_conversion")
@@ -875,9 +881,9 @@ module ProviderCompiler
                        end
         <<~HTML
           <div class="preview-grid preview-request-flow">
-            <section class="card host-input-card"><span class="eyebrow accent">SPACE PAYMENTS</span><h2>Создание выплаты</h2><p>Входные данные канонического контракта</p><form method="post" action="/workspace/#{workspace.id}/preview"><input type="hidden" name="kind" value="request">#{input_field("amount", operation["amount"])}#{input_field("currency", operation["currency"])}#{input_field("external_id", operation["external_id"])}#{input_field("recipient_type", operation.dig("recipient", "type"))}#{input_field("recipient_phone", operation.dig("recipient", "phone"))}#{input_field("recipient_bank_code", operation.dig("recipient", "bank_code"))}<button class="button button-primary" type="submit">Запустить предпросмотр</button></form></section>
-             <section class="card transformation-card"><span class="eyebrow accent">ПРЕОБРАЗОВАНИЕ</span><h2>Что изменится</h2><p>Разрешённый Provider Blueprint</p><span class="label">operation.amount</span><strong class="big-value">#{h(operation["amount"])} #{h(operation["currency"])}</strong><span class="down-arrow">↓</span><span class="conversion-pill">#{h(conversion_label(conversion))}</span><strong class="factor">#{h(conversion_factor_label(conversion))}</strong><span class="down-arrow">↓</span>#{result_value}<div class="divider"></div><span class="label">Основание преобразования</span><small>Источник: Blueprint.money и сопоставление полей</small></section>
-             <section class="card provider-request-card"><span class="eyebrow accent">PROVIDER API</span><h2>Запрос провайдеру</h2><div class="request-line">#{method_pill(workspace.blueprint.dig("endpoints", 0, "method"))}<code>#{h(workspace.blueprint.dig("endpoints", 0, "path"))}</code></div>#{request ? json_block(request) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы построить реальный запрос через сгенерированный адаптер.</p>'}<small>Авторизация: #{h(workspace.blueprint.dig("auth", "strategy", "name"))} · Idempotency-Key — если он доступен</small></section>
+            <section class="card host-input-card"><span class="eyebrow accent">SPACE PAYMENTS INPUT</span><h2>Создание выплаты</h2><p>Host input: <code>operation.amount</code>, <code>operation.payout_requisite</code></p><div class="request-line"><span class="conversion-pill">request_method = #{h(logical_method || "не задан")}</span><small>логический способ выплаты, не HTTP method</small></div>#{json_block(host_snapshot)}<form method="post" action="/workspace/#{workspace.id}/preview"><input type="hidden" name="kind" value="request"><input type="hidden" name="request_method" value="#{h(logical_method)}">#{input_field("amount", operation["amount"])}#{input_field("currency", operation["currency"])}#{input_field("external_id", operation["external_id"])}#{input_field("recipient_type", operation.dig("recipient", "type"))}#{input_field("recipient_phone", operation.dig("recipient", "phone"))}#{input_field("recipient_bank_code", operation.dig("recipient", "bank_code"))}<button class="button button-primary" type="submit">Запустить предпросмотр</button></form></section>
+            <section class="card transformation-card"><span class="eyebrow accent">BLUEPRINT TRANSFORMATION</span><h2>Что изменится</h2><p>Разрешённый Provider Blueprint</p><span class="label">operation.amount</span><strong class="big-value">#{h(operation["amount"])} #{h(operation["currency"])}</strong><span class="down-arrow">↓</span><span class="conversion-pill">#{h(conversion_label(conversion))}</span><strong class="factor">#{h(conversion_factor_label(conversion))}</strong><span class="down-arrow">↓</span>#{result_value}<div class="divider"></div><span class="label">Основание преобразования</span><small>Источник: Blueprint.money и сопоставление полей</small></section>
+            <section class="card provider-request-card"><span class="eyebrow accent">PROVIDER REQUEST</span><h2>Запрос провайдеру</h2><div class="request-line">#{method_pill(workspace.blueprint.dig("endpoints", 0, "method"))}<code>#{h(workspace.blueprint.dig("endpoints", 0, "path"))}</code></div>#{request ? json_block(request) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы построить реальный запрос через сгенерированный адаптер.</p>'}<small>HTTP transport · авторизация: #{h(workspace.blueprint.dig("auth", "strategy", "name"))} · Idempotency-Key — если он доступен</small><div class="divider"></div><span class="label">Provider response id → host result</span><small><code>#{h(provider_preview_id)}</code> → <code>{ result: { id: "#{h(provider_preview_id)}" } }</code>. Provider operation id сохраняет Space Payments, не generated service.</small></section>
           </div>
         HTML
       end
@@ -887,9 +893,14 @@ module ProviderCompiler
         provider_status = provider_body && provider_body["status"]
         host_status = result && result.dig("host_result", "status")
         response_amount = result && result.dig("host_result", "amount")
+        status_action = case host_status
+                        when "approved" then "approve_operation"
+                        when "rejected" then "reject_operation"
+                        else "нет terminal helper"
+                        end
         conversion = workspace.blueprint.fetch("money").fetch("response_conversion")
         projection = if result
-                       %(<span class="label">#{h(provider_status)}</span><span class="down-arrow">↓</span><span class="conversion-pill">#{h(conversion_label(conversion))} #{h(conversion_factor_label(conversion))}</span><strong class="provider-value">#{h(format_amount(response_amount))}</strong><span>#{h(workspace.blueprint.dig("money", "host", "currency"))}</span><div class="divider"></div><strong>#{h(provider_status)} → #{h(host_status)}</strong>)
+                       %(<span class="label">#{h(provider_status)}</span><span class="down-arrow">↓</span><span class="conversion-pill">#{h(conversion_label(conversion))} #{h(conversion_factor_label(conversion))}</span><strong class="provider-value">#{h(format_amount(response_amount))}</strong><span>#{h(workspace.blueprint.dig("money", "host", "currency"))}</span><div class="divider"></div><strong>#{h(provider_status)} → #{h(host_status)} → #{h(status_action)}</strong><small>Состояние и persistence операции принадлежат Space Payments, не service.</small>)
                      else
                        %(<strong class="pending-value">Ожидает запуска</strong><span>Ответ и преобразование появятся после запуска</span>)
                      end
@@ -909,7 +920,7 @@ module ProviderCompiler
                     %(<strong class="pending-value">Ожидает запуска</strong><span>Событие и действие появятся после запуска</span>)
                   end
         <<~HTML
-          <div class="preview-grid webhook-grid"><section class="card code-card"><span class="eyebrow accent">СОБЫТИЕ ПРОВАЙДЕРА</span><h2>Входящий webhook</h2><p>Данные события и модель подписи; секрет не показывается</p>#{result ? json_block("event" => result["event"], "signature_model" => result["signature_model"]) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы проверить webhook.</p>'}#{result ? "" : preview_button(workspace, "webhook")}</section><section class="card transformation-card"><span class="eyebrow accent">ПРОВЕРКА АДАПТЕРА</span><h2>Проверка и сопоставление</h2><p>Поведение сгенерированного адаптера</p>#{mapping}</section><section class="card code-card"><span class="eyebrow accent">SPACE PAYMENTS</span><h2>Действие системы</h2><p>Канонический результат callback</p>#{result ? json_block(result["result"]) : '<p class="empty-hint">Результат появится после запуска предпросмотра.</p>'}</section></div>
+          <div class="preview-grid webhook-grid"><section class="card code-card"><span class="eyebrow accent">СОБЫТИЕ ПРОВАЙДЕРА</span><h2>Входящий webhook</h2><p>Данные события и модель подписи; секрет не показывается</p>#{result ? json_block("event" => result["event"], "signature_model" => result["signature_model"]) : '<p class="empty-hint">Нажмите «Запустить предпросмотр», чтобы проверить webhook.</p>'}#{result ? "" : preview_button(workspace, "webhook")}<div class="divider"></div><small>Подпись считается по исходному raw body. Система не пересобирает JSON для HMAC.</small></section><section class="card transformation-card"><span class="eyebrow accent">ПРОВЕРКА АДАПТЕРА</span><h2>Проверка и сопоставление</h2><p>Поведение сгенерированного адаптера</p>#{mapping}</section><section class="card code-card"><span class="eyebrow accent">SPACE PAYMENTS</span><h2>Действие системы</h2><p>Канонический результат callback</p>#{result ? json_block(result["result"]) : '<p class="empty-hint">Результат появится после запуска предпросмотра.</p>'}</section></div>
         HTML
       end
 

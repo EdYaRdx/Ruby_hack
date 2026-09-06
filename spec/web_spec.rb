@@ -274,6 +274,9 @@ RSpec.describe ProviderCompiler::Web::Application do
     expect(call("GET", "/workspace/#{id}/preview?kind=request").body).to include("150050")
     expect(call("GET", "/workspace/#{id}/preview?kind=response").body).to include("1500.50", "approved")
     expect(call("GET", "/workspace/#{id}/preview?kind=webhook").body).to include("approve_operation", "HMAC-SHA256")
+    expect(call("GET", "/workspace/#{id}/preview?kind=request").body).to include("operation.payout_requisite", "request_method = sbp", "логический способ выплаты", "Provider operation id сохраняет Space Payments")
+    expect(call("GET", "/workspace/#{id}/preview?kind=response").body).to include("completed → approved → approve_operation", "persistence")
+    expect(call("GET", "/workspace/#{id}/preview?kind=webhook").body).to include("исходному raw body", "не пересобирает JSON")
   end
 
   it "shows a distinct empty preview state before runtime execution" do

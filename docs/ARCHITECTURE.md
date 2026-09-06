@@ -44,6 +44,35 @@ Artifacts
 Verification
 ```
 
+## Граница host operation и provider request
+
+В текущем profile преобразование имеет явную границу:
+
+```text
+Space Operation
+  → Host Projection
+  → Canonical Blueprint data
+  → Provider request
+```
+
+`operation.payout_requisite` — это представление реквизитов на стороне host.
+Внутренний canonical recipient и provider body могут иметь другую форму:
+например, `operation.payout_requisite["sbp"]["phone"]` становится полем
+provider `recipient.phone`. Поэтому generated adapter не должен выводить
+наличие flat top-level `operation.recipient_phone` из provider schema.
+
+Нужно различать три независимых понятия:
+
+| Понятие | Пример | Что означает |
+|---|---|---|
+| BaseService operation | `create_request` | метод host adapter contract |
+| host logical `request_method` | `sbp` / `card` | способ выплаты и выбор requisite branch |
+| provider transport | `POST /payouts` | HTTP method и path конкретного API |
+
+`request_method != HTTP method != create_request`. `/balance` и другие
+непривязанные endpoint-ы сохраняются как `EXTRA_OPERATION` и не становятся
+canonical BaseService operation без явного profile binding.
+
 ### Роли слоёв
 
 | Слой | Ответственность |

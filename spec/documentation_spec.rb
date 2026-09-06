@@ -9,6 +9,8 @@ RSpec.describe "submission documentation" do
     paths = %w[
       README.md
       docs/ARCHITECTURE.md
+      docs/ORGANIZER_CONTRACT.md
+      docs/JURY_FAQ.md
       docs/BENCHMARK.md
       docs/DEMO.md
       docs/DEVELOPMENT.md
@@ -109,5 +111,31 @@ RSpec.describe "submission documentation" do
     reference = File.read(File.join(ROOT, "research", "REFERENCE_GROUND_TRUTH.md"), encoding: "UTF-8")
 
     expect(reference).to include(Digest::SHA256.file(fixture).hexdigest.upcase)
+  end
+
+  it "documents the organizer contract boundary and generated host projection" do
+    readme = File.read(File.join(ROOT, "README.md"), encoding: "UTF-8")
+    contract = File.read(File.join(ROOT, "docs", "ORGANIZER_CONTRACT.md"), encoding: "UTF-8")
+    architecture = File.read(File.join(ROOT, "docs", "ARCHITECTURE.md"), encoding: "UTF-8")
+    faq = File.read(File.join(ROOT, "docs", "JURY_FAQ.md"), encoding: "UTF-8")
+    integration = File.read(File.join(ROOT, "examples", "novapay", "INTEGRATION.md"), encoding: "UTF-8")
+
+    expect(readme).to include("## Контракт Space Payments", "docs/ORGANIZER_CONTRACT.md")
+    expect(contract).to include("operation.payout_requisite", "success(result: { id: provider_operation_id })", "request_method")
+    expect(contract).to include("raw body", "amount_limit_exceeded")
+    expect(contract).to match(/не\s+пересобирается/)
+    expect(architecture).to include("Space Operation", "Host Projection", "request_method != HTTP method != create_request")
+    expect(faq).to include("Где сохраняется provider operation id?", "Почему интеграция не всегда полностью автоматическая?")
+    expect(integration).to include("Host input и request_method", "result:", "Host action", "Platform code")
+  end
+
+  it "keeps current contract wording free from known stale host assumptions" do
+    paths = [File.join(ROOT, "README.md"), File.join(ROOT, "docs", "ARCHITECTURE.md"), File.join(ROOT, "docs", "DEMO.md"), File.join(ROOT, "docs", "ORGANIZER_CONTRACT.md"), File.join(ROOT, "examples", "novapay", "INTEGRATION.md")]
+    text = paths.map { |path| File.read(path, encoding: "UTF-8") }.join("\n")
+
+    expect(text).not_to include("request_method = create", "request_method: create", "failure(status, code, message)")
+    expect(text).not_to match(/daily amount limit|дневн(?:ой|ый) лимит/i)
+    expect(text).not_to match(/service (?:saves|сохраняет) provider operation id/i)
+    expect(text).to include("Provider operation id сохраняет Space Payments")
   end
 end

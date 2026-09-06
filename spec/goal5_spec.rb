@@ -186,16 +186,16 @@ RSpec.describe "Goal 5 spec-only hardening and generator correctness" do
     expect(preview_method).not_to include("NovaPay", "np-demo", "payout.completed", "X-NovaPay", "RUB", "kopecks")
   end
 
-  it "renders resolved HTTP error categories instead of repeating a global provider enum" do
+  it "renders the resolved host failure contract instead of repeating a global provider enum" do
     pipeline = pipeline_for(File.join(root, "fixtures", "novapay_provider_api.yaml"), File.join(root, "profiles", "space_payments_v1.yml"), File.join(root, "fixtures", "novapay_case_defaults.yml"))
     Dir.mktmpdir("generated-docs") do |directory|
       generate_for(pipeline, directory)
       doc = File.read(File.join(directory, "INTEGRATION.md"), encoding: "UTF-8")
-      expect(doc).to match(/HTTP 401: .*unauthorized/)
-      expect(doc).to match(/HTTP 402: .*insufficient_balance/)
-      expect(doc).to match(/HTTP 429: .*rate_limit_exceeded.*Retry-After/)
-      expect(doc).to match(/HTTP 500: .*internal_error/)
-      expect(doc).not_to match(/HTTP 401: .*insufficient_balance/)
+      expect(doc).to include("| HTTP 401 | `unauthorized` | `provider.invalid_credentials` |")
+      expect(doc).to include("| HTTP 402 | `unprocessable_entity` | `provider.insufficient_balance` |")
+      expect(doc).to include("| HTTP 429 | `too_many_requests` | `provider.rate_limit` |")
+      expect(doc).to include("| HTTP 500 | `internal_server_error` | `provider.internal_error` |")
+      expect(doc).not_to include("HTTP 401: insufficient_balance")
       expect(doc).to include("## Маппинг статусов", "## ProviderGateway / конфигурация")
       pipeline.blueprint.fetch("statuses").each do |item|
         expect(doc).to include("| `#{item.fetch("provider_value")}` | `#{item.fetch("canonical_value")}` |")

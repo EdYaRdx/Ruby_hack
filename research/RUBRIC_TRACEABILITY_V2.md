@@ -53,6 +53,22 @@ technical-jury rubric с опубликованными максимумами; 
 | Unsupported/ambiguous behavior | `REVIEW_REQUIRED`, `UNKNOWN`, blocking generation gate | Review and blocked Generate page | mutation and black-box safety checks | новые feature classes требуют отдельного evidence и rule |
 | Documentation, fixtures, ease of use | updater-managed docs, generated artifacts, CLI/Web | README, Demo, integration docs | updater idempotency, RSpec, CI | оценка judge presentation itself не является runtime fact |
 
+## Organizer contract alignment evidence
+
+Эта матрица дополнительно проверяет не только наличие analyzer/runtime, но и
+границу organizer contract:
+
+| Contract area | Current evidence | Status |
+|---|---|---|
+| Host operation и requisites | [`docs/ORGANIZER_CONTRACT.md`](../docs/ORGANIZER_CONTRACT.md), `space_payments_v1`, generated NovaPay `INTEGRATION.md` | PROVEN для текущего profile |
+| `request_method` и provider HTTP | [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md), Demo Workbench, generated endpoint section | PROVEN для зафиксированных fixtures |
+| `success(result: { id: ... })` и persistence boundary | organizer contract document, generated integration docs, UI response preview | BOUNDED; production host persistence не заявляется |
+| Status helpers и raw-body HMAC | generated status/callback sections, Demo Workbench, behavioral vectors | BOUNDED для NovaPay/Aurora/Helios fixtures |
+| Unknown requisite safety | Review manifest, structured unresolved item и generation gate | PROVEN для проверенных safety cases |
+
+Эта секция является traceability evidence, а не самостоятельным начислением
+баллов. Полные ответы для jury собраны в [`docs/JURY_FAQ.md`](../docs/JURY_FAQ.md).
+
 ## Current proven boundary
 
 В текущем checkout доказаны parsing, evidence-backed semantic mapping,

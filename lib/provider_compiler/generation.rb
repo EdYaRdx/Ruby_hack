@@ -1074,13 +1074,52 @@ module ProviderCompiler
       provider_class = "Provider::#{Util.camel(blueprint.dig("provider", "name"))}Service"
       idempotency = blueprint.fetch("idempotency", {})
       idempotency_policy = idempotency.dig("adapter_policy", "send_header") || "not resolved"
-      error_lines = blueprint.fetch("errors").select { |item| item["http_status"].to_i >= 400 }.map do |item|
-        codes = Array(item["provider_codes"]).map { |code| "#{code["code"]} → #{code["category"]}" }.uniq
-        label = codes.empty? ? item["canonical_category"] : codes.join(", ")
-        "- HTTP #{item["http_status"]}: #{label}#{item["retry_after_header"] ? " (сохранять #{item["retry_after_header"]})" : ""}"
-      end.uniq.join("\n")
-      host_requirements = Array(blueprint.dig("host_projection", "requirements"))
-      host_todos = host_requirements.map { |item| "- TODO: #{item.fetch("todo")}" }.join("\n")
+      profile = blueprint.fetch("base_service_profile", {})
+      host_operation = profile.fetch("host_operation", {})
+      host_projection = profile.fetch("host_projection", {})
+      requisite = host_projection.fetch("requisite", {})
+      request_method = profile.fetch("request_method", {})
+      create_result = profile.fetch("create_result", {})
+      failure_contract = profile.fetch("failure_contract", {})
+      callback_actions = profile.fetch("callback_actions", {})
+      host_path_label = lambda do |path|
+        path.to_s.split(".").reduce("operation.payout_requisite") { |result, part| "#{result}[\"#{part}\"]" }
+      end
+      host_shape_lines = if requisite["branches"].is_a?(Hash) && !requisite["branches"].empty?
+                           requisite["branches"].flat_map do |method, branch|
+                             branch.fetch("fields", {}).map do |provider_field, host_path|
+                               "- `request_method=#{method}`: `#{host_path_label.call(host_path)}` → `recipient.#{provider_field}`"
+                             end
+                           end.join("\n")
+                         else
+                           host_operation.map { |name, path| "- `#{name}`: `#{path}`" }.join("\n")
+                         end
+      host_shape_lines = "- host input mapping is not resolved" if host_shape_lines.empty?
+      status_action_lines = blueprint.fetch("statuses").map do |item|
+        action = callback_actions[item["canonical_value"]]
+        action = "нет terminal helper" if action.nil?
+        "| `#{item["provider_value"]}` | `#{item["canonical_value"]}` | `#{action}` |"
+      end.join("\n")
+      status_action_lines = "| — | mapping unresolved | нет terminal helper |" if status_action_lines.empty?
+      failure_http_lines = failure_contract.fetch("http_mappings", {}).sort_by { |status, _| status.to_i }.map do |status, mapping|
+        "| HTTP #{status} | `#{mapping["code"]}` | `#{mapping["i18n_key"]}` |"
+      end
+      failure_provider_lines = failure_contract.fetch("provider_code_mappings", {}).map do |provider_code, mapping|
+        "| provider `#{provider_code}` | `#{mapping["code"]}` | `#{mapping["i18n_key"]}` |"
+      end
+      failure_lines = (failure_http_lines + failure_provider_lines).join("\n")
+      failure_lines = "| — | mapping unresolved | mapping unresolved |" if failure_lines.empty?
+      extra_operation_lines = blueprint.fetch("extra_operations").map do |item|
+        "- `#{item["method"]} #{item["path"]}` (`#{item["operation_id"]}`): `EXTRA_OPERATION`, preserved, non-blocking"
+      end.join("\n")
+      extra_operation_lines = "- none" if extra_operation_lines.empty?
+      host_requirements = Array(blueprint.dig("host_projection", "requirements")) + Array(host_projection["requirements"])
+      host_todos = host_requirements.map do |item|
+        provider_field = item["provider_field"] || "unknown"
+        required = item.key?("required") ? item["required"] : item["generation_impact"] == "BLOCKING"
+        host_source = item["host_source"] || "unknown"
+        "- TODO: provider field `#{provider_field}`; required: `#{required}`; host source: `#{host_source}`. #{item.fetch("todo")}"
+      end.join("\n")
       <<~DOC
         # Интеграция #{blueprint.dig("provider", "name")}
 
@@ -1092,7 +1131,7 @@ module ProviderCompiler
         - Сумма: #{blueprint.dig("money", "host", "representation")} #{blueprint.dig("money", "host", "currency")} -> #{blueprint.dig("money", "provider", "unit_name")}; scale #{blueprint.dig("money", "provider", "scale")}; request factor #{blueprint.dig("money", "request_conversion", "factor")}
         - Обязательность Idempotency по спецификации: #{blueprint.dig("idempotency", "spec_required")}
         - Подпись webhook: #{blueprint.dig("webhook", "signature", "algorithm")} / #{blueprint.dig("webhook", "signature", "encoding")}
-        - Действия callback: #{format_mapping(blueprint.dig("base_service_profile", "callback_actions"))}
+        - Действия callback: #{format_mapping(callback_actions)}
         - Дополнительные operations: #{blueprint.fetch("extra_operations").map { |item| item["path"] }.join(", ")}
 
         ## Endpoint-ы
@@ -1107,6 +1146,12 @@ module ProviderCompiler
 
         Источник: resolved Provider Blueprint `statuses`.
 
+        ## Дополнительные operations
+
+        Endpoint-ы без явного profile binding не становятся BaseService methods:
+
+        #{extra_operation_lines}
+
         ## ProviderGateway / конфигурация
 
         - Service class: `#{provider_class}`; BaseService: `#{blueprint.dig("base_service_profile", "class_name") || "not resolved"}`
@@ -1116,28 +1161,59 @@ module ProviderCompiler
         - API key/config parameter: `#{auth_name}`; runtime URL override: `#{provider_slug.upcase}_BASE_URL`
         - Webhook secret: передаётся в generated adapter, если Blueprint содержит signature semantics (`#{blueprint.dig("webhook", "signature", "header") || "not resolved"}`)
         - Idempotency по спецификации: `#{idempotency["spec_required"]}`; adapter policy: `#{idempotency_policy}`; header: `#{idempotency["header"] || "not resolved"}`
-        - Supported canonical operations: `#{Array(blueprint.dig("base_service_profile", "canonical_operations")).join("`, `")}`
-        - Host operation source: `#{blueprint.dig("base_service_profile", "host_operation").values.join("`, `")}`
+        - BaseService methods: `#{Array(profile["required_methods"]).join("`, `")}`
+        - Host operation source: `#{host_operation.values.join("`, `")}`
 
         Параметры, которые необходимо передать в окружение/host gateway, должны
         быть адаптированы к API host-приложения; этот generated документ не
         объявляет production framework contract, которого нет в Blueprint.
 
+        ## Host input и request_method
+
+        Host operation передаёт идентификатор, сумму и `payout_requisite`.
+        Ветки реквизитов и provider-поля:
+
+        #{host_shape_lines}
+
+        `request_method` — логический способ выплаты, поддерживаемые значения:
+        `#{Array(request_method["allowed"]).join("`, `")}`. Это не HTTP method и
+        не имя BaseService operation `create_request`; HTTP method/path указаны
+        в разделе endpoint-ов. Не предполагаются flat top-level поля
+        `operation.recipient_phone`, `operation.bank_code` или
+        `operation.card_number`.
+
+        ## Результат create и persistence
+
+        Успешный create возвращает `success(#{create_result["wrapper"] ? "#{create_result["wrapper"]}: { #{create_result["field"]}: provider_operation_id }" : "result: { id: provider_operation_id }"})`.
+        Provider operation id сохраняется платформой Space Payments; generated
+        service не владеет persistence или состоянием host operation.
+
+        ## Маппинг статусов и helpers
+
+        | Provider status | Space Payments | Host action |
+        |---|---|---|
+        #{status_action_lines}
+
         ## Проверка request и ошибки
 
         Сгенерированный адаптер проверяет обязательные поля, enums, patterns, lengths,
-        conditional recipient fields и host-side minimum amount до отправки.
+        conditional payout requisite fields и host-side minimum amount до отправки.
         HTTP-ошибки возвращаются без blind retries; POST retries после rate limit
         должны повторно использовать тот же idempotency key. Если host не передал
         `operation.idempotency_key`, fallback key хранится только в памяти процесса;
         durability across process restart не гарантируется.
 
-        #{error_lines}
+        Provider condition → platform failure code → i18n key:
+
+        | Provider condition | Platform code | i18n key |
+        |---|---|---|
+        #{failure_lines}
 
         #{host_todos.empty? ? "" : "## TODO\n\n#{host_todos}"}
 
         Обработка webhook использует fail-closed поведение, если raw body,
         signature, secret или known event outcome отсутствуют либо некорректны.
+        Подпись проверяется по исходному raw body; JSON не пересобирается для HMAC.
 
         Сгенерированный Ruby является проекцией resolved Blueprint. Перед production
         use проверьте решения review и контракт host BaseService.
