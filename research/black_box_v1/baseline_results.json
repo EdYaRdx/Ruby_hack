@@ -1,0 +1,1405 @@
+{
+  "schema_version": 1,
+  "corpus": "research/black_box_v1",
+  "implementation_commit": "7257a89d44b3ba541902f0912613c5dd6aa5faf0",
+  "cases": [
+    {
+      "case_id": "01_header_create",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 0,
+        "review_required": 1,
+        "accepted": 10
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "createPayment",
+          "actual": "createPayment"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/payments",
+          "actual": "/payments"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "readPaymentStatus",
+          "actual": "readPaymentStatus"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/payments/{payment_id}",
+          "actual": "/payments/{payment_id}"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "X-Client-Key",
+          "actual": "X-Client-Key"
+        },
+        {
+          "name": "money.host.field",
+          "passed": true,
+          "expected": "operation.amount",
+          "actual": "operation.amount"
+        },
+        {
+          "name": "money.host.currency",
+          "passed": true,
+          "expected": "RUB",
+          "actual": "RUB"
+        },
+        {
+          "name": "money.host.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.provider.request_field",
+          "passed": true,
+          "expected": "request.amount",
+          "actual": "request.amount"
+        },
+        {
+          "name": "money.provider.unit",
+          "passed": true,
+          "expected": "minor",
+          "actual": "minor"
+        },
+        {
+          "name": "money.provider.scale",
+          "passed": true,
+          "expected": 100,
+          "actual": 100
+        },
+        {
+          "name": "money.request_conversion.direction",
+          "passed": true,
+          "expected": "major_to_minor",
+          "actual": "major_to_minor"
+        },
+        {
+          "name": "money.request_conversion.operation",
+          "passed": true,
+          "expected": "multiply",
+          "actual": "multiply"
+        },
+        {
+          "name": "money.request_conversion.factor",
+          "passed": true,
+          "expected": 100,
+          "actual": 100
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        },
+        {
+          "name": "review.decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 0,\n  \"review_required\": 1,\n  \"accepted\": 10,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "02_query_202",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 2,
+        "review_required": 2,
+        "accepted": 8
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "submitTransfer",
+          "actual": "submitTransfer"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/transfers",
+          "actual": "/transfers"
+        },
+        {
+          "name": "operation.create_request.success_statuses",
+          "passed": true,
+          "expected": [
+            "202"
+          ],
+          "actual": [
+            "202"
+          ]
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "lookupTransferState",
+          "actual": "lookupTransferState"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/transfers/{transfer_id}",
+          "actual": "/transfers/{transfer_id}"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "query",
+          "actual": "query"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "access_token",
+          "actual": "access_token"
+        },
+        {
+          "name": "money.host.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.host.currency",
+          "passed": true,
+          "expected": "RUB",
+          "actual": "RUB"
+        },
+        {
+          "name": "money.provider.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.provider.scale",
+          "passed": true,
+          "expected": 1,
+          "actual": 1
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "review.decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        }
+      ],
+      "passed": false,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 8,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": "semantic_or_decision_mismatch"
+    },
+    {
+      "case_id": "03_bearer_polling",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 12,
+        "blocking": 2,
+        "review_required": 2,
+        "accepted": 9
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "initiateFundMove",
+          "actual": "initiateFundMove"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/funds",
+          "actual": "/funds"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "getFundState",
+          "actual": "getFundState"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/funds/{fund_id}/state",
+          "actual": "/funds/{fund_id}/state"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "bearer",
+          "actual": "bearer"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "Authorization",
+          "actual": "Authorization"
+        },
+        {
+          "name": "auth.scheme",
+          "passed": true,
+          "expected": "Bearer",
+          "actual": "Bearer"
+        },
+        {
+          "name": "webhook.mode",
+          "passed": true,
+          "expected": "polling_only",
+          "actual": "polling_only"
+        },
+        {
+          "name": "extra_operations.getLimits.operation_id",
+          "passed": true,
+          "expected": "getLimits",
+          "actual": "getLimits"
+        },
+        {
+          "name": "extra_operations.getLimits.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "extra_operations.getLimits.path",
+          "passed": true,
+          "expected": "/limits",
+          "actual": "/limits"
+        },
+        {
+          "name": "extra_operations.getLimits.kind",
+          "passed": true,
+          "expected": "EXTRA_OPERATION",
+          "actual": "EXTRA_OPERATION"
+        },
+        {
+          "name": "extra_operations.getLimits.preserved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "extra_operations.getLimits.blocking",
+          "passed": true,
+          "expected": false,
+          "actual": false
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "review.decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        }
+      ],
+      "passed": false,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 9,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": "semantic_or_decision_mismatch"
+    },
+    {
+      "case_id": "04_unsupported_auth",
+      "expected_decision": "UNKNOWN",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 10,
+        "blocking": 3,
+        "review_required": 2,
+        "accepted": 6
+      },
+      "semantic_checks": [
+        {
+          "name": "auth.unsupported",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "auth.scheme_type",
+          "passed": true,
+          "expected": "oauth2",
+          "actual": "oauth2"
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "UNKNOWN",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "unknown.preserved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 10,\n  \"blocking\": 3,\n  \"review_required\": 2,\n  \"accepted\": 6,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "05_missing_operation_id",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 2,
+        "review_required": 2,
+        "accepted": 8
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": null,
+          "actual": null
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/withdrawals",
+          "actual": "/withdrawals"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": null,
+          "actual": null
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/withdrawals/{withdrawal_id}/status",
+          "actual": "/withdrawals/{withdrawal_id}/status"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "X-Ledger-Key",
+          "actual": "X-Ledger-Key"
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "review.decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        }
+      ],
+      "passed": false,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 8,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": "semantic_or_decision_mismatch"
+    },
+    {
+      "case_id": "06_nested_major",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 0,
+        "review_required": 2,
+        "accepted": 9
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "createRemittance",
+          "actual": "createRemittance"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/remittances",
+          "actual": "/remittances"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "getRemittanceState",
+          "actual": "getRemittanceState"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/remittances/{remittance_id}",
+          "actual": "/remittances/{remittance_id}"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "bearer",
+          "actual": "bearer"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "Authorization",
+          "actual": "Authorization"
+        },
+        {
+          "name": "auth.scheme",
+          "passed": true,
+          "expected": "Bearer",
+          "actual": "Bearer"
+        },
+        {
+          "name": "money.host.field",
+          "passed": true,
+          "expected": "operation.amount",
+          "actual": "operation.amount"
+        },
+        {
+          "name": "money.host.currency",
+          "passed": true,
+          "expected": "RUB",
+          "actual": "RUB"
+        },
+        {
+          "name": "money.host.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.provider.request_field",
+          "passed": true,
+          "expected": "request.money.value",
+          "actual": "request.money.value"
+        },
+        {
+          "name": "money.provider.response_field",
+          "passed": true,
+          "expected": "response.money.value",
+          "actual": "response.money.value"
+        },
+        {
+          "name": "money.provider.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.provider.scale",
+          "passed": true,
+          "expected": 1,
+          "actual": 1
+        },
+        {
+          "name": "money.request_conversion.direction",
+          "passed": true,
+          "expected": "same_unit",
+          "actual": "same_unit"
+        },
+        {
+          "name": "money.request_conversion.operation",
+          "passed": true,
+          "expected": "identity",
+          "actual": "identity"
+        },
+        {
+          "name": "money.request_conversion.factor",
+          "passed": true,
+          "expected": 1,
+          "actual": 1
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        },
+        {
+          "name": "review.decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 0,\n  \"review_required\": 2,\n  \"accepted\": 9,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "07_scale_1000",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 0,
+        "review_required": 2,
+        "accepted": 9
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "makePayment",
+          "actual": "makePayment"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/payments",
+          "actual": "/payments"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "readPaymentState",
+          "actual": "readPaymentState"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/payments/{payment_id}/status",
+          "actual": "/payments/{payment_id}/status"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "X-Millstone-Key",
+          "actual": "X-Millstone-Key"
+        },
+        {
+          "name": "money.host.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.host.currency",
+          "passed": true,
+          "expected": "RUB",
+          "actual": "RUB"
+        },
+        {
+          "name": "money.provider.request_field",
+          "passed": true,
+          "expected": "request.amount",
+          "actual": "request.amount"
+        },
+        {
+          "name": "money.provider.unit",
+          "passed": true,
+          "expected": "minor",
+          "actual": "minor"
+        },
+        {
+          "name": "money.provider.scale",
+          "passed": true,
+          "expected": 1000,
+          "actual": 1000
+        },
+        {
+          "name": "money.request_conversion.direction",
+          "passed": true,
+          "expected": "major_to_minor",
+          "actual": "major_to_minor"
+        },
+        {
+          "name": "money.request_conversion.operation",
+          "passed": true,
+          "expected": "multiply",
+          "actual": "multiply"
+        },
+        {
+          "name": "money.request_conversion.factor",
+          "passed": true,
+          "expected": 1000,
+          "actual": 1000
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        },
+        {
+          "name": "review.decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 0,\n  \"review_required\": 2,\n  \"accepted\": 9,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "08_ambiguous_money",
+      "expected_decision": "UNKNOWN",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 10,
+        "blocking": 4,
+        "review_required": 3,
+        "accepted": 5
+      },
+      "semantic_checks": [
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "query",
+          "actual": "query"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "access",
+          "actual": "access"
+        },
+        {
+          "name": "money.host.field",
+          "passed": true,
+          "expected": "operation.amount",
+          "actual": "operation.amount"
+        },
+        {
+          "name": "money.host.currency",
+          "passed": true,
+          "expected": "RUB",
+          "actual": "RUB"
+        },
+        {
+          "name": "money.host.unit",
+          "passed": true,
+          "expected": "major",
+          "actual": "major"
+        },
+        {
+          "name": "money.provider.request_field",
+          "passed": true,
+          "expected": "request.money.value",
+          "actual": "request.money.value"
+        },
+        {
+          "name": "money.provider.unit",
+          "passed": true,
+          "expected": "UNKNOWN",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "money.provider.scale",
+          "passed": true,
+          "expected": null,
+          "actual": null
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "UNKNOWN",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "unknown.preserved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "safety.forbid_resolved.money.provider.unit",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "safety.forbid_resolved.money.request_conversion.factor",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 10,\n  \"blocking\": 4,\n  \"review_required\": 3,\n  \"accepted\": 5,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "09_required_parameters",
+      "expected_decision": "UNKNOWN",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 10,
+        "blocking": 2,
+        "review_required": 2,
+        "accepted": 7
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "createDisbursement",
+          "actual": "createDisbursement"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/disbursements",
+          "actual": "/disbursements"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "X-Harbor-Key",
+          "actual": "X-Harbor-Key"
+        },
+        {
+          "name": "required_parameters.query.tenant",
+          "passed": false,
+          "expected": "BLOCKING",
+          "actual": null
+        },
+        {
+          "name": "required_parameters.header.X-Region",
+          "passed": false,
+          "expected": "BLOCKING",
+          "actual": null
+        },
+        {
+          "name": "optional_parameters.query.trace",
+          "passed": false,
+          "expected": true,
+          "actual": false
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "UNKNOWN",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "unknown.preserved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "passed": false,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 10,\n  \"blocking\": 2,\n  \"review_required\": 2,\n  \"accepted\": 7,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": "semantic_or_decision_mismatch"
+    },
+    {
+      "case_id": "10_webhook_contradiction",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "REVIEW_REQUIRED",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 12,
+        "blocking": 1,
+        "review_required": 4,
+        "accepted": 8
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "createPayout",
+          "actual": "createPayout"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/payouts",
+          "actual": "/payouts"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "getPayoutState",
+          "actual": "getPayoutState"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/payouts/{payout_id}",
+          "actual": "/payouts/{payout_id}"
+        },
+        {
+          "name": "operation.process_callback.operation_id",
+          "passed": true,
+          "expected": "receivePayoutEvent",
+          "actual": "receivePayoutEvent"
+        },
+        {
+          "name": "operation.process_callback.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.process_callback.path",
+          "passed": true,
+          "expected": "/events",
+          "actual": "/events"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "X-Eventide-Key",
+          "actual": "X-Eventide-Key"
+        },
+        {
+          "name": "webhook.endpoint",
+          "passed": true,
+          "expected": "POST /events",
+          "actual": "POST /events"
+        },
+        {
+          "name": "webhook.algorithm",
+          "passed": true,
+          "expected": "HMAC-SHA256",
+          "actual": "HMAC-SHA256"
+        },
+        {
+          "name": "webhook.header",
+          "passed": true,
+          "expected": "X-Eventide-Signature",
+          "actual": "X-Eventide-Signature"
+        },
+        {
+          "name": "webhook.input",
+          "passed": true,
+          "expected": "raw_body",
+          "actual": "raw_body"
+        },
+        {
+          "name": "webhook.encoding",
+          "passed": true,
+          "expected": "hex",
+          "actual": "hex"
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        },
+        {
+          "name": "review.decision",
+          "passed": true,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "REVIEW_REQUIRED"
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 1,\n  \"review_required\": 4,\n  \"accepted\": 8,\n  \"decision\": \"REVIEW_REQUIRED\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "11_openapi_shapes",
+      "expected_decision": "UNKNOWN",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 4,
+        "review_required": 4,
+        "accepted": 5
+      },
+      "semantic_checks": [
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "api_key",
+          "actual": "api_key"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "X-Xml-Key",
+          "actual": "X-Xml-Key"
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": true,
+          "expected": "UNKNOWN",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "unknown.preserved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        }
+      ],
+      "passed": true,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 11,\n  \"blocking\": 4,\n  \"review_required\": 4,\n  \"accepted\": 5,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": null
+    },
+    {
+      "case_id": "12_local_refs",
+      "expected_decision": "REVIEW_REQUIRED",
+      "actual_decision": "UNKNOWN",
+      "generation": {
+        "status": "not_attempted"
+      },
+      "manifest_summary": {
+        "decisions": 12,
+        "blocking": 1,
+        "review_required": 1,
+        "accepted": 10
+      },
+      "semantic_checks": [
+        {
+          "name": "operation.create_request.operation_id",
+          "passed": true,
+          "expected": "initiateRouteTransfer",
+          "actual": "initiateRouteTransfer"
+        },
+        {
+          "name": "operation.create_request.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "operation.create_request.path",
+          "passed": true,
+          "expected": "/transfers",
+          "actual": "/transfers"
+        },
+        {
+          "name": "operation.fetch_status.operation_id",
+          "passed": true,
+          "expected": "inspectRouteTransfer",
+          "actual": "inspectRouteTransfer"
+        },
+        {
+          "name": "operation.fetch_status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "operation.fetch_status.path",
+          "passed": true,
+          "expected": "/transfers/{transfer_id}",
+          "actual": "/transfers/{transfer_id}"
+        },
+        {
+          "name": "auth.kind",
+          "passed": true,
+          "expected": "bearer",
+          "actual": "bearer"
+        },
+        {
+          "name": "auth.transport",
+          "passed": true,
+          "expected": "header",
+          "actual": "header"
+        },
+        {
+          "name": "auth.name",
+          "passed": true,
+          "expected": "Authorization",
+          "actual": "Authorization"
+        },
+        {
+          "name": "auth.scheme",
+          "passed": true,
+          "expected": "Bearer",
+          "actual": "Bearer"
+        },
+        {
+          "name": "money.provider.request_field",
+          "passed": true,
+          "expected": "request.amount",
+          "actual": "request.amount"
+        },
+        {
+          "name": "money.provider.unit",
+          "passed": true,
+          "expected": "minor",
+          "actual": "minor"
+        },
+        {
+          "name": "money.provider.scale",
+          "passed": true,
+          "expected": 100,
+          "actual": 100
+        },
+        {
+          "name": "extra_operations.readRouteLimits.operation_id",
+          "passed": true,
+          "expected": "readRouteLimits",
+          "actual": "readRouteLimits"
+        },
+        {
+          "name": "extra_operations.readRouteLimits.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "extra_operations.readRouteLimits.path",
+          "passed": true,
+          "expected": "/limits",
+          "actual": "/limits"
+        },
+        {
+          "name": "extra_operations.readRouteLimits.kind",
+          "passed": true,
+          "expected": "EXTRA_OPERATION",
+          "actual": "EXTRA_OPERATION"
+        },
+        {
+          "name": "extra_operations.readRouteLimits.preserved",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "extra_operations.readRouteLimits.blocking",
+          "passed": true,
+          "expected": false,
+          "actual": false
+        }
+      ],
+      "safety_checks": [
+        {
+          "name": "decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        },
+        {
+          "name": "review.decision",
+          "passed": false,
+          "expected": "REVIEW_REQUIRED",
+          "actual": "UNKNOWN"
+        }
+      ],
+      "passed": false,
+      "compiler": {
+        "exit_status": 0,
+        "stdout": "{\n  \"decisions\": 12,\n  \"blocking\": 1,\n  \"review_required\": 1,\n  \"accepted\": 10,\n  \"decision\": \"UNKNOWN\",\n  \"generation_ready\": false\n}\n",
+        "stderr": ""
+      },
+      "failure_class": "semantic_or_decision_mismatch"
+    }
+  ],
+  "aggregate": {
+    "cases_total": 12,
+    "cases_passed": 7,
+    "decision_automation_rate": 0.0,
+    "review_rate": 33.3,
+    "unknown_rate": 66.7,
+    "safe_semantic_accuracy": 58.3,
+    "fully_auto_ready_rate": 0.0,
+    "generation_success_rate": 0.0,
+    "runtime_vector_rate": 0.0,
+    "critical_false_accept_count": 0,
+    "unsafe_generation_attempt_count": 0,
+    "compiler_crash_count": 0
+  }
+}

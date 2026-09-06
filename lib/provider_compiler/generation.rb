@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 module ProviderCompiler
 
   class RubyProjection
@@ -10,6 +12,7 @@ module ProviderCompiler
     def render
       provider = @blueprint.fetch("provider").fetch("name")
       class_name = "#{Util.camel(provider)}Service"
+      validate_class_name!(class_name)
       endpoints = @blueprint.fetch("endpoints").each_with_object({}) do |endpoint, result|
         result[endpoint.fetch("operation_id").to_s] = { "method" => endpoint.fetch("method"), "path" => endpoint.fetch("path"), "canonical" => endpoint["canonical"], "success_statuses" => Array(endpoint["success_statuses"]) }
       end
@@ -30,6 +33,8 @@ module ProviderCompiler
       sandbox = @blueprint.fetch("servers").find { |server| server["environment"] == "sandbox" } || @blueprint.fetch("servers").first
       base_url = sandbox && sandbox["url"]
       raise Error, "resolved Blueprint has no server URL" if Util.blank?(base_url)
+      validate_base_url!(base_url)
+      validate_patterns!
       base_url_env = "#{Util.slug(provider).upcase}_BASE_URL"
       status_parameter = endpoint_path("fetch_status").to_s[/\{([^}]+)\}/, 1] || "id"
       webhook_id_field = @blueprint.dig("webhook", "identifier_field") || "id"
@@ -57,6 +62,7 @@ module ProviderCompiler
         status_parameter: status_parameter,
         webhook_id_field: webhook_id_field,
         callback_actions: ruby_literal(@blueprint.dig("base_service_profile", "callback_actions") || {}),
+        failure_arguments: ruby_literal(Array(failure_contract.fetch("arguments", ["message"]))),
         call_super_conditions: profile.dig("check_conditions", "call_super") == true,
         validation_failure_status: ruby_literal(failure_contract.fetch("validation_status", 422)),
         validation_failure_code: ruby_literal(failure_contract.fetch("validation_code", "validation_error")),
@@ -70,6 +76,34 @@ module ProviderCompiler
     end
 
     private
+
+    def validate_class_name!(class_name)
+      return if class_name.match?(/\A[A-Z][A-Za-z0-9_]*\z/)
+
+      raise Error, "provider title cannot produce a safe Ruby service class name"
+    end
+
+    def validate_base_url!(base_url)
+      uri = URI.parse(base_url.to_s)
+      return if %w[http https].include?(uri.scheme) && !base_url.to_s.match?(/[\r\n]/)
+
+      raise Error, "provider server URL must be an HTTP(S) URL without control characters"
+    rescue URI::InvalidURIError
+      raise Error, "provider server URL is invalid"
+    end
+
+    def validate_patterns!
+      Array(@blueprint["constraints"]).each do |constraint|
+        pattern = constraint["pattern"]
+        next if pattern.nil?
+        raise Error, "provider regex is too large" if pattern.to_s.length > 1024
+        raise Error, "provider regex has unsafe nested quantifiers" if pattern.to_s.match?(/\([^)]*[+*][^)]*\)[+*]/)
+
+        Regexp.new(pattern.to_s)
+      rescue RegexpError, ArgumentError => e
+        raise Error, "provider regex is invalid: #{e.message}"
+      end
+    end
 
     def endpoint_path(role)
       endpoint = @blueprint.fetch("endpoints").find { |item| item["canonical"] == role }
@@ -111,6 +145,7 @@ module ProviderCompiler
       require "json"
       require "openssl"
       require "securerandom"
+      require "uri"
 
       module Provider
         class <%= class_name %> < BaseService
@@ -135,6 +170,7 @@ module ProviderCompiler
           CREATE_SUCCESS_STATUSES = <%= create_success_statuses %>.freeze
           STATUS_SUCCESS_STATUSES = <%= status_success_statuses %>.freeze
           CALL_SUPER_CONDITIONS = <%= call_super_conditions.inspect %>
+          FAILURE_ARGUMENTS = <%= failure_arguments %>.freeze
           VALIDATION_FAILURE_STATUS = <%= validation_failure_status %>
           VALIDATION_FAILURE_CODE = <%= validation_failure_code %>
 
@@ -148,20 +184,20 @@ module ProviderCompiler
           def check_conditions(operation, request_method)
             if CALL_SUPER_CONDITIONS
               base_result = super(operation, request_method)
-              return base_result if base_result.is_a?(Hash) && base_result["ok"] == false
+              return base_result if failed_result?(base_result)
             end
 
             return success if request_method.to_s != "create"
 
             errors = validate_constraints(operation)
             errors.concat(validate_conditionals(operation))
-            errors.empty? ? success : failure(VALIDATION_FAILURE_STATUS, VALIDATION_FAILURE_CODE, errors.join("; "))
+            errors.empty? ? success : host_failure(errors.join("; "), status: VALIDATION_FAILURE_STATUS, code: VALIDATION_FAILURE_CODE)
           end
 
           def build_create_request(operation, request_method = "create")
             raise ArgumentError, "unsupported request_method: #{request_method}" unless request_method.to_s == "create"
             condition_result = check_conditions(operation, request_method)
-            raise ArgumentError, condition_result.fetch("error") unless condition_result.fetch("ok")
+            raise ArgumentError, condition_error(condition_result) if failed_result?(condition_result)
 
             body = build_provider_body(operation)
             headers, query = authentication
@@ -181,36 +217,46 @@ module ProviderCompiler
             request = build_create_request(operation, request_method)
             return request unless @client
 
-            handle_response(dispatch(request), expected_success: CREATE_SUCCESS_STATUSES)
+            response = dispatch_or_failure(request)
+            return response if compiler_failure?(response)
+
+            handle_response(response, expected_success: CREATE_SUCCESS_STATUSES)
           end
 
           def fetch_status(operation)
             id = read(operation, :provider_operation_id) || read(operation, :id)
-            return failure("provider operation id is required") if blank?(id)
-            path = <%= status_path.inspect %>.sub("{#{STATUS_PARAMETER}}", id.to_s)
+            return host_failure("provider operation id is required", code: "missing_provider_operation_id") if blank?(id)
+            path = <%= status_path.inspect %>.sub("{#{STATUS_PARAMETER}}", escape_path_segment(id))
             headers, query = authentication
             request = { "method" => STATUS_METHOD, "path" => path, "url" => "#{BASE_URL}#{path}", "headers" => headers, "query" => query }
             return request unless @client
 
-            handle_response(dispatch(request), expected_success: STATUS_SUCCESS_STATUSES)
+            response = dispatch_or_failure(request)
+            return response if compiler_failure?(response)
+
+            handle_response(response, expected_success: STATUS_SUCCESS_STATUSES)
           end
 
           def process_callback(payload)
-            return failure("provider has no webhook; polling-only integration") if WEBHOOK["mode"] == "polling_only"
+            return host_failure("provider has no webhook; polling-only integration", code: "polling_only") if WEBHOOK["mode"] == "polling_only"
 
             raw_body = read(payload, :raw_body)
             signature = read(payload, :signature) || read(read(payload, :headers), WEBHOOK.dig("signature", "header"))
-            return failure("raw webhook body is required") if blank?(raw_body)
-            return failure("webhook signature is required") if blank?(signature)
-            return failure("invalid webhook signature") unless verify_webhook_signature(raw_body, signature)
+            return host_failure("raw webhook body is required", code: "missing_raw_body") if blank?(raw_body)
+            return host_failure("webhook signature is required", code: "missing_webhook_signature") if blank?(signature)
+            return host_failure("invalid webhook signature", code: "invalid_webhook_signature") unless verify_webhook_signature(raw_body, signature)
 
             event = read(payload, :event)
             body = parse_json(raw_body)
             body = body.is_a?(Hash) ? body : {}
             provider_status = (read(payload, :status) || body["status"]).to_s
             event = read(payload, :event) || body["event"]
+            event_status = event.to_s.split(".").last
+            if !blank?(provider_status) && !blank?(event_status) && provider_status.casecmp?(event_status) == false
+              return host_failure("webhook event/status contradiction", code: "webhook_contradiction")
+            end
             canonical = WEBHOOK.fetch("events", {})[event.to_s]
-            return failure("unknown webhook event") if canonical.nil? || canonical == "UNKNOWN"
+            return host_failure("unknown webhook event", code: "unknown_webhook_event") if canonical.nil? || canonical == "UNKNOWN"
 
             result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(payload, :external_id) || body["external_id"], "provider_operation_id" => read(payload, WEBHOOK_ID_FIELD) || body[WEBHOOK_ID_FIELD] }
             action_result = bind_callback_action(canonical, result["provider_operation_id"] || result["external_id"] || result)
@@ -237,7 +283,29 @@ module ProviderCompiler
             convert_host_amount(value)
           end
 
+          def host_failure(message, status: VALIDATION_FAILURE_STATUS, code: "runtime_error")
+            values = { "status" => status, "code" => code, "message" => message }
+            result = failure(*FAILURE_ARGUMENTS.map { |argument| values.fetch(argument.to_s) })
+            result.is_a?(Hash) ? result.merge("provider_compiler_failure" => true) : result
+          end
+
           private
+
+          def failed_result?(result)
+            return result["ok"] == false if result.is_a?(Hash) && result.key?("ok")
+            return result.failed? if result.respond_to?(:failed?)
+            return !result.ok? if result.respond_to?(:ok?)
+
+            false
+          end
+
+          def condition_error(result)
+            read(result, :error) || read(result, :message) || "BaseService rejected operation"
+          end
+
+          def compiler_failure?(result)
+            result.is_a?(Hash) && result["provider_compiler_failure"] == true
+          end
 
           def convert_host_amount(value)
             conversion = MONEY.fetch("request_conversion")
@@ -264,8 +332,8 @@ module ProviderCompiler
           def bind_callback_action(canonical, operation_reference)
             action = CALLBACK_ACTIONS[canonical]
             return { "action" => "none", "terminal" => false } if action.nil? && canonical == "in_progress"
-            return failure("callback action binding is unresolved") if action.nil?
-            return failure("callback action is not available on BaseService") unless respond_to?(action)
+            return host_failure("callback action binding is unresolved", code: "unresolved_callback_action") if action.nil?
+            return host_failure("callback action is not available on BaseService", code: "missing_callback_action") unless respond_to?(action)
 
             { "action" => action, "terminal" => true, "action_result" => public_send(action, operation_reference) }
           end
@@ -331,20 +399,37 @@ module ProviderCompiler
             end
           end
 
+          def dispatch_or_failure(request)
+            dispatch(request)
+          rescue StandardError => e
+            host_failure("provider transport error: #{e.class}: #{e.message}", status: 502, code: "transport_error")
+          end
+
           def dispatch(request)
             if @client.respond_to?(:request)
               @client.request(request.fetch("method"), request.fetch("url"), request.fetch("headers"), request.fetch("body", nil), request.fetch("query", {}))
             elsif request.fetch("method") == "GET" && @client.respond_to?(:get)
-              @client.get(request.fetch("url"), request.fetch("headers"))
+              @client.get(with_query(request.fetch("url"), request.fetch("query", {})), request.fetch("headers"))
             elsif request.fetch("method") == "POST" && @client.respond_to?(:post)
-              @client.post(request.fetch("url"), request.fetch("headers"), request.fetch("body"))
+              @client.post(with_query(request.fetch("url"), request.fetch("query", {})), request.fetch("headers"), request.fetch("body"))
             else
               raise ArgumentError, "client does not support #{request.fetch("method")}"
             end
           end
 
+          def with_query(url, query)
+            return url if query.nil? || query.empty?
+
+            separator = url.include?("?") ? "&" : "?"
+            "#{url}#{separator}#{URI.encode_www_form(query)}"
+          end
+
+          def escape_path_segment(value)
+            value.to_s.gsub(/[^A-Za-z0-9._~-]/) { |character| "%%%02X" % character.ord }
+          end
+
           def handle_response(response, expected_success:)
-            body_present = response.is_a?(Hash) && (response.key?("body") || response.key?(:body))
+            body_present = (response.is_a?(Hash) && (response.key?("body") || response.key?(:body))) || (!response.is_a?(Hash) && response.respond_to?(:body))
             http_status = read(response, :http_status) || read(response, :status_code) || (body_present ? read(response, :status) : nil)
             body = if body_present
                      read(response, :body)
@@ -353,12 +438,15 @@ module ProviderCompiler
                    else
                      response
                    end
+            raw_body = body
+            body = parse_json(body) if body.is_a?(String)
             if http_status && !expected_success.map(&:to_s).include?(http_status.to_s)
               return provider_error(response, body, http_status)
             end
 
+            return host_failure("provider response body is malformed JSON", status: 502, code: "invalid_provider_response") if body.nil? && raw_body.is_a?(String) && !raw_body.empty? && http_status
             return { "ok" => true, "http_status" => http_status.to_s, "response" => nil } if body.nil? && http_status
-            return failure("provider response body is not an object") unless body.is_a?(Hash)
+            return host_failure("provider response body is not an object", status: 502, code: "invalid_provider_response") unless body.is_a?(Hash)
             mapped = map_provider_response(body)
             provider_status = mapped["provider_status"].to_s
             canonical_status = STATUS_MAP.fetch(provider_status, "unknown")
@@ -437,7 +525,7 @@ module ProviderCompiler
                               read(error, :code) || read(read(error, :error), :code)
                             end
             status_entry = ERROR_MODEL.find { |item| item["http_status"].to_s == http_status.to_s }
-            entry = Array(status_entry && status_entry["provider_codes"]).find { |item| provider_code.nil? || item["code"].to_s == provider_code.to_s }
+            entry = Array(status_entry && status_entry["provider_codes"]).find { |item| !provider_code.nil? && item["code"].to_s == provider_code.to_s }
             headers = read(response, :headers)
             retry_after = if headers.is_a?(Hash)
                             headers["Retry-After"] || headers["retry-after"] || headers["RETRY-AFTER"]
@@ -453,7 +541,13 @@ module ProviderCompiler
 
           def read(object, key)
             return nil unless object
-            object[key] || object[key.to_s] || (object[key.to_sym] if key.respond_to?(:to_sym))
+            if object.is_a?(Hash)
+              object[key] || object[key.to_s] || (object[key.to_sym] if key.respond_to?(:to_sym))
+            elsif object.respond_to?(key)
+              object.public_send(key)
+            elsif object.respond_to?(:[])
+              object[key] || object[key.to_s] || (object[key.to_sym] if key.respond_to?(:to_sym))
+            end
           end
 
           def blank?(value)
@@ -782,7 +876,9 @@ module ProviderCompiler
         Сгенерированный адаптер проверяет обязательные поля, enums, patterns, lengths,
         conditional recipient fields и host-side minimum amount до отправки.
         HTTP-ошибки возвращаются без blind retries; POST retries после rate limit
-        должны повторно использовать тот же idempotency key.
+        должны повторно использовать тот же idempotency key. Если host не передал
+        `operation.idempotency_key`, fallback key хранится только в памяти процесса;
+        durability across process restart не гарантируется.
 
         #{error_lines}
 

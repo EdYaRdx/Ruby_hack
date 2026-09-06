@@ -120,45 +120,54 @@ module ProviderCompiler
   class BlueprintValidationError < ValidationError; end
 
   class RefResolver
-    POLICY_VERSION = 1
+    POLICY_VERSION = 2
+    MAX_FILE_BYTES = 10 * 1024 * 1024
+    MAX_RESOLUTION_NODES = 100_000
+    MAX_RESOLUTION_DEPTH = 64
     attr_reader :resolved_refs, :loaded_files
 
     def initialize(root_path)
-      @root_path = File.expand_path(root_path)
+      @root_path = File.realpath(root_path)
       @root_dir = File.dirname(@root_path)
+      @root_real_dir = File.realpath(@root_dir)
       @documents = {}
       @resolved_refs = []
       @loaded_files = {}
+      @resolution_nodes = 0
     end
 
     def resolve(root_document)
       @documents[@root_path] = root_document
       remember_file(@root_path)
-      resolve_node(root_document, current_path: @root_path, stack: [])
+      resolve_node(root_document, current_path: @root_path, stack: [], depth: 0)
     end
 
     private
 
-    def resolve_node(node, current_path:, stack:)
+    def resolve_node(node, current_path:, stack:, depth:)
+      @resolution_nodes += 1
+      raise RefError, "OpenAPI reference graph is too large" if @resolution_nodes > MAX_RESOLUTION_NODES
+      raise RefError, "OpenAPI reference graph is too deep" if depth > MAX_RESOLUTION_DEPTH
+
       case node
       when Hash
         if node.key?("$ref")
-          resolved = resolve_ref(node.fetch("$ref"), current_path: current_path, stack: stack)
+          resolved = resolve_ref(node.fetch("$ref"), current_path: current_path, stack: stack, depth: depth)
           extras = node.reject { |key, _| key == "$ref" }
-          extras.empty? ? resolved : deep_merge(resolved, resolve_node(extras, current_path: current_path, stack: stack))
+          extras.empty? ? resolved : deep_merge(resolved, resolve_node(extras, current_path: current_path, stack: stack, depth: depth + 1))
         else
           node.each_with_object({}) do |(key, value), result|
-            result[key] = resolve_node(value, current_path: current_path, stack: stack)
+            result[key] = resolve_node(value, current_path: current_path, stack: stack, depth: depth + 1)
           end
         end
       when Array
-        node.map { |item| resolve_node(item, current_path: current_path, stack: stack) }
+        node.map { |item| resolve_node(item, current_path: current_path, stack: stack, depth: depth + 1) }
       else
         node
       end
     end
 
-    def resolve_ref(reference, current_path:, stack:)
+    def resolve_ref(reference, current_path:, stack:, depth:)
       target_path, fragment = split_reference(reference, current_path)
       key = "#{target_path}##{fragment}"
       raise RefError, "recursive $ref detected at #{key}" if stack.include?(key)
@@ -171,7 +180,7 @@ module ProviderCompiler
       }
       target_document = load_document(target_path)
       target = Util.pointer_get(target_document, fragment)
-      resolve_node(Util.deep_dup(target), current_path: target_path, stack: stack + [key])
+      resolve_node(Util.deep_dup(target), current_path: target_path, stack: stack + [key], depth: depth + 1)
     rescue KeyError, IndexError => e
       raise RefError, "unresolved $ref #{reference.inspect}: #{e.message}"
     end
@@ -188,9 +197,15 @@ module ProviderCompiler
                     else
                       File.expand_path(external, File.dirname(current_path))
                     end
-      root_prefix = "#{@root_dir}#{File::SEPARATOR}"
-      unless target_path == @root_dir || target_path.start_with?(root_prefix)
+      root_prefix = "#{@root_real_dir}#{File::SEPARATOR}"
+      unless target_path == @root_real_dir || target_path.start_with?(root_prefix)
         raise RefError, "$ref escapes allowed root: #{reference}"
+      end
+      if File.exist?(target_path)
+        target_path = File.realpath(target_path)
+        unless target_path == @root_real_dir || target_path.start_with?(root_prefix)
+          raise RefError, "$ref escapes allowed root through a symlink: #{reference}"
+        end
       end
       [target_path, fragment ? "##{fragment}" : ""]
     end
@@ -204,6 +219,9 @@ module ProviderCompiler
     end
 
     def parse_file(path)
+      size = File.size(path)
+      raise RefError, "ref document exceeds #{MAX_FILE_BYTES} bytes: #{path}" if size > MAX_FILE_BYTES
+
       content = File.read(path, encoding: "UTF-8")
       if File.extname(path).downcase == ".json"
         JSON.parse(content)
@@ -217,7 +235,8 @@ module ProviderCompiler
     end
 
     def remember_file(path)
-      @loaded_files[Util.relative_path(path, @root_dir)] = Digest::SHA256.hexdigest(File.binread(path))
+      canonical_path = File.realpath(path)
+      @loaded_files[Util.relative_path(canonical_path, @root_real_dir)] = Digest::SHA256.hexdigest(File.binread(canonical_path))
     end
 
     def deep_merge(left, right)
@@ -298,6 +317,9 @@ module ProviderCompiler
     private
 
     def parse_file(path)
+      size = File.size(path)
+      raise Error, "OpenAPI input exceeds #{RefResolver::MAX_FILE_BYTES} bytes" if size > RefResolver::MAX_FILE_BYTES
+
       content = File.read(path, encoding: "UTF-8")
       if File.extname(path).downcase == ".json"
         JSON.parse(content)
@@ -313,6 +335,9 @@ module ProviderCompiler
     def validate!(source_document)
       document = source_document.resolved
       issues = []
+      unless document.is_a?(Hash)
+        raise ValidationError, ["OpenAPI document must be an object"]
+      end
       issues << "openapi must be a 3.x string" unless document["openapi"].to_s.start_with?("3.")
       issues << "info.title is required" unless document.dig("info", "title").is_a?(String)
       issues << "info.version is required" unless document.dig("info", "version").is_a?(String)

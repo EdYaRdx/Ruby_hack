@@ -53,7 +53,7 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 889
+          "loc": 1011
         },
         {
           "path": "lib/provider_compiler/application.rb",
@@ -61,11 +61,11 @@
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
-          "loc": 128
+          "loc": 129
         },
         {
           "path": "lib/provider_compiler/core.rb",
-          "loc": 433
+          "loc": 455
         },
         {
           "path": "lib/provider_compiler/decisions.rb",
@@ -73,7 +73,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 749
+          "loc": 827
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -88,7 +88,7 @@
           "loc": 1002
         }
       ],
-      "loc": 4306
+      "loc": 4529
     },
     "other_participant_source": {
       "files": [
@@ -103,8 +103,8 @@
       ],
       "loc": 531
     },
-    "total_source_loc": 4837,
-    "ruby_share_percent": 89.0
+    "total_source_loc": 5060,
+    "ruby_share_percent": 89.5
   },
   "production_plus_tests": {
     "ruby": {
@@ -135,7 +135,7 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 889
+          "loc": 1011
         },
         {
           "path": "lib/provider_compiler/application.rb",
@@ -143,11 +143,11 @@
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
-          "loc": 128
+          "loc": 129
         },
         {
           "path": "lib/provider_compiler/core.rb",
-          "loc": 433
+          "loc": 455
         },
         {
           "path": "lib/provider_compiler/decisions.rb",
@@ -155,7 +155,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 749
+          "loc": 827
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -194,12 +194,24 @@
           "loc": 196
         },
         {
+          "path": "spec/hostile_openapi_matrix_spec.rb",
+          "loc": 74
+        },
+        {
+          "path": "spec/hostile_openapi_spec.rb",
+          "loc": 89
+        },
+        {
           "path": "spec/metrics_spec.rb",
           "loc": 54
         },
         {
           "path": "spec/pipeline_spec.rb",
           "loc": 51
+        },
+        {
+          "path": "spec/runtime_hardening_spec.rb",
+          "loc": 210
         },
         {
           "path": "spec/second_provider_spec.rb",
@@ -230,7 +242,7 @@
           "loc": 354
         }
       ],
-      "loc": 5639
+      "loc": 6235
     },
     "other_participant_source": {
       "files": [
@@ -245,7 +257,7 @@
       ],
       "loc": 531
     },
-    "total_source_loc": 6170,
-    "ruby_share_percent": 91.4
+    "total_source_loc": 6766,
+    "ruby_share_percent": 92.2
   }
 }

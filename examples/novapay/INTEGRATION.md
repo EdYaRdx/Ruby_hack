@@ -52,7 +52,9 @@
 Сгенерированный адаптер проверяет обязательные поля, enums, patterns, lengths,
 conditional recipient fields и host-side minimum amount до отправки.
 HTTP-ошибки возвращаются без blind retries; POST retries после rate limit
-должны повторно использовать тот же idempotency key.
+должны повторно использовать тот же idempotency key. Если host не передал
+`operation.idempotency_key`, fallback key хранится только в памяти процесса;
+durability across process restart не гарантируется.
 
 - HTTP 400: validation_error
 - HTTP 401: unauthorized → unauthorized

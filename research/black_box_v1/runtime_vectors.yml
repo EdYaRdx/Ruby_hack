@@ -1,0 +1,40 @@
+schema_version: 1
+description: Hand-authored runtime expectations for generated adapters; not derived from Blueprint output.
+vectors:
+  - id: helios_query_create
+    provider: HeliosPay
+    input:
+      operation:
+        amount: 12.50
+        currency: EUR
+        external_id: helios-op-runtime
+        recipient: { kind: bank, account: DE02120300000000202051, bic: BYLADEM1001 }
+    expected_http:
+      method: POST
+      path: /funds
+      query: { access_token: test-key }
+      body: { payment: { amount: 1250, currency: EUR }, client_reference: helios-op-runtime }
+    expected_result: { http_status: '202', status: in_progress }
+  - id: helios_query_status
+    provider: HeliosPay
+    input: { provider_operation_id: hf-runtime-1 }
+    expected_http:
+      method: GET
+      path: /funds/hf-runtime-1
+      query: { access_token: test-key }
+    provider_response: { fund_id: hf-runtime-1, phase: settled, settlement: { amount: 1250 } }
+    expected_result: { http_status: '200', status: approved, amount: 12.50 }
+  - id: novapay_header_204
+    provider: NovaPay
+    input: { amount: 1500.50, currency: RUB, external_id: bodyless }
+    expected_http:
+      method: POST
+      path: /payouts
+      headers: { X-API-Key: test-key }
+      body: { amount: 150050 }
+    provider_response: { http_status: 204, body: null }
+    expected_result: { http_status: '204', response: null }
+  - id: webhook_contradiction
+    provider: NovaPay
+    input: { event: payout.completed, status: failed }
+    expected_result: { ok: false, error_code: webhook_contradiction, action: none }

@@ -467,7 +467,12 @@ module ProviderCompiler
     end
 
     def analyze(facts)
-      values = status_enums(facts.components).flatten.uniq
+      values = status_enums(facts.components).flatten
+      facts.operations.each do |operation|
+        values.concat(status_enums(operation["request_body"]).flatten)
+        values.concat(status_enums(operation["responses"]).flatten)
+      end
+      values = values.uniq
       mappings = values.map do |provider_value|
         canonical = @defaults.statuses[provider_value]
         mapping_source = @defaults.data.fetch("status_source", "CASE_DEFAULT")
@@ -540,7 +545,12 @@ module ProviderCompiler
       algorithm = description.match?(/HMAC-SHA256/i) ? "HMAC-SHA256" : nil
       raw_body = @defaults.webhook.key?("raw_body") ? @defaults.webhook["raw_body"] : (description.match?(/raw\s+body|сырое\s+тело/i) ? true : nil)
       encoding = @defaults.webhook["signature_encoding"] || (description.match?(/\bhex(?:adecimal)?\b/i) ? "hex" : (description.match?(/\bbase64\b/i) ? "base64" : nil))
-      events = event_enums(facts.components).first || []
+      events = event_enums(facts.components).flatten
+      facts.operations.each do |item|
+        events.concat(event_enums(item["request_body"]).flatten)
+        events.concat(event_enums(item["responses"]).flatten)
+      end
+      events = events.uniq
       event_map = events.each_with_object({}) do |event, result|
         provider_status = event.to_s.split(".").last
         mapping = @status_section.find { |item| item["provider_value"] == provider_status }
@@ -821,6 +831,22 @@ module ProviderCompiler
       schema = operation && operation.dig("request_body", "content", "application/json", "schema")
       constraints = []
       walk(schema, "request", constraints) if schema.is_a?(Hash)
+      invalid_patterns = constraints.filter_map do |constraint|
+        pattern = constraint["pattern"]
+        next if pattern.nil?
+
+        begin
+          raise RegexpError, "pattern exceeds safety limit" if pattern.to_s.length > 1024
+          raise RegexpError, "nested quantifiers are not accepted" if pattern.to_s.match?(/\([^)]*[+*][^)]*\)[+*]/)
+
+          Regexp.new(pattern.to_s)
+          nil
+        rescue RegexpError, ArgumentError => e
+          constraint["pattern_valid"] = false
+          constraint["pattern_error"] = e.message
+          constraint
+        end
+      end
       provider_amount_path = money.dig("provider", "field") || "request.amount"
       constraints.each do |constraint|
         next unless constraint["path"] == provider_amount_path && constraint.key?("minimum")
@@ -838,11 +864,17 @@ module ProviderCompiler
       present = schema.is_a?(Hash)
       decision = Decision.new(
         id: "constraints:create-request",
-        outcome: present ? "ACCEPT" : "UNKNOWN",
-        severity: present ? "INFO" : "BLOCKING",
+        outcome: invalid_patterns.empty? ? (present ? "ACCEPT" : "UNKNOWN") : "REVIEW_REQUIRED",
+        severity: invalid_patterns.empty? ? (present ? "INFO" : "BLOCKING") : "BLOCKING",
         candidate: constraints,
         evidence: [Evidence.new(source: "SPEC_FACT", locations: ["#/paths/*/requestBody/content/application~1json/schema"], excerpt: "request constraints")],
-        rationale: present ? "structured request constraints are preserved for generated validation" : "create request schema is missing"
+        rationale: if invalid_patterns.any?
+                     "one or more provider regex patterns are invalid or exceed the runtime safety limit"
+                   elsif present
+                     "structured request constraints are preserved for generated validation"
+                   else
+                     "create request schema is missing"
+                   end
       )
       AnalysisResult.new(section: constraints, decisions: [decision])
     end
@@ -963,6 +995,98 @@ module ProviderCompiler
     end
   end
 
+  class ParameterAnalyzer
+    def analyze(facts)
+      auth_names = facts.security_schemes.values.filter_map do |scheme|
+        scheme["name"] if scheme.is_a?(Hash) && scheme["type"] == "apiKey"
+      end
+      features = facts.operations.flat_map do |operation|
+        webhook_operation = operation["source_kind"] == "webhook" || operation["path"].to_s.match?(/webhook|callback|notification/i)
+        Array(operation["parameters"]).filter_map do |parameter|
+          next unless parameter.is_a?(Hash)
+          location = parameter["in"].to_s
+          next unless %w[query header cookie].include?(location)
+          name = parameter["name"].to_s
+          next if auth_names.include?(name)
+          next if name.match?(/idempot/i)
+          next if webhook_operation && name.match?(/signature/i)
+
+          required = parameter["required"] == true
+          {
+            "location" => "#/paths/#{operation["path"].to_s.gsub("/", "~1")}/#{operation["method"].to_s.downcase}/parameters/#{name}",
+            "feature" => "required_provider_parameter",
+            "in" => location,
+            "name" => name,
+            "required" => required,
+            "reason" => required ? "required provider parameter has no canonical host/config mapping" : "optional provider parameter is preserved but not emitted by the canonical adapter",
+            "severity" => required ? "BLOCKING" : "WARNING",
+            "generation_impact" => required ? "BLOCKING" : "NON_BLOCKING"
+          }
+        end
+      end
+      required = features.select { |item| item["required"] }
+      decision = Decision.new(
+        id: "parameters:provider-inputs",
+        outcome: required.empty? ? "ACCEPT" : "REVIEW_REQUIRED",
+        severity: required.empty? ? "INFO" : "BLOCKING",
+        candidate: features,
+        evidence: [Evidence.new(source: "SPEC_FACT", locations: features.map { |item| item["location"] }, excerpt: "provider query/header/cookie parameters")],
+        rationale: required.empty? ? "no unmapped required provider parameter was found" : "required provider parameters need an explicit host/config mapping before generation"
+      )
+      AnalysisResult.new(section: features, decisions: features.empty? ? [] : [decision])
+    end
+  end
+
+  class UnsupportedFeatureAnalyzer
+    def analyze(facts)
+      features = []
+      facts.security_schemes.each do |name, scheme|
+        next if (scheme["type"] == "apiKey" && %w[header query].include?(scheme["in"])) || (scheme["type"] == "http" && scheme["scheme"].to_s.casecmp?("bearer"))
+
+        features << {
+          "location" => "#/components/securitySchemes/#{name}",
+          "feature" => scheme["type"].to_s,
+          "reason" => "authentication scheme is outside the supported deterministic transport boundary",
+          "severity" => "BLOCKING",
+          "generation_impact" => "BLOCKING"
+        }
+      end
+      facts.operations.each do |operation|
+        media_types = operation.dig("request_body", "content")
+        if media_types.is_a?(Hash) && !media_types.empty? && !media_types.key?("application/json")
+          media_types.keys.each do |media_type|
+            features << {
+              "location" => "#/paths/#{operation["path"].to_s.gsub("/", "~1")}/#{operation["method"].to_s.downcase}/requestBody/content/#{media_type}",
+              "feature" => "#{media_type.gsub("/", "_")}_request",
+              "reason" => "canonical generated transport only defines JSON request projection",
+              "severity" => "BLOCKING",
+              "generation_impact" => "BLOCKING"
+            }
+          end
+        end
+        next unless operation["source_kind"] == "webhook"
+        next if Array(operation["parameters"]).any? { |parameter| parameter["name"].to_s.match?(/signature/i) }
+
+        features << {
+          "location" => "#/paths/#{operation["path"].to_s.gsub("/", "~1")}/#{operation["method"].to_s.downcase}",
+          "feature" => "callback_without_signature",
+          "reason" => "callback endpoint has no declared signature input",
+          "severity" => "REVIEW_REQUIRED",
+          "generation_impact" => "BLOCKING"
+        }
+      end
+      decision = Decision.new(
+        id: "unsupported:features",
+        outcome: features.empty? ? "ACCEPT" : "REVIEW_REQUIRED",
+        severity: features.empty? ? "INFO" : (features.any? { |item| item["generation_impact"] == "BLOCKING" } ? "BLOCKING" : "WARNING"),
+        candidate: features,
+        evidence: [Evidence.new(source: "SPEC_FACT", locations: features.map { |item| item["location"] }, excerpt: "unsupported or unresolved OpenAPI features")],
+        rationale: features.empty? ? "no unsupported critical feature was found" : "unsupported or unresolved provider features are preserved as diagnostics"
+      )
+      AnalysisResult.new(section: features, decisions: features.empty? ? [] : [decision])
+    end
+  end
+
   class AnalyzerEngine
     def initialize(profile:, defaults:, adapter_policy: "if_available")
       @profile = profile
@@ -998,6 +1122,11 @@ module ProviderCompiler
       error_result = ErrorAnalyzer.new.analyze(facts)
       results[:errors] = error_result.section
       decisions.concat(error_result.decisions)
+      parameter_result = ParameterAnalyzer.new.analyze(facts)
+      unsupported_result = UnsupportedFeatureAnalyzer.new.analyze(facts)
+      results[:unsupported_features] = parameter_result.section + unsupported_result.section
+      decisions.concat(parameter_result.decisions)
+      decisions.concat(unsupported_result.decisions)
       AnalysisBundle.new(results, decisions)
     end
   end

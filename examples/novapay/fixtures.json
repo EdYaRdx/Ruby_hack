@@ -151,7 +151,7 @@
     }
   ],
   "blueprint_expectations": {
-    "source_fingerprint": "sha256:05d52c95b18c2ca611e0b72ec73b989661ceb42b1b7bcc05b3af89208559cc7c",
+    "source_fingerprint": "sha256:2b6ad1db111691c80f3b098d76d69896fc88c7b0859f9a17af725325dbbbda77",
     "sandbox_url": "https://api.sandbox.novapay.example/v1",
     "canonical_operations": [
       "create_request",

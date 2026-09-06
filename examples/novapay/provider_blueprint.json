@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source": {
-    "spec_fingerprint": "sha256:05d52c95b18c2ca611e0b72ec73b989661ceb42b1b7bcc05b3af89208559cc7c",
+    "spec_fingerprint": "sha256:2b6ad1db111691c80f3b098d76d69896fc88c7b0859f9a17af725325dbbbda77",
     "root_document_sha256": "415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551",
     "fingerprint_inputs": {
       "root_document": "novapay_provider_api.yaml",
@@ -76,7 +76,7 @@
       "resolved_files": {
         "novapay_provider_api.yaml": "415f50ee36fb331dfab49ceed0e8ed3b0ebe16053d7e00dbabd32282f4396551"
       },
-      "resolver_policy_version": 1
+      "resolver_policy_version": 2
     }
   },
   "provider": {
@@ -811,6 +811,7 @@
       ]
     }
   ],
+  "unsupported_features": [],
   "idempotency": {
     "header": "Idempotency-Key",
     "spec_required": false,

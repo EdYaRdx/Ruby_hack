@@ -73,6 +73,7 @@ module ProviderCompiler
         "money" => sections.fetch(:money),
         "statuses" => sections.fetch(:statuses),
         "errors" => sections.fetch(:errors),
+        "unsupported_features" => sections.fetch(:unsupported_features),
         "idempotency" => sections.fetch(:idempotency),
         "webhook" => sections.fetch(:webhook),
         "conditionals" => sections.fetch(:conditionals),
@@ -89,7 +90,7 @@ module ProviderCompiler
   end
 
   class BlueprintValidator
-    REQUIRED = %w[schema_version source provider servers base_service_profile auth operations endpoints field_mappings constraints money statuses errors idempotency webhook conditionals extra_operations decisions warnings unknowns].freeze
+    REQUIRED = %w[schema_version source provider servers base_service_profile auth operations endpoints field_mappings constraints money statuses errors unsupported_features idempotency webhook conditionals extra_operations decisions warnings unknowns].freeze
 
     def validate!(blueprint, profile)
       issues = REQUIRED.reject { |key| blueprint.key?(key) }.map { |key| "missing blueprint key #{key}" }
