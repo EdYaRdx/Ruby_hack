@@ -27,8 +27,11 @@ operation.payout_requisite["sbp"]["bank_name"] # если нужен provider
 
 ```ruby
 operation.payout_requisite["card_number"]
-operation.payout_requisite["phone"] # только если это явно требуется profile
 ```
+
+Space Payments не гарантирует `operation.payout_requisite["phone"]` для карты.
+Если provider требует дополнительный card phone, а profile не содержит явного
+host mapping, решение остаётся `REVIEW_REQUIRED` и генерация блокируется.
 
 Контракт не гарантирует плоские top-level поля
 `operation.recipient_phone`, `operation.bank_code` или

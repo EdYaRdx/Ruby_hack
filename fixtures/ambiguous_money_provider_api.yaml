@@ -67,6 +67,8 @@ paths:
     get:
       operationId: getPayoutStatus
       summary: Get payout status
+      security:
+        - ApiKeyAuth: []
       parameters:
         - name: payout_id
           in: path

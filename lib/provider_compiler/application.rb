@@ -123,7 +123,7 @@ module ProviderCompiler
       {
         spec: configured_spec.empty? ? reference_spec : configured_spec,
         profile: "profiles/space_payments_v1.yml",
-        defaults: reference_defaults,
+        defaults: configured_spec.empty? ? reference_defaults : empty_defaults,
         empty_defaults: empty_defaults,
         spec_explicit: false,
         defaults_explicit: false,

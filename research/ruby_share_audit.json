@@ -191,7 +191,7 @@
         },
         {
           "path": "spec/auth_hardening_spec.rb",
-          "loc": 68
+          "loc": 100
         },
         {
           "path": "spec/benchmark_spec.rb",
@@ -199,7 +199,7 @@
         },
         {
           "path": "spec/cli_spec.rb",
-          "loc": 136
+          "loc": 155
         },
         {
           "path": "spec/documentation_spec.rb",
@@ -290,7 +290,7 @@
           "loc": 396
         }
       ],
-      "loc": 8792
+      "loc": 8843
     },
     "other_participant_source": {
       "files": [
@@ -305,7 +305,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 9346,
+    "total_source_loc": 9397,
     "ruby_share_percent": 94.1
   }
 }

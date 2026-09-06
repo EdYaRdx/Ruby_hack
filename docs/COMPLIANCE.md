@@ -24,9 +24,9 @@
 
 **Production-код + тесты**
 
-- Ruby: 8792 LOC
+- Ruby: 8843 LOC
 - Другой исходный код участников: 554 LOC
-- Всего: 9346 LOC
+- Всего: 9397 LOC
 - Доля Ruby: 94.1%
 
 Оба измерения превышают требование `>50%`. Машиночитаемый файл — [`research/ruby_share_audit.json`](../research/ruby_share_audit.json). После изменений исходного кода повторно выполните `ruby bin/audit_ruby_share`.

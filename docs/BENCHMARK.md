@@ -9,6 +9,9 @@
 3. spec-only прогоны для официального NovaPay и mutation corpus;
 4. независимая проверка Aurora и HeliosPay с заранее подготовленной ground truth
    и behavioral vectors.
+5. независимый OpenAPI-only success corpus из трёх синтетических providers в
+   [`research/spec_only_success_v1`](../research/spec_only_success_v1); это
+   доказательство универсальности pipeline, но не три production integrations.
 
 Официальный `provider_api.yaml` NovaPay — reference input организатора. Сам
 mutation benchmark — воспроизводимый corpus, подготовленный авторами, а не
@@ -19,6 +22,10 @@ Aurora и HeliosPay — независимые provider-прогоны; их gro
 vectors находятся в [`fixtures/`](../fixtures/). Comparator проверяет не только
 совпадение decision и отсутствие crash, но и независимые semantic subsets,
 fail-closed safety и применимые generation/runtime gates.
+
+Три provider-а из `spec_only_success_v1` — синтетический независимый corpus,
+а не реальные production-подключения; его результат нельзя описывать как
+`3/3 production providers`.
 
 ## Определения метрик
 

@@ -1108,7 +1108,7 @@ module ProviderCompiler
       status_lines = "| — | mapping unresolved |" if status_lines.empty?
       server_lines = blueprint.fetch("servers").map { |server| "- #{server["environment"]}: `#{server["url"]}`" }.join("\n")
       auth = blueprint.fetch("auth", {})
-      auth_strategy = auth.fetch("strategy", {})
+      auth_strategy = auth.fetch("strategy", {}) || {}
       auth_name = auth_strategy["name"] || "not resolved"
       auth_transport = auth_strategy["transport"] || "not resolved"
       provider_slug = Util.slug(blueprint.dig("provider", "name"))

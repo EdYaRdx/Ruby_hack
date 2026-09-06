@@ -78,4 +78,40 @@ RSpec.describe "operation-level authentication hardening" do
       )
     end
   end
+
+  it "does not select a declared scheme when neither root nor operation security is declared" do
+    Dir.mktmpdir("auth-undeclared") do |directory|
+      spec = load_spec
+      spec["paths"].each_value do |path_item|
+        path_item.each_value do |operation|
+          operation.delete("security") if operation.is_a?(Hash)
+        end
+      end
+      spec.delete("security")
+      pipeline = write_pipeline(directory, spec)
+
+      expect(pipeline.blueprint.dig("auth", "selected")).to be_nil
+      expect(pipeline.blueprint.fetch("decision")).to eq("REVIEW_REQUIRED")
+      expect(pipeline.manifest.to_h.fetch("decisions")).to include(
+        include("decision_id" => "auth:security-schemes", "outcome" => "REVIEW_REQUIRED", "severity" => "BLOCKING")
+      )
+      expect(pipeline.blueprint.dig("auth", "operation_requirements")).to include(
+        include("canonical" => "create_request", "status" => "unresolved", "resolution" => "no_operation_or_root_security_requirement")
+      )
+    end
+  end
+
+  it "resolves an explicit public operation while keeping mixed public/auth output blocked" do
+    Dir.mktmpdir("auth-public-operation") do |directory|
+      spec = load_spec
+      spec["security"] = [{ "ApiKeyAuth" => [] }]
+      spec["paths"]["/payouts"]["post"]["security"] = []
+      pipeline = write_pipeline(directory, spec)
+      create_auth = pipeline.blueprint.dig("auth", "operation_requirements").find { |item| item["canonical"] == "create_request" }
+
+      expect(create_auth).to include("security_source" => "operation", "status" => "resolved", "strategy" => nil, "resolution" => "explicitly_public")
+      expect(pipeline.blueprint.fetch("decision")).to eq("REVIEW_REQUIRED")
+      expect(pipeline.blueprint.dig("auth", "selected")).to be_nil
+    end
+  end
 end

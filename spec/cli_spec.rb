@@ -12,6 +12,8 @@ RSpec.describe "provider_compiler CLI" do
 
     ENV["PROVIDER_SPEC"] = "custom/provider.yml"
     expect(ProviderCompiler::CLI.default_options.fetch(:spec)).to eq("custom/provider.yml")
+    expect(ProviderCompiler::CLI.default_options.fetch(:defaults)).to eq("fixtures/empty_case_defaults.yml")
+    expect(ProviderCompiler::CLI.default_options.fetch(:defaults_origin)).to eq("none")
   ensure
     original.nil? ? ENV.delete("PROVIDER_SPEC") : ENV["PROVIDER_SPEC"] = original
   end
@@ -149,6 +151,25 @@ RSpec.describe "provider_compiler CLI" do
       expect(File).not_to exist(File.join(directory, "service.rb"))
       expect(File).not_to exist(File.join(directory, "fixtures.json"))
       expect(File).not_to exist(File.join(directory, "contract_smoke.rb"))
+    end
+  end
+
+  it "compiles PROVIDER_SPEC input without implicit NovaPay defaults" do
+    Dir.mktmpdir("provider-cli-env-review") do |directory|
+      custom_spec = File.join(SpecSupport::ROOT, "fixtures", "aurora_transfer_api.yaml")
+      custom_profile = File.join(SpecSupport::ROOT, "profiles", "aurora_payments_v1.yml")
+      stdout, stderr, status = Open3.capture3(
+        { "PROVIDER_SPEC" => custom_spec },
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "compile",
+        "--profile", custom_profile,
+        "--out", directory
+      )
+
+      expect(status.exitstatus).to eq(2), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      expect(stdout).to include("Decision: REVIEW_REQUIRED", "case_default=0", "Result: GENERATION_BLOCKED")
+      expect(File).not_to exist(File.join(directory, "service.rb"))
     end
   end
 end

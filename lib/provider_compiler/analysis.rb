@@ -175,8 +175,10 @@ module ProviderCompiler
       strategies = operation_requirements.filter_map { |item| item["strategy"] }.uniq { |strategy| Util.canonicalize(strategy) }
       auth_modes = operation_requirements.select { |item| item["status"] == "resolved" }.map { |item| item["strategy"] || { "kind" => "public" } }.uniq { |mode| Util.canonicalize(mode) }
       mixed = auth_modes.length > 1
-      selected = if operation_requirements.any? && !unresolved && !mixed
-                   schemes.find { |scheme| scheme["decision"] == "ACCEPT" && Util.canonicalize(scheme["strategy"]) == Util.canonicalize(strategies.first) }
+      selected = if operation_requirements.any?
+                   if !unresolved && !mixed
+                     schemes.find { |scheme| scheme["decision"] == "ACCEPT" && Util.canonicalize(scheme["strategy"]) == Util.canonicalize(strategies.first) }
+                   end
                  else
                    supported_schemes.first
                  end
@@ -272,10 +274,7 @@ module ProviderCompiler
       end
 
       if security.nil?
-        supported = schemes.select { |scheme| scheme["decision"] == "ACCEPT" }
-        return { "status" => "resolved", "strategy" => supported.first["strategy"], "scheme_names" => [supported.first["name"]], "resolution" => "single_provider_strategy" } if supported.length == 1
-
-        return { "status" => "unresolved", "strategy" => nil, "scheme_names" => [], "resolution" => supported.empty? ? "no_supported_scheme" : "multiple_provider_strategies_without_operation_requirement" }
+        return { "status" => "unresolved", "strategy" => nil, "scheme_names" => [], "resolution" => "no_operation_or_root_security_requirement" }
       end
 
       return { "status" => "unresolved", "strategy" => nil, "scheme_names" => [], "resolution" => "security_requirement_is_not_an_array" } unless security.is_a?(Array) && !security.empty?
