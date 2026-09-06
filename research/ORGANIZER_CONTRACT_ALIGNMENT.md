@@ -101,6 +101,7 @@ safety.
 | Mutation generation | 18/18 |
 | Aurora resolution levels | 3/3 semantic pass |
 | Aurora resolved behavioral vectors | 4/4 |
+| GitHub Actions matrix | 4/4 green (Ruby 3.3/4.0 × Ubuntu/Windows) |
 
 Expected pending — symlink traversal case — связан только с отсутствием
 symlink support в текущем Windows test environment и не является failure.
@@ -129,6 +130,9 @@ symlink support в текущем Windows test environment и не являет�
   adapter;
 - transport/test doubles обновлены с invented positional contract на organizer
   contract.
+- успешные generated diagnostics канонизируются как пустой `stderr`, чтобы
+  Bundler/Ruby warnings и локальные пути не ломали cross-platform reproducibility;
+  error output при неуспешном процессе сохраняется.
 
 Это локальное расширение существующего Blueprint/profile boundary, а не смена
 архитектуры. Поэтому итоговая классификация: semantic core не redesigned;
