@@ -705,6 +705,360 @@
       "passed": true,
       "stdout": "contract smoke passed\n",
       "stderr": ""
+    },
+    "transport": {
+      "status": "PASS",
+      "method": "localhost_http_e2e",
+      "outbound_http_supported": true,
+      "base_url_runtime_configurable": true,
+      "base_url_env": "NOVAPAY_BASE_URL",
+      "auth_location": "header",
+      "create_request": {
+        "passed": true
+      },
+      "status_request": {
+        "passed": true
+      },
+      "response_parsing": {
+        "passed": true,
+        "result_status": "approved"
+      },
+      "checks": [
+        {
+          "name": "create.method",
+          "passed": true,
+          "expected": "POST",
+          "actual": "POST"
+        },
+        {
+          "name": "create.path",
+          "passed": true,
+          "expected": "/payouts",
+          "actual": "/payouts"
+        },
+        {
+          "name": "create.query",
+          "passed": true,
+          "expected": [],
+          "actual": []
+        },
+        {
+          "name": "create.auth",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "create.body",
+          "passed": true,
+          "expected": {
+            "amount": 1500000,
+            "currency": "RUB",
+            "external_id": "op_abc123",
+            "recipient": {
+              "type": "sbp",
+              "phone": "79001234567",
+              "bank_code": "044525225",
+              "bank_name": "Сбербанк"
+            }
+          },
+          "actual": {
+            "amount": 1500000,
+            "currency": "RUB",
+            "external_id": "op_abc123",
+            "recipient": {
+              "type": "sbp",
+              "phone": "79001234567",
+              "bank_code": "044525225",
+              "bank_name": "Сбербанк"
+            }
+          }
+        },
+        {
+          "name": "create.content_type",
+          "passed": true,
+          "expected": "application/json",
+          "actual": "application/json"
+        },
+        {
+          "name": "status.method",
+          "passed": true,
+          "expected": "GET",
+          "actual": "GET"
+        },
+        {
+          "name": "status.path",
+          "passed": true,
+          "expected": "/payouts/np_7f3a9b2c",
+          "actual": "/payouts/np_7f3a9b2c"
+        },
+        {
+          "name": "status.auth",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "response.parsing",
+          "passed": true,
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "response.status_mapping",
+          "passed": true,
+          "expected": "approved",
+          "actual": "approved"
+        }
+      ],
+      "requests": {
+        "create": {
+          "method": "POST",
+          "path": "/payouts",
+          "query": {},
+          "headers": {
+            "accept-encoding": [
+              "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+            ],
+            "accept": [
+              "*/*"
+            ],
+            "user-agent": [
+              "Ruby"
+            ],
+            "host": [
+              "127.0.0.1:<PORT>"
+            ],
+            "x-api-key": [
+              "[REDACTED]"
+            ],
+            "idempotency-key": [
+              "[REDACTED]"
+            ],
+            "content-type": [
+              "application/json"
+            ],
+            "content-length": [
+              "165"
+            ]
+          },
+          "body": {
+            "amount": 1500000,
+            "currency": "RUB",
+            "external_id": "op_abc123",
+            "recipient": {
+              "type": "sbp",
+              "phone": "79001234567",
+              "bank_code": "044525225",
+              "bank_name": "Сбербанк"
+            }
+          }
+        },
+        "status": {
+          "method": "GET",
+          "path": "/payouts/np_7f3a9b2c",
+          "query": {},
+          "headers": {
+            "accept-encoding": [
+              "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+            ],
+            "accept": [
+              "*/*"
+            ],
+            "user-agent": [
+              "Ruby"
+            ],
+            "host": [
+              "127.0.0.1:<PORT>"
+            ],
+            "x-api-key": [
+              "[REDACTED]"
+            ]
+          },
+          "body": null
+        }
+      },
+      "external_provider_call": {
+        "executed": false,
+        "reason": "No real sandbox endpoint/credentials supplied"
+      }
+    }
+  },
+  "runtime_transport": {
+    "status": "PASS",
+    "method": "localhost_http_e2e",
+    "outbound_http_supported": true,
+    "base_url_runtime_configurable": true,
+    "base_url_env": "NOVAPAY_BASE_URL",
+    "auth_location": "header",
+    "create_request": {
+      "passed": true
+    },
+    "status_request": {
+      "passed": true
+    },
+    "response_parsing": {
+      "passed": true,
+      "result_status": "approved"
+    },
+    "checks": [
+      {
+        "name": "create.method",
+        "passed": true,
+        "expected": "POST",
+        "actual": "POST"
+      },
+      {
+        "name": "create.path",
+        "passed": true,
+        "expected": "/payouts",
+        "actual": "/payouts"
+      },
+      {
+        "name": "create.query",
+        "passed": true,
+        "expected": [],
+        "actual": []
+      },
+      {
+        "name": "create.auth",
+        "passed": true,
+        "expected": true,
+        "actual": true
+      },
+      {
+        "name": "create.body",
+        "passed": true,
+        "expected": {
+          "amount": 1500000,
+          "currency": "RUB",
+          "external_id": "op_abc123",
+          "recipient": {
+            "type": "sbp",
+            "phone": "79001234567",
+            "bank_code": "044525225",
+            "bank_name": "Сбербанк"
+          }
+        },
+        "actual": {
+          "amount": 1500000,
+          "currency": "RUB",
+          "external_id": "op_abc123",
+          "recipient": {
+            "type": "sbp",
+            "phone": "79001234567",
+            "bank_code": "044525225",
+            "bank_name": "Сбербанк"
+          }
+        }
+      },
+      {
+        "name": "create.content_type",
+        "passed": true,
+        "expected": "application/json",
+        "actual": "application/json"
+      },
+      {
+        "name": "status.method",
+        "passed": true,
+        "expected": "GET",
+        "actual": "GET"
+      },
+      {
+        "name": "status.path",
+        "passed": true,
+        "expected": "/payouts/np_7f3a9b2c",
+        "actual": "/payouts/np_7f3a9b2c"
+      },
+      {
+        "name": "status.auth",
+        "passed": true,
+        "expected": true,
+        "actual": true
+      },
+      {
+        "name": "response.parsing",
+        "passed": true,
+        "expected": true,
+        "actual": true
+      },
+      {
+        "name": "response.status_mapping",
+        "passed": true,
+        "expected": "approved",
+        "actual": "approved"
+      }
+    ],
+    "requests": {
+      "create": {
+        "method": "POST",
+        "path": "/payouts",
+        "query": {},
+        "headers": {
+          "accept-encoding": [
+            "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+          ],
+          "accept": [
+            "*/*"
+          ],
+          "user-agent": [
+            "Ruby"
+          ],
+          "host": [
+            "127.0.0.1:<PORT>"
+          ],
+          "x-api-key": [
+            "[REDACTED]"
+          ],
+          "idempotency-key": [
+            "[REDACTED]"
+          ],
+          "content-type": [
+            "application/json"
+          ],
+          "content-length": [
+            "165"
+          ]
+        },
+        "body": {
+          "amount": 1500000,
+          "currency": "RUB",
+          "external_id": "op_abc123",
+          "recipient": {
+            "type": "sbp",
+            "phone": "79001234567",
+            "bank_code": "044525225",
+            "bank_name": "Сбербанк"
+          }
+        }
+      },
+      "status": {
+        "method": "GET",
+        "path": "/payouts/np_7f3a9b2c",
+        "query": {},
+        "headers": {
+          "accept-encoding": [
+            "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+          ],
+          "accept": [
+            "*/*"
+          ],
+          "user-agent": [
+            "Ruby"
+          ],
+          "host": [
+            "127.0.0.1:<PORT>"
+          ],
+          "x-api-key": [
+            "[REDACTED]"
+          ]
+        },
+        "body": null
+      }
+    },
+    "external_provider_call": {
+      "executed": false,
+      "reason": "No real sandbox endpoint/credentials supplied"
     }
   },
   "required_runtime_configuration": [

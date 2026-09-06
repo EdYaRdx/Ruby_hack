@@ -977,7 +977,13 @@ module ProviderCompiler
       paths = [File.join(output_dir, "service.rb"), File.join(output_dir, "contract_smoke.rb")]
       syntax = paths.map { |path| ruby_syntax(path) }
       stdout, stderr, status = Open3.capture3(RbConfig.ruby, "contract_smoke.rb", chdir: output_dir)
-      { "passed" => syntax.all? { |item| item["passed"] } && status.success?, "syntax" => syntax, "smoke" => { "passed" => status.success?, "stdout" => stdout, "stderr" => stderr } }
+      transport = if defined?(TransportVerification)
+                    TransportVerification.verify_from_output(output_dir)
+                  else
+                    { "status" => "NOT_RUN", "reason" => "transport verification is unavailable" }
+                  end
+      transport_passed = transport["status"] != "FAIL"
+      { "passed" => syntax.all? { |item| item["passed"] } && status.success? && transport_passed, "syntax" => syntax, "smoke" => { "passed" => status.success?, "stdout" => stdout, "stderr" => stderr }, "transport" => transport }
     end
   end
 

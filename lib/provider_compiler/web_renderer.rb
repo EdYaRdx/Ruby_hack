@@ -120,6 +120,7 @@ module ProviderCompiler
               #{demo_card("ambiguous", "Неоднозначный provider", "Безопасная остановка на неизвестной сумме", "ТРЕБУЕТ ПРОВЕРКИ", "review", "Открыть Review")}
             </div>
           </section>
+          #{multi_spec_comparison}
         HTML
         layout(nil, active: "spec", title: "Новая интеграция", subtitle: "OpenAPI → проверенный Ruby-адаптер провайдера", state: "START", content: content)
       end
@@ -311,6 +312,7 @@ module ProviderCompiler
             </section>
             #{workspace.generated? ? artifact_panel(workspace, artifact) : '<section class="card empty-card"><h2>Сгенерированные файлы</h2><p>После запуска здесь появятся service.rb, Blueprint, Manifest, fixtures и результаты проверки.</p></section>'}
           </div>
+          #{transport_verification_panel(verification)}
           #{workspace.generated? ? verification_panel(workspace, verification) : ""}
         HTML
         layout(workspace, active: "generate", title: workspace_title(workspace), subtitle: "provider_api.yaml · детерминированный результат", state: generation_state(workspace), content: content)
@@ -394,6 +396,71 @@ module ProviderCompiler
             </button>
           </form>
         HTML
+      end
+
+      def multi_spec_comparison
+        rows = %w[novapay aurora heliospay].filter_map do |demo_name|
+          config = Web::DEMOS.fetch(demo_name)
+          pipeline = Pipeline.new(spec_path: config.fetch("spec"), profile_path: config.fetch("profile"), defaults_path: config.fetch("defaults"))
+          blueprint = pipeline.blueprint
+          create = Array(blueprint["endpoints"]).find { |item| item["canonical"] == "create_request" }
+          status = Array(blueprint["endpoints"]).find { |item| item["canonical"] == "fetch_status" }
+          webhook = blueprint["webhook"] || {}
+          provider_money = blueprint.dig("money", "provider") || {}
+          strategy = blueprint.dig("auth", "strategy") || {}
+          {
+            "provider" => config.fetch("label"),
+            "auth" => comparison_auth(strategy),
+            "money" => comparison_money(provider_money),
+            "operations" => [create, status].compact.map { |item| "#{item["method"]} #{item["path"]}" }.join(" · "),
+            "webhook" => [webhook["endpoint"], webhook.dig("signature", "header")].compact.join(" · "),
+            "difference" => comparison_difference(blueprint, create, webhook)
+          }
+        end
+        return "" if rows.empty?
+
+        <<~HTML
+          <section class="demo-section comparison-section">
+            <div class="section-heading"><div><h2>Проверка на разных OpenAPI</h2><p>Один compiler pipeline работает на заметно разных структурах provider API.</p></div></div>
+            <div class="comparison-card">
+              <div class="comparison-table-wrap"><table class="comparison-table"><thead><tr><th>Provider</th><th>Auth</th><th>Money shape</th><th>Основные операции</th><th>Webhook</th><th>Отличительный признак</th></tr></thead><tbody>#{rows.map { |row| comparison_table_row(row) }.join}</tbody></table></div>
+              <div class="comparison-footer"><span>Сравнение построено из текущих fixtures и анализа, а не из отдельной provider-логики.</span><a class="button button-secondary" href="#spec-file">Загрузить произвольный OpenAPI</a></div>
+            </div>
+          </section>
+        HTML
+      end
+
+      def comparison_table_row(row)
+        %(<tr><th scope="row">#{h(row["provider"])}</th><td>#{h(row["auth"])}</td><td>#{h(row["money"])}</td><td><code>#{h(row["operations"])}</code></td><td>#{h(row["webhook"])}</td><td>#{h(row["difference"])}</td></tr>)
+      end
+
+      def comparison_auth(strategy)
+        kind = strategy["kind"].to_s
+        transport = strategy["transport"].to_s
+        return "Bearer · #{transport}" if kind == "bearer"
+        return "API key · #{transport}" if kind == "api_key"
+
+        "Не определено"
+      end
+
+      def comparison_money(provider_money)
+        field = provider_money["field"].to_s.sub("request.", "")
+        response_field = provider_money["response_field"].to_s.sub("response.", "")
+        shape = provider_money["nested_money_candidate"] ? "nested" : "flat"
+        paths = [field, response_field].reject(&:empty?).uniq.join(" / ")
+        [shape, paths].reject(&:empty?).join(" · ")
+      end
+
+      def comparison_difference(blueprint, create, webhook)
+        parts = []
+        success = Array(create && create["success_statuses"]).first
+        parts << "HTTP #{success}" if success
+        parts << "Retry-After" if Array(blueprint["errors"]).any? { |item| item["retry_after_header"] }
+        extras = Array(blueprint["extra_operations"])
+        parts << "#{extras.length} extra operation#{extras.length == 1 ? "" : "s"}" unless extras.empty?
+        event = blueprint.dig("webhook", "events")&.keys&.first
+        parts << "event: #{event}" if event
+        parts.empty? ? (webhook["mode"] || "структура из спецификации") : parts.join(" · ")
       end
 
       def money_summary(money)
@@ -887,6 +954,56 @@ module ProviderCompiler
             <details class="technical-details"><summary>Технический результат</summary>#{json_block(verification)}</details>
           </section>
         HTML
+      end
+
+      def transport_verification_panel(verification)
+        transport = verification && verification["transport"] || {}
+        status = transport.fetch("status", "NOT_RUN")
+        create_passed = transport.dig("create_request", "passed")
+        status_passed = transport.dig("status_request", "passed")
+        outbound = transport["outbound_http_supported"]
+        configurable = transport["base_url_runtime_configurable"]
+        external = transport.dig("external_provider_call", "executed")
+        rows = [
+          ["Исходящий HTTP transport", transport_state(status, outbound == true)],
+          ["Create request", transport_state(status, create_passed)],
+          ["Status request", transport_state(status, status_passed)],
+          ["Runtime base URL", configurable == true ? "CONFIGURABLE" : transport_state(status, configurable)],
+          ["Проверка", transport["method"] == "localhost_http_e2e" ? "localhost HTTP E2E" : (transport["method"] || "localhost HTTP E2E")],
+          ["Внешний provider", external == true ? "EXECUTED" : "NOT EXECUTED"]
+        ]
+        note = if status == "PASS"
+                "Сгенерированный adapter действительно отправляет запросы в локальный HTTP server; внешний provider не вызывается."
+              elsif status == "FAIL"
+                "Проверка transport завершилась ошибкой; генерация не считается полностью проверенной."
+              else
+                "Проверка transport ещё не запускалась."
+              end
+        <<~HTML
+          <section class="card transport-card">
+            <div class="card-heading"><div><h2>HTTP transport</h2><p>Исполняемая проверка сетевой границы сгенерированного adapter</p></div>#{status_pill(status, tone_for(status))}</div>
+            <div class="transport-grid">#{rows.map { |name, value| transport_row(name, value) }.join}</div>
+            <p class="transport-note">#{h(note)}</p>
+            #{transport["reason"] ? %(<p class="transport-reason">#{h(transport["reason"])}</p>) : ""}
+          </section>
+        HTML
+      end
+
+      def transport_state(status, passed)
+        return "PASS" if status == "PASS" && passed == true
+        return "FAIL" if status == "FAIL" || passed == false
+
+        "NOT RUN"
+      end
+
+      def transport_row(name, value)
+        if %w[PASS FAIL NOT RUN].include?(value)
+          %(<div class="transport-row"><span>#{h(name)}</span>#{status_pill(value, tone_for(value))}</div>)
+        elsif value == "CONFIGURABLE"
+          %(<div class="transport-row"><span>#{h(name)}</span><strong class="transport-positive">НАСТРАИВАЕТСЯ</strong></div>)
+        else
+          %(<div class="transport-row"><span>#{h(name)}</span><code>#{h(value)}</code></div>)
+        end
       end
 
       def readiness_rows(workspace)

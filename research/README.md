@@ -15,7 +15,8 @@
 
 `REFERENCE_GROUND_TRUTH.md`, `GROUND_TRUTH_CORRECTIONS.md`,
 `PROVIDER_BLUEPRINT_V1.md`, `RULE_PRECEDENCE.md`, `ARCHITECTURE_INVARIANTS.md`,
-`ARCHITECTURE_RED_TEAM.md` и `SECOND_PROVIDER_VALIDATION.md` содержат актуальные
+`ARCHITECTURE_RED_TEAM.md`, `SECOND_PROVIDER_VALIDATION.md` и
+`POST_CHECKPOINT_RUBRIC_AUDIT.md` содержат актуальные
 подтверждающие материалы. Их aggregate-метрики всё равно публикуются
 канонически через [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
 
@@ -82,6 +83,8 @@
 - [RULE_PRECEDENCE.md](RULE_PRECEDENCE.md) — precedence, freshness, scope и conflicts rules.
 - [PROVIDER_BLUEPRINT_V1.md](PROVIDER_BLUEPRINT_V1.md) — минимальная Blueprint и NovaPay projection.
 - [SCORE_AUDIT.md](SCORE_AUDIT.md) — audit каждого критерия без fake score.
+- [POST_CHECKPOINT_RUBRIC_AUDIT.md](POST_CHECKPOINT_RUBRIC_AUDIT.md) — post-checkpoint audit rubric, multi-spec visibility и outbound HTTP evidence.
+- [GOAL_6_5_RESULT.md](GOAL_6_5_RESULT.md) — итог multi-spec validation, localhost HTTP evidence и regression matrix GOAL 6.5.
 - [BONUS_FEATURE_ROI.md](BONUS_FEATURE_ROI.md) — ROI и порядок bonus features.
 - [IMPLEMENTATION_PLAN_FINAL.md](IMPLEMENTATION_PLAN_FINAL.md) — critical path и vertical slice после verdict.
 - [ARCHITECTURE_INVARIANTS.md](ARCHITECTURE_INVARIANTS.md) — invariants, которые нельзя нарушать.

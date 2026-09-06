@@ -513,3 +513,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .verification-result { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 700; }
 .verification-result.passed { color: var(--green); }
 .verification-result.failed { color: var(--red); }
+
+/* GOAL 6.5: evaluator-visible outbound HTTP evidence. */
+.comparison-card { overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.comparison-table-wrap { overflow-x: auto; }
+.comparison-table { width: 100%; min-width: 940px; border-collapse: collapse; font-size: 12px; }
+.comparison-table th, .comparison-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.comparison-table thead th { background: #f7f8fb; color: var(--muted); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+.comparison-table tbody tr:last-child th, .comparison-table tbody tr:last-child td { border-bottom: 0; }
+.comparison-table tbody th { min-width: 100px; font-size: 13px; white-space: nowrap; }
+.comparison-table td { color: var(--muted); line-height: 1.45; }
+.comparison-table code { color: var(--text); font-size: 11px; white-space: normal; }
+.comparison-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.comparison-footer .button { flex: 0 0 auto; }
+.transport-card { max-width: 1020px; margin-top: 18px; }
+.transport-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 42px; margin-top: 13px; }
+.transport-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 42px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.transport-row .status-pill { min-height: 24px; padding: 3px 10px; font-size: 10px; }
+.transport-positive { color: var(--green); font-size: 11px; }
+.transport-row code { color: var(--text); font-size: 11px; }
+.transport-note, .transport-reason { margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.transport-reason { color: var(--red); }
+
+@media (max-width: 760px) {
+  .comparison-footer { align-items: flex-start; flex-direction: column; }
+  .transport-grid { grid-template-columns: 1fr; }
+}

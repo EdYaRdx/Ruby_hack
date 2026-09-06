@@ -1,7 +1,9 @@
-# Демонстрационный checkpoint: NovaPay, fail-closed и Aurora
+# Демонстрационный checkpoint: NovaPay, Aurora, HeliosPay и fail-closed
 
 Сценарий рассчитан на live-показ из корня репозитория. Он использует локальные
-fixtures, не требует credentials и не выполняет сетевые вызовы к провайдеру.
+fixtures, не требует credentials и не выполняет сетевые вызовы к реальному provider.
+При Generate generated adapter выполняется против ephemeral localhost HTTP server,
+чтобы проверить outbound transport без обращения к внешнему sandbox.
 
 ## Подготовка
 
@@ -13,6 +15,20 @@ bundle exec ruby bin/provider_compiler_web
 
 Откройте `http://127.0.0.1:4567`. Если нужен только CLI, перейдите к разделу
 [Запасной сценарий CLI](#d-запасной-сценарий-cli).
+
+## Сравнение нескольких OpenAPI
+
+На стартовом экране виден единый блок сравнения NovaPay, Aurora и HeliosPay.
+Значения в нём строятся из текущих fixtures и результатов анализа: отличаются
+auth transport, структура money, методы и paths, webhook и дополнительные
+операции. Кнопка «Загрузить произвольный OpenAPI» оставляет тот же общий pipeline
+для нового входного документа.
+
+После Generate откройте блок `HTTP transport`. Статус `PASS` означает, что
+сгенерированный adapter сделал реальные localhost HTTP-запросы к временному
+провайдеру и прошёл проверки create/status, auth, body, content type и response
+mapping. Это не live-вызов provider sandbox: внешний endpoint и credentials не
+используются.
 
 ## A. Успешный сценарий NovaPay — 2–3 минуты
 

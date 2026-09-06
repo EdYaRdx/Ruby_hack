@@ -34,6 +34,14 @@
 - Verification: `PASS`
 - Overall readiness: `READY`
 
+## Runtime transport
+
+- Outbound HTTP supported: `YES`
+- Executable verification: `localhost_http_e2e` / `PASS`
+- Create request: `PASS`
+- Status request: `PASS`
+- External provider call: `NOT_EXECUTED`
+
 ## Required runtime configuration
 
 - NOVAPAY_BASE_URL (optional sandbox default)

@@ -204,6 +204,7 @@ module ProviderCompiler
         "generation_ready" => pipeline.blueprint["decision"] == "ACCEPT" && counts["blocking_count"].zero?,
         "generated" => generated,
         "verification" => verification || { "status" => "NOT_RUN" },
+        "runtime_transport" => verification && verification["transport"] || { "status" => "NOT_RUN", "method" => "localhost_http_e2e", "external_provider_call" => { "executed" => false, "reason" => "No real sandbox endpoint/credentials supplied" } },
         "required_runtime_configuration" => runtime_configuration(pipeline.blueprint),
         "known_limitations" => known_limitations(pipeline),
         "stale_override" => stale_override,
@@ -249,6 +250,14 @@ module ProviderCompiler
         - `generated`: `#{report.fetch("generated")}`
         - Verification: `#{report.dig("verification", "passed") == true ? "PASS" : report.dig("verification", "status") || "NOT_RUN"}`
         - Overall readiness: `#{report.fetch("ready") ? "READY" : "NOT_READY"}`
+
+        ## Runtime transport
+
+        - Outbound HTTP supported: `#{report.dig("runtime_transport", "outbound_http_supported") == true ? "YES" : "NOT_RUN"}`
+        - Executable verification: `#{report.dig("runtime_transport", "method") || "localhost_http_e2e"}` / `#{report.dig("runtime_transport", "status") || "NOT_RUN"}`
+        - Create request: `#{report.dig("runtime_transport", "create_request", "passed") == true ? "PASS" : "NOT_RUN"}`
+        - Status request: `#{report.dig("runtime_transport", "status_request", "passed") == true ? "PASS" : "NOT_RUN"}`
+        - External provider call: `#{report.dig("runtime_transport", "external_provider_call", "executed") == true ? "EXECUTED" : "NOT_EXECUTED"}`
 
         ## Required runtime configuration
 

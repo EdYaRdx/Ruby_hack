@@ -448,4 +448,28 @@ RSpec.describe ProviderCompiler::Web::Application do
     expect(failed.body).to include("Не удалось выполнить операцию", "Технические подробности")
     expect(failed.body).not_to include("backtrace", "stack trace")
   end
+
+  it "shows the multi-spec comparison from the three independent demo pipelines" do
+    response = call("GET", "/")
+
+    expect(response.body).to include(
+      "Проверка на разных OpenAPI", "NovaPay", "Aurora", "HeliosPay", "Загрузить произвольный OpenAPI",
+      "API key", "Bearer", "flat", "nested", "money.value", "payment.amount",
+      "/payouts", "/transfers", "/notifications", "/funds", "HTTP 202", "Retry-After"
+    )
+  end
+
+  it "exposes actual HTTP transport evidence after generation" do
+    response = call("POST", "/demo", body: "demo=novapay")
+    id = workspace_id(response)
+    call("POST", "/workspace/#{id}/generate")
+    workspace = store.fetch(id)
+    page = call("GET", "/workspace/#{id}/generate")
+
+    expect(workspace.verification.dig("transport", "status")).to eq("PASS")
+    expect(workspace.verification.dig("transport", "create_request", "passed")).to be(true)
+    expect(workspace.verification.dig("transport", "status_request", "passed")).to be(true)
+    expect(workspace.verification.dig("transport", "external_provider_call", "executed")).to be(false)
+    expect(page.body).to include("HTTP transport", "localhost HTTP E2E", "Create request", "Status request")
+  end
 end
