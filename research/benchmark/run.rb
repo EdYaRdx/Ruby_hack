@@ -54,7 +54,7 @@ module RealMutationBenchmark
       "aggregate" => aggregate(results)
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
-    File.write(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n", encoding: "UTF-8")
+    ProviderCompiler::Util.write_text(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n")
     puts ProviderCompiler::Util.pretty_json(report.fetch("aggregate"))
     puts "Wrote #{OUTPUT_PATH}"
     report
@@ -68,9 +68,9 @@ module RealMutationBenchmark
     case_dir = File.join(work_dir, id)
     FileUtils.mkdir_p(case_dir)
     spec_path = File.join(case_dir, "provider_api.yaml")
-    File.write(spec_path, YAML.dump(document), encoding: "UTF-8")
+    ProviderCompiler::Util.write_text(spec_path, YAML.dump(document))
     extra_files.each do |name, content|
-      File.write(File.join(case_dir, name), YAML.dump(content), encoding: "UTF-8")
+      ProviderCompiler::Util.write_text(File.join(case_dir, name), YAML.dump(content))
     end
 
     pipeline = ProviderCompiler::Pipeline.new(

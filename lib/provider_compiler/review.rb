@@ -148,7 +148,7 @@ module ProviderCompiler
 
     def self.write(path, **kwargs)
       override = build(**kwargs)
-      File.write(path, YAML.dump(override.to_h), encoding: "UTF-8")
+      Util.write_text(path, YAML.dump(override.to_h))
       path
     end
   end
@@ -156,8 +156,8 @@ module ProviderCompiler
   class IntegrationReadiness
     def self.write(output_dir, report)
       FileUtils.mkdir_p(output_dir)
-      File.write(File.join(output_dir, "integration_readiness.json"), Util.pretty_json(report) + "\n", encoding: "UTF-8")
-      File.write(File.join(output_dir, "INTEGRATION_READINESS.md"), to_markdown(report), encoding: "UTF-8")
+      Util.write_text(File.join(output_dir, "integration_readiness.json"), Util.pretty_json(report) + "\n")
+      Util.write_text(File.join(output_dir, "INTEGRATION_READINESS.md"), to_markdown(report))
       [File.join(output_dir, "integration_readiness.json"), File.join(output_dir, "INTEGRATION_READINESS.md")]
     end
 

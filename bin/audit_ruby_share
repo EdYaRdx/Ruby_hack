@@ -64,6 +64,13 @@ def share(ruby_loc, other_loc)
   total.zero? ? 0.0 : (ruby_loc.to_f * 100 / total).round(1)
 end
 
+def write_text(path, content)
+  text = content.to_s
+  text = text.dup.force_encoding("UTF-8") if text.encoding == Encoding::BINARY
+  normalized = text.encode("UTF-8").gsub(/\r\n?/, "\n")
+  File.binwrite(path, normalized)
+end
+
 production_ruby_files = tracked_files(["lib/**/*.rb", "bin/*"])
 test_ruby_files = tracked_files(["spec/**/*.rb"])
 other_source_files = tracked_files(["web/public/**/*.js", "web/public/**/*.css", "web/public/**/*.html"])
@@ -94,7 +101,7 @@ report = {
   }
 }
 
-File.write(REPORT_PATH, JSON.pretty_generate(report) + "\n", encoding: "UTF-8")
+write_text(REPORT_PATH, JSON.pretty_generate(report) + "\n")
 
 def replace_generated_block(path, name, content)
   source = File.read(path, encoding: "UTF-8")
@@ -104,7 +111,7 @@ def replace_generated_block(path, name, content)
   abort "missing or duplicate generated block #{name} in #{path}" unless source.scan(pattern).length == 1
 
   replacement = "#{start_marker}\n#{content.rstrip}\n#{end_marker}"
-  File.write(path, source.sub(pattern, replacement), encoding: "UTF-8")
+  write_text(path, source.sub(pattern, replacement))
 end
 
 production = report.fetch("production_only")

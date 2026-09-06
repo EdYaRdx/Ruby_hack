@@ -35,6 +35,13 @@ def canonical_json(value)
   JSON.pretty_generate(value).gsub(/\[\s*\]/, "[]") + "\n"
 end
 
+def write_text(path, content)
+  text = content.to_s
+  text = text.dup.force_encoding("UTF-8") if text.encoding == Encoding::BINARY
+  normalized = text.encode("UTF-8").gsub(/\r\n?/, "\n")
+  File.binwrite(path, normalized)
+end
+
 def run_command(*args)
   stdout, stderr, status = Open3.capture3(RbConfig.ruby, *args, chdir: ROOT)
   { "exit_status" => status.exitstatus, "stdout" => stdout, "stderr" => stderr }
@@ -242,10 +249,10 @@ report = {
     "compiler_crash_count" => results.count { |item| item["actual_decision"] == "COMPILER_ERROR" }
   }
 }
-File.write(OUTPUT, canonical_json(report), encoding: "UTF-8")
+write_text(OUTPUT, canonical_json(report))
 failures_path = ENV.fetch("BLACK_BOX_FAILURES", File.join(File.dirname(OUTPUT), "failures.json"))
 failures = report.fetch("cases").reject { |item| item["passed"] }
 failures_report = { "schema_version" => 1, "source" => repository_relative(OUTPUT), "failures" => failures }
-File.write(failures_path, canonical_json(failures_report), encoding: "UTF-8")
+write_text(failures_path, canonical_json(failures_report))
 puts JSON.pretty_generate(report.fetch("aggregate"))
 puts "Wrote #{OUTPUT}"

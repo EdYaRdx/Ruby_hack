@@ -11,8 +11,8 @@ module ProviderCompiler
         path = File.join(output_dir, name)
         File.delete(path) if File.file?(path)
       end
-      File.write(File.join(output_dir, "provider_blueprint.json"), Util.pretty_json(blueprint) + "\n", encoding: "UTF-8")
-      File.write(File.join(output_dir, "review_manifest.json"), Util.pretty_json(manifest.to_h) + "\n", encoding: "UTF-8")
+      Util.write_text(File.join(output_dir, "provider_blueprint.json"), Util.pretty_json(blueprint) + "\n")
+      Util.write_text(File.join(output_dir, "review_manifest.json"), Util.pretty_json(manifest.to_h) + "\n")
       ["provider_blueprint.json", "review_manifest.json"].map { |name| File.join(output_dir, name) }
     end
   end

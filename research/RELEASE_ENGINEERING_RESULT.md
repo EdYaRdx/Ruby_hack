@@ -1,4 +1,4 @@
-# GOAL 6.2 — Release Engineering Result
+# GOAL 6.3 — Release Engineering Result
 
 ## Evidence
 
@@ -14,6 +14,7 @@
 | Installed Web `/health` | PASS — HTTP 200, `{"ok":true}` |
 | Package content audit | PASS — no `research`, `spec` or benchmark tree in installed gem |
 | Documentation/example updater repeatability | PASS — second run completed without a new semantic change |
+| Cross-platform reproducibility | PASS — all four GitHub Actions matrix jobs passed hygiene verification |
 
 The clean install was exercised twice from empty working directories. The final
 run used ordinary `gem install provider_compiler-0.1.0.gem --no-document` with
@@ -23,10 +24,11 @@ bundled fixtures/profile/defaults and completed `inspect` successfully.
 
 ## Platform statement
 
-The CI workflow now declares Windows/Linux × Ruby 3.3/4.0. This checkout
-observed Windows with Ruby 4.0.6 and Bundler 2.5.22. Linux and Ruby 3.3 are
-configured acceptance lanes, but their execution is not evidence available in
-this local run and remains a release gate.
+The CI workflow declares Windows/Linux × Ruby 3.3/4.0. Run
+[34023508224](https://github.com/EdYaRdx/Ruby_hack/actions/runs/34023508224)
+observed all four matrix jobs completing successfully, including updater and
+repository-hygiene checks. This checkout also observed Windows with Ruby 4.0.6
+and Bundler 2.5.22.
 
 ## Packaging caveat
 
@@ -37,5 +39,6 @@ quality item, not a runtime or packaging-integrity failure.
 ## Release engineering conclusion
 
 The artifact is reproducibly buildable and runnable from a clean local install.
-It is checkpoint/demo ready under the repository harness; full preproduction
-acceptance remains pending Linux CI evidence and the real host runtime contract.
+Compiler-core preproduction acceptance is green under the repository harness
+and remote matrix. Real Space host integration remains pending because the
+production `Provider::BaseService` contract is not included.

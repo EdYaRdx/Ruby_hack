@@ -51,7 +51,9 @@ Space Payments production runtime is present in this checkout.
 
 - Production `Provider::BaseService` and its client/result classes are not
   included in this checkout; local verification uses the repository harness.
-- Linux CI and Ruby 3.3 execution are configured but were not observed in this
-  Windows-only execution environment.
+- The successful GitHub Actions matrix run
+  [34023508224](https://github.com/EdYaRdx/Ruby_hack/actions/runs/34023508224)
+  verified Windows/Linux and Ruby 3.3/4.0; the local checkout execution itself
+  remains Windows-only.
 - Provider credentials and webhook secrets are runtime inputs and are never
   persisted in Review overrides.

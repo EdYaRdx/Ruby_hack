@@ -76,7 +76,7 @@ module SecondProviderBenchmark
       }
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
-    File.write(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n", encoding: "UTF-8")
+    ProviderCompiler::Util.write_text(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n")
     puts ProviderCompiler::Util.pretty_json(report.fetch("aggregate"))
     puts "Wrote #{OUTPUT_PATH}"
     report

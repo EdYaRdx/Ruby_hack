@@ -16,7 +16,15 @@ abort "unsafe example output path" unless File.expand_path(OUTPUT) == expected_o
 
 FileUtils.rm_rf(OUTPUT)
 FileUtils.mkdir_p(OUTPUT)
-FileUtils.cp(SOURCE, File.join(OUTPUT, "provider_api.yaml"))
+
+def write_text(path, content)
+  text = content.to_s
+  text = text.dup.force_encoding("UTF-8") if text.encoding == Encoding::BINARY
+  normalized = text.encode("UTF-8").gsub(/\r\n?/, "\n")
+  File.binwrite(path, normalized)
+end
+
+write_text(File.join(OUTPUT, "provider_api.yaml"), File.binread(SOURCE))
 
 def run_cli(*arguments)
   stdout, stderr, status = Open3.capture3(RbConfig.ruby, "bin/provider_compiler", *arguments, chdir: ROOT)

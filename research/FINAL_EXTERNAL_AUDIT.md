@@ -1,4 +1,4 @@
-# GOAL 6.2 — Final External Audit
+# GOAL 6.3 — Final External Audit
 
 ## Audit mode
 
@@ -8,9 +8,11 @@ behavioral expectations, generated adapters, localhost HTTP servers, hostile
 OpenAPI tests, package inspection and the declared CI workflow. No live provider
 API, credential, neural service or proprietary runtime was used.
 
-No independent third-party reviewer or remote Linux runner was available in
-this environment. Therefore this document records an auditable internal
-acceptance candidate, not a fabricated external sign-off.
+No independent third-party reviewer was available in this environment. The
+GitHub Actions matrix was observed remotely in run
+[34023508224](https://github.com/EdYaRdx/Ruby_hack/actions/runs/34023508224), so
+this document records cross-platform compiler-core evidence, not a fabricated
+real Space production sign-off.
 
 ## Findings
 
@@ -21,14 +23,13 @@ acceptance candidate, not a fabricated external sign-off.
 - No compiler crashes in the frozen black-box lane.
 - No neural/proprietary runtime dependency or committed credential detected.
 
-### P1 — acceptance blockers remain
+### P1 — external acceptance items remain
 
 1. The actual production `Provider::BaseService` and its client/result contract
    are not supplied in this checkout. Generated code passes the repository
    harness and real localhost HTTP E2E, but staging integration cannot be
    signed off against an absent external contract.
-2. Linux and Ruby 3.3 CI are configured but not observed in this Windows run.
-3. An independent external reviewer has not executed the final acceptance.
+2. An independent external reviewer has not executed the final acceptance.
 
 ### P2 — non-blocking quality items
 
@@ -47,6 +48,8 @@ acceptance candidate, not a fabricated external sign-off.
 
 ## Audit conclusion
 
-The implementation is safe and reproducible within the supplied harness, but a
-truthful external acceptance verdict must remain open until the P1 conditions
-are resolved. No architecture redesign is required by these findings.
+The implementation is safe and reproducible within the supplied harness and
+the observed Windows/Linux × Ruby 3.3/4.0 matrix. Compiler-core acceptance is
+ready, while truthful real Space host acceptance remains open until the
+production contract and/or external review are supplied. No architecture
+redesign is required by these findings.

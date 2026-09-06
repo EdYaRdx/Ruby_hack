@@ -79,6 +79,14 @@ module ProviderCompiler
       JSON.pretty_generate(value).gsub(/\{\n\s*\}/, "{}").gsub(/\[\n\s*\]/, "[]")
     end
 
+    # Keep generated text artifacts byte-stable across Windows and Unix.
+    def write_text(path, content)
+      text = content.to_s
+      text = text.dup.force_encoding("UTF-8") if text.encoding == Encoding::BINARY
+      normalized = text.encode("UTF-8").gsub(/\r\n?/, "\n")
+      File.binwrite(path, normalized)
+    end
+
     def pointer_get(document, fragment)
       return document if fragment.nil? || fragment.empty? || fragment == "#"
 

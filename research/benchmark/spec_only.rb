@@ -52,7 +52,7 @@ module SpecOnlyBenchmark
       }
     }
     FileUtils.mkdir_p(File.dirname(OUTPUT_PATH))
-    File.write(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n", encoding: "UTF-8")
+    ProviderCompiler::Util.write_text(OUTPUT_PATH, ProviderCompiler::Util.pretty_json(report) + "\n")
     puts ProviderCompiler::Util.pretty_json(report.fetch("aggregate"))
     puts "Wrote #{OUTPUT_PATH}"
     report
@@ -64,7 +64,7 @@ module SpecOnlyBenchmark
     case_dir = File.join(work_dir, id)
     FileUtils.mkdir_p(case_dir)
     spec_path = File.join(case_dir, "provider_api.yaml")
-    File.write(spec_path, YAML.dump(document), encoding: "UTF-8")
+    ProviderCompiler::Util.write_text(spec_path, YAML.dump(document))
     pipeline = ProviderCompiler::Pipeline.new(spec_path: spec_path, profile_path: PROFILE_PATH, defaults_path: EMPTY_DEFAULTS_PATH)
     blueprint = pipeline.blueprint
     actual_decision = blueprint.fetch("decision")

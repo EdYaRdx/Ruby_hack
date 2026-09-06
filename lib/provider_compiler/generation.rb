@@ -791,7 +791,7 @@ module ProviderCompiler
         "INTEGRATION.md" => integration_doc(blueprint),
         "contract_smoke.rb" => smoke_harness(blueprint, fixture_data)
       }
-      files.each { |name, content| File.write(File.join(output_dir, name), content, mode: "w", encoding: "UTF-8") }
+      files.each { |name, content| Util.write_text(File.join(output_dir, name), content) }
       readiness_files = readiness ? IntegrationReadiness.write(output_dir, readiness) : []
       files.keys.map { |name| File.join(output_dir, name) } + readiness_files
     end
