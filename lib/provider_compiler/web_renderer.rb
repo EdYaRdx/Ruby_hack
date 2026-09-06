@@ -235,7 +235,7 @@ module ProviderCompiler
           #{needs_review ? "<div class=\"review-progress\"><div><strong>#{decisions.length} решения требуют подтверждения</strong><span>Шаг 1 из #{decisions.length}</span></div><div class=\"progress-track\"><span style=\"width: #{(100.0 / decisions.length).round(1)}%\"></span></div><small>После подтверждения автоматически откроется следующий нерешённый вопрос.</small></div>" : ""}
            #{decisions.empty? ? happy_review_card(summary, workspace) : review_decision_card(workspace, active_decision, 1, decisions.length)}
            #{needs_review && decisions.length > 1 ? review_queue(decisions.drop(1), 2) : ""}
-           <section class="card review-storage"><h2>Review decisions</h2><p>Confirmed decisions can be exported as a versioned local override. Applying the file later is allowed only for the same spec fingerprint and compatible host profile.</p><p><a class="button button-secondary" href="/workspace/#{workspace.id}/review/export">Export confirmed decisions</a></p><form method="post" action="/workspace/#{workspace.id}/review/import" enctype="multipart/form-data"><label class="input-label">Import provider_overrides.yml<input type="file" name="override_file" accept=".yml,.yaml" required></label><button class="button button-secondary" type="submit">Import Review decisions</button></form></section>
+           <section class="card review-storage"><h2>Подтверждённые решения</h2><p>Подтверждённые решения можно экспортировать в версионируемый локальный файл. Повторное применение разрешено только для той же спецификации и совместимого профиля хоста.</p><p>При изменении спецификации старые решения не применяются автоматически.</p><p><a class="button button-secondary" href="/workspace/#{workspace.id}/review/export">Экспортировать решения</a></p><form method="post" action="/workspace/#{workspace.id}/review/import" enctype="multipart/form-data"><label class="input-label">Импорт provider_overrides.yml<input type="file" name="override_file" accept=".yml,.yaml" required></label><button class="button button-secondary" type="submit">Импортировать решения</button></form></section>
          HTML
         layout(workspace, active: "review", title: workspace_title(workspace), subtitle: workspace_subtitle(workspace), state: display_state(workspace), content: content)
       end
@@ -288,16 +288,17 @@ module ProviderCompiler
 
         verification = workspace.verification
         artifact = if workspace.generated?
-                     selected = Web::ARTIFACTS.include?(artifact_name.to_s) ? artifact_name.to_s : "service.rb"
+                     selected = Web::ALL_ARTIFACTS.include?(artifact_name.to_s) ? artifact_name.to_s : "service.rb"
                      { "name" => selected, "content" => workspace.artifact(selected) }
                    end
+        artifact_count = Web::ALL_ARTIFACTS.length
         content = <<~HTML
           <div class="page-heading split-heading generation-hero">
             <div>
               <span class="eyebrow accent">ГЕНЕРАЦИЯ</span>
               <h1>#{workspace.generated? ? "✓ Интеграция сгенерирована" : "Готово к генерации"}</h1>
               <p>#{generation_subtitle(workspace, verification)}</p>
-              <div class="generation-summary"><strong>#{workspace.generated? ? Web::ARTIFACTS.length : Web::ARTIFACTS.length} файлов #{workspace.generated? ? "создано" : "будет создано"}</strong><span class="generation-check-note">#{workspace.generated? ? (verification && verification["passed"] ? "Обязательные проверки пройдены" : "Обязательная проверка не пройдена") : "#{workspace.blueprint["decisions"].length} из #{workspace.blueprint["decisions"].length} решений разрешены"}</span></div>
+              <div class="generation-summary"><strong>#{artifact_count} файлов #{workspace.generated? ? "создано" : "будет создано"}</strong><span class="generation-check-note">#{workspace.generated? ? (verification && verification["passed"] ? "Обязательные проверки пройдены" : "Обязательная проверка не пройдена") : "#{workspace.blueprint["decisions"].length} из #{workspace.blueprint["decisions"].length} решений разрешены"}</span></div>
             </div>
             #{workspace.generated? ? "" : '<form method="post" action="/workspace/' + workspace.id + '/generate"><button class="button button-primary" type="submit">Сгенерировать интеграцию</button></form>'}
           </div>
@@ -846,8 +847,8 @@ module ProviderCompiler
       end
 
       def artifact_panel(workspace, artifact)
-        primary = %w[service.rb INTEGRATION.md fixtures.json]
-        advanced = %w[provider_blueprint.json review_manifest.json contract_smoke.rb INTEGRATION_READINESS.md integration_readiness.json]
+        primary = Web::ARTIFACTS
+        advanced = Web::READINESS_ARTIFACTS
         tab_group = lambda do |names|
           names.map do |name|
           active = artifact && artifact["name"] == name ? "active" : ""

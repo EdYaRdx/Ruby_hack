@@ -318,9 +318,33 @@ RSpec.describe ProviderCompiler::Web::Application do
     artifact = call("GET", "/workspace/#{id}/artifact?name=service.rb")
 
     expect(generated.status).to eq(303)
-    expect(page.body).to include("ПРОВЕРЕНО", "Интеграция сгенерирована", "6 файлов создано", "Обязательные проверки пройдены", "Обязательные проверки", "Проверенные сценарии предпросмотра", "Интеграция проверена", "service.rb", "Проверка runtime", "ПРОЙДЕНО")
+    expect(page.body).to include("ПРОВЕРЕНО", "Интеграция сгенерирована", "8 файлов создано", "Обязательные проверки пройдены", "Обязательные проверки", "Проверенные сценарии предпросмотра", "Интеграция проверена", "service.rb", "Проверка runtime", "ПРОЙДЕНО")
+    expect(page.body).not_to include("6 файлов создано")
     expect(artifact.body).to include("class NovapayService")
     expect(store.fetch(id).verification.dig("syntax", 0, "passed")).to be(true)
+  end
+
+  it "derives the generation count from the complete artifact collection" do
+    response = call("POST", "/demo", body: "demo=novapay")
+    id = workspace_id(response)
+    call("POST", "/workspace/#{id}/generate")
+
+    page = call("GET", "/workspace/#{id}/generate").body
+    expected_count = ProviderCompiler::Web::ALL_ARTIFACTS.length
+
+    expect(page).to include("#{expected_count} файлов создано")
+    expect(page).not_to include("6 файлов создано") if expected_count != 6
+    ProviderCompiler::Web::ALL_ARTIFACTS.each { |name| expect(page).to include(name) }
+  end
+
+  it "localizes the persisted Review actions without changing their routes" do
+    response = call("POST", "/demo", body: "demo=novapay_spec_only")
+    id = workspace_id(response)
+    review = call("GET", "/workspace/#{id}/review").body
+
+    expect(review).to include("Подтверждённые решения", "Экспортировать решения", "Импорт provider_overrides.yml", "Импортировать решения")
+    expect(review).not_to include("Review decisions", "Export confirmed decisions", "Import Review decisions")
+    expect(review).to include("/workspace/#{id}/review/export", "/workspace/#{id}/review/import")
   end
 
   it "separates mandatory generation checks from optional preview scenarios" do
