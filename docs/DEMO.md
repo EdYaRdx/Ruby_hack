@@ -170,3 +170,15 @@ ruby bin/provider_compiler verify --out tmp/demo-generated
 Для произвольного входа укажите явно `--spec`, `--profile` и при необходимости
 `--defaults`. `analyze` создаёт только Blueprint и Manifest; runtime artifacts
 появляются после успешной validation в `generate`.
+
+## Фразы, которые нельзя перепутать
+
+- `10/14` — semantic decisions, не endpoints.
+- `37/37` — mutation cases, не providers.
+- `12/12` — frozen black-box cases, не providers.
+- localhost HTTP E2E ≠ external live provider.
+- resolved NovaPay = OpenAPI + confirmed rules.
+- Review ≠ failure; это fail-closed safety gate.
+- `request_method` ≠ HTTP method.
+- Provider Blueprint = source of truth.
+- Generated Ruby = deterministic projection.

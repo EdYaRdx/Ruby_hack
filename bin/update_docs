@@ -13,6 +13,7 @@ AURORA_JSON = File.join(TMP, "second_provider.json")
 SPEC_ONLY_JSON = File.join(ROOT, "research", "spec_only_novapay_report.json")
 THIRD_PROVIDER_JSON = File.join(TMP, "third_provider.json")
 RSPEC_JSON = File.join(TMP, "rspec.json")
+BLACK_BOX_JSON = File.join(ROOT, "research", "black_box_v1", "baseline_results.json")
 
 def run_ruby(environment, *arguments)
   stdout, stderr, status = Open3.capture3(environment, RbConfig.ruby, *arguments, chdir: ROOT)
@@ -81,6 +82,7 @@ aurora = read_json(AURORA_JSON)
 spec_only = read_json(SPEC_ONLY_JSON)
 third_provider = read_json(THIRD_PROVIDER_JSON)
 rspec = read_json(RSPEC_JSON)
+black_box = read_json(BLACK_BOX_JSON)
 
 # RSpec's JSON formatter includes wall-clock timing. Remove it so a second
 # updater run produces the same documentation snapshot.
@@ -107,6 +109,29 @@ aurora_spec_metrics = aurora_aggregate.fetch("pure_generic").fetch("metrics")
 aurora_resolved_metrics = aurora_aggregate.fetch("resolved").fetch("metrics")
 helios_spec_metrics = third_spec_only.fetch("metrics")
 helios_resolved_metrics = third_resolved.fetch("metrics")
+black_box_aggregate = black_box.fetch("aggregate")
+
+jury_summary_block = <<~MARKDOWN
+  **Что делает**
+
+  - Принимает OpenAPI YAML/JSON.
+  - Сопоставляет provider API с `Provider::BaseService`: operations, money, auth,
+    statuses, fields, webhooks, errors и idempotency.
+  - Показывает evidence и human review; критическая неоднозначность блокирует
+    unsafe generation.
+
+  **Доказательство (актуальный snapshot)**
+
+  - RSpec: #{rspec_summary.fetch("example_count")} примеров / #{rspec_summary.fetch("failure_count")} ошибок.
+  - Reference mutation benchmark: #{aggregate.fetch("cases_passed")}/#{aggregate.fetch("cases_total")} adversarial cases, а не провайдеров.
+  - Frozen black-box corpus: #{black_box_aggregate.fetch("cases_passed")}/#{black_box_aggregate.fetch("cases_total")} cases, а не провайдеров.
+  - Критических ложных ACCEPT: #{aggregate.fetch("critical_false_accept_count")}; попыток небезопасной генерации: #{aggregate.dig("metrics", "safety", "unsafe_generation_attempts")}.
+  - Outbound HTTP: generated adapter → реальный localhost HTTP E2E; Aurora и HeliosPay проходят независимые semantic/runtime проверки.
+  - CI: Windows/Linux × Ruby 3.3/4.0; текущий статус виден на green badge вверху страницы.
+
+  Числа обновляются из benchmark/RSpec через `ruby bin/update_docs`; оба результата
+  относятся к cases, не providers.
+MARKDOWN
 
 status_block = <<~MARKDOWN
   **Текущий снимок проверки (сгенерировано)**
@@ -186,6 +211,7 @@ MARKDOWN
 replace_block(File.join(ROOT, "README.md"), "PROJECT_STATUS", status_block)
 replace_block(File.join(ROOT, "README.md"), "CAPABILITIES", capabilities_block)
 replace_block(File.join(ROOT, "README.md"), "JUDGE_METRICS", judge_metrics_block)
+replace_block(File.join(ROOT, "README.md"), "JURY_SUMMARY", jury_summary_block)
 replace_block(File.join(ROOT, "docs", "BENCHMARK.md"), "BENCHMARK", benchmark_block)
 replace_block(File.join(ROOT, "research", "NOVAPAY_SPEC_ONLY_BASELINE.md"), "NOVAPAY_SPEC_ONLY_BASELINE", baseline_block)
 puts "Judge-facing metrics and generated documentation updated"

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/EdYaRdx/Ruby_hack/actions/workflows/ci.yml/badge.svg)](https://github.com/EdYaRdx/Ruby_hack/actions/workflows/ci.yml)
 
-> OpenAPI → Provider Blueprint на основе доказательств → проверенный Ruby-адаптер
+> OpenAPI → evidence-backed Provider Blueprint → verified Ruby adapter
 
 Provider Compiler принимает OpenAPI платёжного провайдера, сопоставляет
 API провайдера с контрактом Space Payments, формирует `Review Manifest` и
@@ -19,22 +19,43 @@ API провайдера с контрактом Space Payments, формиру�
 | Безопасность | критическая неоднозначность → генерация заблокирована |
 | Runtime | Ruby, детерминированная работа, без нейросетей |
 
-## Контракт Space Payments
+## Для жюри за 30 секунд
 
-Текущий `space_payments_v1` profile использует host operation со следующими
-границами: `operation.id`, `operation.amount` и
-`operation.payout_requisite` (JSONB/hash). SBP-реквизиты находятся в
-`operation.payout_requisite["sbp"]`, карточные — в
-`operation.payout_requisite["card_number"]`; плоские top-level
-`recipient_phone`/`bank_code`/`card_number` не гарантируются. `request_method`
-(`sbp`, `card`) — логический способ выплаты, не HTTP method и не `create`.
-Успешный create возвращает `success(result: { id: provider_operation_id })`;
-Provider operation id сохраняет Space Payments, а не generated service. Ошибки
-используют
-`failure(code, i18n_key)`, статусы — `approve_operation`/`reject_operation`, а
-неизвестные обязательные mappings проходят Review и fail-closed блокируют
-unsafe generation. Полная граница контракта — в
-[`docs/ORGANIZER_CONTRACT.md`](docs/ORGANIZER_CONTRACT.md).
+Provider Compiler берёт OpenAPI платёжного провайдера и превращает его в
+проверяемую проекцию на payment-domain contract Space Payments.
+
+| | |
+|---|---|
+| Input | OpenAPI YAML / JSON |
+| Output | `service.rb`, `INTEGRATION.md`, `fixtures.json` |
+| Что сопоставляется | operations, money, auth, statuses, fields, webhooks, errors, idempotency |
+| Safety gate | critical ambiguity → `REVIEW_REQUIRED` / `BLOCKING` → generation blocked |
+
+<!-- BEGIN GENERATED: JURY_SUMMARY -->
+**Что делает**
+
+- Принимает OpenAPI YAML/JSON.
+- Сопоставляет provider API с `Provider::BaseService`: operations, money, auth,
+  statuses, fields, webhooks, errors и idempotency.
+- Показывает evidence и human review; критическая неоднозначность блокирует
+  unsafe generation.
+
+**Доказательство (актуальный snapshot)**
+
+- RSpec: 135 примеров / 0 ошибок.
+- Reference mutation benchmark: 37/37 adversarial cases, а не провайдеров.
+- Frozen black-box corpus: 12/12 cases, а не провайдеров.
+- Критических ложных ACCEPT: 0; попыток небезопасной генерации: 0.
+- Outbound HTTP: generated adapter → реальный localhost HTTP E2E; Aurora и HeliosPay проходят независимые semantic/runtime проверки.
+- CI: Windows/Linux × Ruby 3.3/4.0; текущий статус виден на green badge вверху страницы.
+
+Числа обновляются из benchmark/RSpec через `ruby bin/update_docs`; оба результата
+относятся к cases, не providers.
+<!-- END GENERATED: JURY_SUMMARY -->
+
+Ключевая ценность — не в создании HTTP-класса, а в объяснимом mapping provider
+API на контракт хоста. Неоднозначность не угадывается: она сохраняется с
+evidence, попадает на human review и блокирует unsafe generation.
 
 ## Проблема
 
@@ -49,6 +70,15 @@ Space Payments регулярно подключает новых платёжн
 контракт платежей Space Payments. Именно это сопоставление, а не создание
 HTTP-классов, является
 центральной задачей Provider Compiler.
+
+## Что получает пользователь
+
+После успешного анализа и генерации пользователь получает детерминированный
+Ruby adapter `Provider::BaseService`, его `Provider Blueprint` и `Review Manifest`,
+а также `INTEGRATION.md`, `fixtures.json`, `contract_smoke.rb` и readiness report.
+Если критическое решение не подтверждено, система сохраняет analysis artifacts,
+но не выдаёт runtime integration artifacts. Подробное описание файлов находится в
+[разделе о generated artifacts](#что-генерируется).
 
 ## Чем отличается от OpenAPI Generator
 
@@ -101,6 +131,21 @@ Provider Compiler не позиционируется как универсал�
 внешнего платёжного provider или production `BaseService`; точные числа
 поддерживаются generated status block ниже.
 
+## Требование → доказательство
+
+| Требование | Реализация | Evidence |
+|---|---|---|
+| OpenAPI parsing | loader + Facts IR | parser и frozen black-box tests |
+| Auth, statuses, money и errors | integration analyzers | provider benchmarks и semantic comparator |
+| `Provider::BaseService` | deterministic generator | `service.rb` и contract smoke |
+| Реальные HTTP-запросы адаптера | generated runtime | localhost HTTP E2E |
+| Transformations и mapping | Provider Blueprint | Preview и behavioral vectors |
+| Webhook | HMAC/callback mapping | runtime tests и Aurora/Helios vectors |
+| Документация | generated `INTEGRATION.md` | canonical NovaPay example |
+| Fixtures | generated `fixtures.json` | canonical NovaPay example |
+| Универсальность | generic pipeline | NovaPay, Aurora, HeliosPay, black-box corpus |
+| Ruby majority | compliance audit | `docs/COMPLIANCE.md` и machine-readable report |
+
 ## Быстрый запуск
 
 Нужен Ruby `>= 3.3`; отдельное виртуальное окружение не требуется.
@@ -122,6 +167,22 @@ bundle exec ruby bin/provider_compiler_web
 
 Откройте `http://127.0.0.1:4567`. Полный сценарий находится в
 [`docs/DEMO.md`](docs/DEMO.md).
+
+## Контракт Space Payments
+
+Текущий `space_payments_v1` profile использует host operation со следующими
+границами: `operation.id`, `operation.amount` и
+`operation.payout_requisite` (JSONB/hash). SBP-реквизиты находятся в
+`operation.payout_requisite["sbp"]`, карточные — в
+`operation.payout_requisite["card_number"]`; плоские top-level
+`recipient_phone`/`bank_code`/`card_number` не гарантируются. `request_method`
+(`sbp`, `card`) — логический способ выплаты, не HTTP method и не `create`.
+Успешный create возвращает `success(result: { id: provider_operation_id })`;
+Provider operation id сохраняет Space Payments, а не generated service. Ошибки
+используют `failure(code, i18n_key)`, статусы — `approve_operation`/`reject_operation`,
+а неизвестные обязательные mappings проходят Review и fail-closed блокируют
+unsafe generation. Полная граница контракта — в
+[`docs/ORGANIZER_CONTRACT.md`](docs/ORGANIZER_CONTRACT.md).
 
 ## Pipeline: как работает
 
@@ -552,42 +613,49 @@ runner-ов и текущего запуска RSpec. Числа не копир
 
 ## Что не заявляется
 
-- поддержка любого существующего OpenAPI;
-- 100% automatic integration;
-- 37 реальных providers — benchmark содержит 37 mutation cases одного домена;
+- автоматическая готовность любого OpenAPI без review;
+- эквивалентность 37 mutation cases и 37 providers;
 - совместимость с реальным production `Space Payments BaseService` без его
   фактического contract;
 - live-вызов внешнего NovaPay sandbox.
 
 ## Документация
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — текущая архитектура и
-  инварианты;
+### Основные документы
+
+- [`docs/DEMO.md`](docs/DEMO.md) — сценарий Web UI, fail-closed, Aurora, HeliosPay
+  и CLI fallback;
+- [`docs/JURY_FAQ.md`](docs/JURY_FAQ.md) — короткие ответы на вопросы жюри;
 - [`docs/ORGANIZER_CONTRACT.md`](docs/ORGANIZER_CONTRACT.md) — актуальная граница
   host operation, результата, статусов и реквизитов;
-- [`docs/JURY_FAQ.md`](docs/JURY_FAQ.md) — краткие ответы для демонстрации жюри;
-- [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — методика, формулы и актуальные
-  результаты;
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — текущая архитектура и
+  инварианты;
 - [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — фактическая матрица
   поддерживаемых и отклоняемых OpenAPI-возможностей;
-- [`docs/DEMO.md`](docs/DEMO.md) — готовый live-сценарий для Web UI, fail-closed,
-  Aurora, HeliosPay и CLI fallback;
-- [`research/RUBRIC_TRACEABILITY_V2.md`](research/RUBRIC_TRACEABILITY_V2.md) —
-  трассировка official rubric: implementation → UI evidence → tests → limits;
-- [`research/GOAL_6_5_RESULT.md`](research/GOAL_6_5_RESULT.md) — текущий acceptance
-  snapshot multi-spec и localhost HTTP evidence;
-- [`research/GOAL_6_6_RESULT.md`](research/GOAL_6_6_RESULT.md) — итоговая нормализация
-  jury-facing документации и проверка готовности документации;
-- [`research/POST_CHECKPOINT_RUBRIC_AUDIT.md`](research/POST_CHECKPOINT_RUBRIC_AUDIT.md) —
-  audit official rubric и граница доказательств;
+- [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — методика, формулы и актуальные
+  результаты.
+
+### Разработка и справка
+
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — процесс разработки и проверок;
-- [`docs/DOCS_POLICY.md`](docs/DOCS_POLICY.md) — правила для стабильной и
+- [`docs/DOCS_POLICY.md`](docs/DOCS_POLICY.md) — правила стабильной и
   сгенерированной документации;
 - [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — аудит доли Ruby в исходном коде;
 - [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — единый словарь терминов;
-- [`THIRD_PARTY.md`](THIRD_PARTY.md) — зависимости и лицензии;
+- [`THIRD_PARTY.md`](THIRD_PARTY.md) — зависимости и лицензии.
+
+### Research и история
+
+- [`research/RUBRIC_TRACEABILITY_V2.md`](research/RUBRIC_TRACEABILITY_V2.md) —
+  трассировка official rubric: implementation → UI evidence → tests → limits;
+- [`research/GOAL_6_5_RESULT.md`](research/GOAL_6_5_RESULT.md) — acceptance snapshot
+  multi-spec и localhost HTTP evidence;
+- [`research/GOAL_6_6_RESULT.md`](research/GOAL_6_6_RESULT.md) — итоговая нормализация
+  jury-facing документации;
+- [`research/POST_CHECKPOINT_RUBRIC_AUDIT.md`](research/POST_CHECKPOINT_RUBRIC_AUDIT.md) —
+  audit official rubric и граница доказательств;
 - [`research/README.md`](research/README.md) — исследовательские материалы и
-  audit-артефакты с явным разделением текущих и исторических данных.
+  audit-артефакты с разделением текущих и исторических данных.
 
 ## Структура репозитория
 
