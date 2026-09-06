@@ -3,6 +3,11 @@ Gem::Specification.new do |spec|
   spec.version = "0.1.0"
   spec.summary = "Evidence-gated Ruby payment-provider integration compiler"
   spec.authors = ["Hack.Genesis"]
+  spec.homepage = "https://github.com/EdYaRdx/Ruby_hack"
+  spec.metadata = {
+    "source_code_uri" => "https://github.com/EdYaRdx/Ruby_hack",
+    "bug_tracker_uri" => "https://github.com/EdYaRdx/Ruby_hack/issues"
+  }
   # The repository keeps research, benchmarks and tests; the release gem keeps
   # only runtime code, bundled demo inputs, user-facing docs and executables.
   spec.files = Dir["lib/**/*", "bin/*", "web/**/*", "profiles/**/*", "fixtures/**/*", "docs/**/*", "README.md", "THIRD_PARTY.md", ".gitattributes"].select { |path| File.file?(path) }

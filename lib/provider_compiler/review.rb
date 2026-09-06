@@ -163,13 +163,27 @@ module ProviderCompiler
 
     def self.build(pipeline, verification: nil, generated: false, stale_override: nil)
       decisions = Array(pipeline.blueprint["decisions"])
+      decision_provenance = decisions.map { |decision| provenance_sources(decision) }
+      accepted = decisions.count { |item| item["outcome"] == "ACCEPT" }
+      accepted_without_human = decisions.count { |item| item["outcome"] == "ACCEPT" && !human_confirmed?(item) }
+      spec_evidence = decision_provenance.count { |sources| sources.any? { |source| source.start_with?("SPEC_") } }
+      builtin_evidence = decision_provenance.count { |sources| sources.any? { |source| source == "BUILTIN_RULE" || source == "GENERIC_RULE" } }
+      case_default_evidence = decision_provenance.count { |sources| sources.include?("CASE_DEFAULT") }
+      human_confirmed = decisions.count { |item| human_confirmed?(item) }
       counts = {
         "total_semantic_decisions" => decisions.length,
-        "automatic_accept_count" => decisions.count { |item| item["outcome"] == "ACCEPT" && !human_confirmed?(item) },
+        # Kept for consumers of the v1 readiness schema. This is an outcome
+        # count, not a claim that all values came from the specification.
+        "automatic_accept_count" => accepted_without_human,
+        "accepted_decisions" => accepted,
+        "accepted_without_human_confirmed" => accepted_without_human,
+        "spec_evidence_decisions" => spec_evidence,
+        "builtin_rule_evidence_decisions" => builtin_evidence,
+        "case_default_decisions" => case_default_evidence,
         "review_count" => decisions.count { |item| item["outcome"] == "REVIEW_REQUIRED" },
         "unknown_count" => decisions.count { |item| item["outcome"] == "UNKNOWN" },
         "blocking_count" => decisions.count { |item| item["severity"] == "BLOCKING" },
-        "human_decisions_supplied" => decisions.count { |item| human_confirmed?(item) },
+        "human_decisions_supplied" => human_confirmed,
         "unsupported_critical_features" => Array(pipeline.blueprint["unsupported_features"]).count { |item| item["generation_impact"] == "BLOCKING" }
       }
       generated_ok = generated && verification && verification["passed"] == true
@@ -190,15 +204,17 @@ module ProviderCompiler
           "money" => pipeline.blueprint["money"],
           "statuses" => pipeline.blueprint["statuses"],
           "fields" => pipeline.blueprint["field_mappings"],
-          "webhook" => pipeline.blueprint["webhook"],
+          "webhook" => webhook_semantics(pipeline.blueprint),
           "idempotency" => pipeline.blueprint["idempotency"],
           "errors" => pipeline.blueprint["errors"]
         },
         "decisions" => {
           "counts" => counts,
-          "spec_derived" => decisions.count { |item| item.fetch("evidence", []).any? { |evidence| evidence["source"].to_s.start_with?("SPEC_") } },
-          "human_confirmed" => counts["human_decisions_supplied"],
-          "case_defaults" => decisions.count { |item| item.fetch("evidence", []).any? { |evidence| evidence["source"] == "CASE_DEFAULT" } },
+          # Backward-compatible aliases retained for existing consumers.
+          "spec_derived" => spec_evidence,
+          "human_confirmed" => human_confirmed,
+          "case_defaults" => case_default_evidence,
+          "builtin_rule_evidence" => builtin_evidence,
           "adapter_policy" => Array(pipeline.blueprint.dig("idempotency", "adapter_policy")).empty? ? 0 : 1
         },
         "generation_ready" => pipeline.blueprint["decision"] == "ACCEPT" && counts["blocking_count"].zero?,
@@ -238,7 +254,11 @@ module ProviderCompiler
         ## Human effort
 
         - Total semantic decisions: #{counts.fetch("total_semantic_decisions")}
-        - Automatically resolved decisions: #{counts.fetch("automatic_accept_count")}
+        - Accepted in current Blueprint: #{counts.fetch("accepted_decisions")}
+        - Accepted without HUMAN_CONFIRMED: #{counts.fetch("accepted_without_human_confirmed")}
+        - Decisions with SPEC evidence: #{counts.fetch("spec_evidence_decisions")}
+        - Decisions with BUILTIN/generic rule evidence: #{counts.fetch("builtin_rule_evidence_decisions")}
+        - Decisions resolved using CASE_DEFAULT: #{counts.fetch("case_default_decisions")}
         - Questions requiring review: #{counts.fetch("review_count")}
         - Human decisions supplied: #{counts.fetch("human_decisions_supplied")}
         - Blocking unknowns: #{counts.fetch("blocking_count")}
@@ -274,6 +294,39 @@ module ProviderCompiler
       Array(decision["evidence"]).any? { |item| item["source"] == "HUMAN_CONFIRMED" } || (candidate.is_a?(Hash) && candidate["source"] == "HUMAN_CONFIRMED")
     end
     private_class_method :human_confirmed?
+
+    def self.provenance_sources(value, result = [])
+      case value
+      when Hash
+        value.each do |key, item|
+          key = key.to_s
+          if %w[source candidate_source provenance].include?(key)
+            result << item.to_s unless item.nil? || item.to_s.empty?
+          elsif key == "evidence_sources"
+            Array(item).each { |source| result << source.to_s unless source.nil? || source.to_s.empty? }
+          end
+          provenance_sources(item, result)
+        end
+      when Array
+        value.each { |item| provenance_sources(item, result) }
+      end
+      result.uniq
+    end
+    private_class_method :provenance_sources
+
+    def self.webhook_semantics(blueprint)
+      webhook = Util.deep_dup(blueprint["webhook"] || {})
+      explicit_mode = webhook["mode"].to_s.strip
+      webhook["mode"] = if !explicit_mode.empty?
+                           explicit_mode
+                         elsif webhook["endpoint"] || webhook["signature"].is_a?(Hash) || webhook["events"].is_a?(Hash)
+                           "webhook"
+                         else
+                           "unresolved"
+                         end
+      webhook
+    end
+    private_class_method :webhook_semantics
 
     def self.runtime_configuration(blueprint)
       slug = Util.slug(blueprint.dig("provider", "name"))

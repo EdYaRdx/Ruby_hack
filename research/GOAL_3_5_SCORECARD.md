@@ -1,5 +1,7 @@
 # GOAL 3.5: scorecard
 
+> **Current GOAL 6.10 extension (2026-09-06):** the original GOAL 3.5 figures remain historical for the frozen mutation/Aurora scope. The additional independent corpus is `3/3` spec-only ACCEPT, `3/3` semantic, `3/3` generation/localhost transport and `3/3` behavioral vectors, with zero CaseDefaults and zero HUMAN_CONFIRMED overrides. Full details: [GOAL_6_10_RESULT.md](GOAL_6_10_RESULT.md).
+
 > **ИСТОРИЧЕСКИЙ SNAPSHOT GOAL 3.5.** Это зафиксированный результат отдельного
 > этапа. Текущие counts и aggregate metrics обновляются в
 > [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).

@@ -1,5 +1,7 @@
 # GOAL 3.5: независимая semantic benchmark validation
 
+> **GOAL 6.10 current checkpoint (2026-09-06):** the frozen mutation lane remains `37/37` with zero critical false ACCEPTs. A separate independent spec-only success corpus now validates `3/3` materially different explicit providers with semantic comparison, generation, localhost transport and hand-authored behavioral vectors. See [GOAL_6_10_RESULT.md](GOAL_6_10_RESULT.md).
+
 > HISTORICAL SNAPSHOT — this GOAL 3.5 checkpoint predates the current GOAL 5.1 metric terminology and regression baseline. Current judge-facing evidence is maintained in [docs/BENCHMARK.md](../docs/BENCHMARK.md), [GOAL_5_RESULT.md](GOAL_5_RESULT.md), [NOVAPAY_SPEC_ONLY_BASELINE.md](NOVAPAY_SPEC_ONLY_BASELINE.md), and [spec_only_novapay_report.json](spec_only_novapay_report.json).
 
 Date: 2026-09-04

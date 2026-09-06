@@ -41,7 +41,7 @@
         },
         {
           "path": "bin/update_docs",
-          "loc": 174
+          "loc": 178
         },
         {
           "path": "bin/update_examples",
@@ -53,11 +53,11 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1064
+          "loc": 1082
         },
         {
           "path": "lib/provider_compiler/application.rb",
-          "loc": 148
+          "loc": 180
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
@@ -81,7 +81,7 @@
         },
         {
           "path": "lib/provider_compiler/review.rb",
-          "loc": 240
+          "loc": 288
         },
         {
           "path": "lib/provider_compiler/transport_verification.rb",
@@ -96,7 +96,7 @@
           "loc": 1118
         }
       ],
-      "loc": 5766
+      "loc": 5868
     },
     "other_participant_source": {
       "files": [
@@ -111,8 +111,8 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 6320,
-    "ruby_share_percent": 91.2
+    "total_source_loc": 6422,
+    "ruby_share_percent": 91.4
   },
   "production_plus_tests": {
     "ruby": {
@@ -131,7 +131,7 @@
         },
         {
           "path": "bin/update_docs",
-          "loc": 174
+          "loc": 178
         },
         {
           "path": "bin/update_examples",
@@ -143,11 +143,11 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1064
+          "loc": 1082
         },
         {
           "path": "lib/provider_compiler/application.rb",
-          "loc": 148
+          "loc": 180
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
@@ -171,7 +171,7 @@
         },
         {
           "path": "lib/provider_compiler/review.rb",
-          "loc": 240
+          "loc": 288
         },
         {
           "path": "lib/provider_compiler/transport_verification.rb",
@@ -195,7 +195,7 @@
         },
         {
           "path": "spec/cli_spec.rb",
-          "loc": 72
+          "loc": 136
         },
         {
           "path": "spec/documentation_spec.rb",
@@ -239,7 +239,7 @@
         },
         {
           "path": "spec/readiness_spec.rb",
-          "loc": 22
+          "loc": 42
         },
         {
           "path": "spec/release_e2e_spec.rb",
@@ -262,6 +262,10 @@
           "loc": 21
         },
         {
+          "path": "spec/spec_only_success_spec.rb",
+          "loc": 14
+        },
+        {
           "path": "spec/support/base_service_stub.rb",
           "loc": 19
         },
@@ -282,7 +286,7 @@
           "loc": 396
         }
       ],
-      "loc": 8185
+      "loc": 8385
     },
     "other_participant_source": {
       "files": [
@@ -297,7 +301,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 8739,
-    "ruby_share_percent": 93.7
+    "total_source_loc": 8939,
+    "ruby_share_percent": 93.8
   }
 }

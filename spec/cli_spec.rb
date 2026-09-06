@@ -81,4 +81,74 @@ RSpec.describe "provider_compiler CLI" do
       expect(File).not_to exist(File.join(directory, "service.rb"))
     end
   end
+
+  it "removes stale runtime and readiness artifacts when analyze follows generate" do
+    Dir.mktmpdir("provider-cli-stale") do |directory|
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "generate",
+        "--spec", SpecSupport::SPEC_PATH,
+        "--profile", SpecSupport::PROFILE_PATH,
+        "--defaults", SpecSupport::DEFAULTS_PATH,
+        "--out", directory
+      )
+      expect(status.success?).to be(true), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      expect(File).to exist(File.join(directory, "service.rb"))
+      expect(File).to exist(File.join(directory, "integration_readiness.json"))
+      expect(File).to exist(File.join(directory, "INTEGRATION_READINESS.md"))
+
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "analyze",
+        "--spec", SpecSupport::SPEC_PATH,
+        "--profile", SpecSupport::PROFILE_PATH,
+        "--out", directory
+      )
+      expect(status.success?).to be(true), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      expect(Dir.children(directory)).to contain_exactly("provider_blueprint.json", "review_manifest.json")
+    end
+  end
+
+  it "compiles an explicit resolved provider in one command and reports provenance" do
+    Dir.mktmpdir("provider-cli-compile") do |directory|
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "compile",
+        "--spec", SpecSupport::SPEC_PATH,
+        "--profile", SpecSupport::PROFILE_PATH,
+        "--defaults", SpecSupport::DEFAULTS_PATH,
+        "--out", directory
+      )
+
+      expect(status.exitstatus).to eq(0), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      expect(stdout).to include("Decision: ACCEPT", "Provenance:", "Verification: PASS", "Result: READY")
+      expect(File).to exist(File.join(directory, "service.rb"))
+      expect(File).to exist(File.join(directory, "fixtures.json"))
+      expect(File).to exist(File.join(directory, "integration_readiness.json"))
+    end
+  end
+
+  it "compiles explicit spec-only input without implicit NovaPay defaults and blocks runtime output" do
+    Dir.mktmpdir("provider-cli-compile-review") do |directory|
+      stdout, stderr, status = Open3.capture3(
+        RbConfig.ruby,
+        SpecSupport::BIN_PATH,
+        "compile",
+        "--spec", File.join(SpecSupport::ROOT, "fixtures", "aurora_transfer_api.yaml"),
+        "--profile", File.join(SpecSupport::ROOT, "profiles", "aurora_payments_v1.yml"),
+        "--out", directory
+      )
+
+      expect(status.exitstatus).to eq(2), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
+      expect(stdout).to include("Decision: REVIEW_REQUIRED", "case_default=0", "Result: GENERATION_BLOCKED")
+      expect(File).to exist(File.join(directory, "provider_blueprint.json"))
+      expect(File).to exist(File.join(directory, "review_manifest.json"))
+      expect(File).not_to exist(File.join(directory, "service.rb"))
+      expect(File).not_to exist(File.join(directory, "fixtures.json"))
+      expect(File).not_to exist(File.join(directory, "contract_smoke.rb"))
+    end
+  end
 end

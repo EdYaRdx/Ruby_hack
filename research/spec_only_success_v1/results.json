@@ -1,0 +1,1109 @@
+{
+  "schema_version": 1,
+  "benchmark": "spec_only_success_v1",
+  "methodology": "three materially different explicit OpenAPI specs; hand-authored semantics and behavioral vectors; no CaseDefaults or HUMAN_CONFIRMED overrides",
+  "providers": [
+    {
+      "provider_id": "ledger_one",
+      "spec": "specs/ledger_one.yaml",
+      "expected_decision": "ACCEPT",
+      "actual_decision": "ACCEPT",
+      "decision_pass": true,
+      "semantic": {
+        "passed": true,
+        "failures": [],
+        "areas": {
+          "operations": true,
+          "money": true,
+          "auth": true,
+          "statuses": true,
+          "webhook": true,
+          "idempotency": true,
+          "fields": true
+        }
+      },
+      "generation": {
+        "attempted": true,
+        "passed": true,
+        "verification": {
+          "passed": true,
+          "syntax": [
+            {
+              "path": "service.rb",
+              "passed": true,
+              "stdout": "Syntax OK\n",
+              "stderr": ""
+            },
+            {
+              "path": "contract_smoke.rb",
+              "passed": true,
+              "stdout": "Syntax OK\n",
+              "stderr": ""
+            }
+          ],
+          "smoke": {
+            "passed": true,
+            "stdout": "contract smoke passed\n",
+            "stderr": ""
+          },
+          "transport": {
+            "status": "PASS",
+            "method": "localhost_http_e2e",
+            "outbound_http_supported": true,
+            "base_url_runtime_configurable": true,
+            "base_url_env": "LEDGERONE_BASE_URL",
+            "auth_location": "query",
+            "create_request": {
+              "passed": true
+            },
+            "status_request": {
+              "passed": true
+            },
+            "response_parsing": {
+              "passed": true,
+              "result_status": "approved"
+            },
+            "checks": [
+              {
+                "name": "create.method",
+                "passed": true,
+                "expected": "POST",
+                "actual": "POST"
+              },
+              {
+                "name": "create.path",
+                "passed": true,
+                "expected": "/transfers",
+                "actual": "/transfers"
+              },
+              {
+                "name": "create.query",
+                "passed": true,
+                "expected": [
+                  "api_key"
+                ],
+                "actual": [
+                  "api_key"
+                ]
+              },
+              {
+                "name": "create.auth",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "create.body",
+                "passed": true,
+                "expected": {
+                  "amount": 1,
+                  "currency": "RUB",
+                  "external_id": "preview-value",
+                  "recipient": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                },
+                "actual": {
+                  "amount": 1,
+                  "currency": "RUB",
+                  "external_id": "preview-value",
+                  "recipient": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                }
+              },
+              {
+                "name": "create.content_type",
+                "passed": true,
+                "expected": "application/json",
+                "actual": "application/json"
+              },
+              {
+                "name": "status.method",
+                "passed": true,
+                "expected": "GET",
+                "actual": "GET"
+              },
+              {
+                "name": "status.path",
+                "passed": true,
+                "expected": "/transfers/preview-value",
+                "actual": "/transfers/preview-value"
+              },
+              {
+                "name": "status.auth",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "response.parsing",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "response.status_mapping",
+                "passed": true,
+                "expected": "approved",
+                "actual": "approved"
+              }
+            ],
+            "requests": {
+              "create": {
+                "method": "POST",
+                "path": "/transfers",
+                "query": {
+                  "api_key": "[REDACTED]"
+                },
+                "headers": {
+                  "accept-encoding": [
+                    "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+                  ],
+                  "accept": [
+                    "*/*"
+                  ],
+                  "user-agent": [
+                    "Ruby"
+                  ],
+                  "host": [
+                    "127.0.0.1:<PORT>"
+                  ],
+                  "content-type": [
+                    "application/json"
+                  ],
+                  "content-length": [
+                    "138"
+                  ]
+                },
+                "body": {
+                  "amount": 1,
+                  "currency": "RUB",
+                  "external_id": "preview-value",
+                  "recipient": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                }
+              },
+              "status": {
+                "method": "GET",
+                "path": "/transfers/preview-value",
+                "query": {
+                  "api_key": "[REDACTED]"
+                },
+                "headers": {
+                  "accept-encoding": [
+                    "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+                  ],
+                  "accept": [
+                    "*/*"
+                  ],
+                  "user-agent": [
+                    "Ruby"
+                  ],
+                  "host": [
+                    "127.0.0.1:<PORT>"
+                  ]
+                },
+                "body": null
+              }
+            },
+            "external_provider_call": {
+              "executed": false,
+              "reason": "No real sandbox endpoint/credentials supplied"
+            }
+          }
+        }
+      },
+      "behavioral_vectors": [
+        {
+          "passed": true,
+          "checks": {
+            "method": true,
+            "path": true,
+            "body": true,
+            "query": true
+          },
+          "actual": {
+            "method": "POST",
+            "path": "/transfers",
+            "url": "https://sandbox.ledgerone.example/v1/transfers",
+            "headers": {},
+            "query": {
+              "api_key": "independent-vector-key"
+            },
+            "body": {
+              "amount": 1234,
+              "currency": "RUB",
+              "external_id": "op-ledger-1",
+              "recipient": {
+                "type": "sbp",
+                "bank_code": "044525225",
+                "phone": "79000000001"
+              }
+            }
+          },
+          "expected": {
+            "method": "POST",
+            "path": "/transfers",
+            "query": {
+              "api_key": "[REDACTED]"
+            },
+            "body": {
+              "amount": 1234,
+              "currency": "RUB",
+              "external_id": "op-ledger-1",
+              "recipient": {
+                "type": "sbp",
+                "phone": "79000000001",
+                "bank_code": "044525225"
+              }
+            }
+          },
+          "name": "create_request"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "method": true,
+            "path": true,
+            "body": true,
+            "query": true
+          },
+          "actual": {
+            "method": "GET",
+            "path": "/transfers/tr_ledger_1",
+            "url": "https://sandbox.ledgerone.example/v1/transfers/tr_ledger_1",
+            "headers": {},
+            "query": {
+              "api_key": "independent-vector-key"
+            }
+          },
+          "expected": {
+            "method": "GET",
+            "path": "/transfers/tr_ledger_1",
+            "query": {
+              "api_key": "[REDACTED]"
+            }
+          },
+          "name": "fetch_status"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "status": true,
+            "provider_operation_id": true,
+            "amount": true
+          },
+          "actual": {
+            "ok": true,
+            "provider_status": "settled",
+            "status": "approved",
+            "response": {
+              "transfer_id": "tr_ledger_1",
+              "status": "settled",
+              "amount": 1234,
+              "currency": "RUB"
+            },
+            "http_status": "200",
+            "provider_operation_id": "tr_ledger_1",
+            "amount": "0.1234e2",
+            "action": "approve_operation",
+            "terminal": true,
+            "action_result": {
+              "ok": true,
+              "action": "approve_operation",
+              "operation": "tr_ledger_1"
+            }
+          },
+          "expected": {
+            "status": "approved",
+            "provider_operation_id": "tr_ledger_1",
+            "amount": 12.34
+          },
+          "name": "provider_status_response"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "status": true,
+            "event": true,
+            "action": true
+          },
+          "actual": {
+            "ok": true,
+            "provider_status": "settled",
+            "status": "approved",
+            "event": "transfer.settled",
+            "external_id": "op-ledger-1",
+            "provider_operation_id": "tr_ledger_1",
+            "action": "approve_operation",
+            "terminal": true,
+            "action_result": {
+              "ok": true,
+              "action": "approve_operation",
+              "operation": "tr_ledger_1"
+            }
+          },
+          "expected": {
+            "status": "approved",
+            "event": "transfer.settled",
+            "action": "approve_operation"
+          },
+          "name": "settled_webhook"
+        }
+      ],
+      "no_case_defaults_or_human_overrides": true,
+      "passed": true,
+      "manifest_summary": {
+        "decisions": 12,
+        "blocking": 0,
+        "review_required": 0,
+        "accepted": 12
+      }
+    },
+    {
+      "provider_id": "orbit_remit",
+      "spec": "specs/orbit_remit.yaml",
+      "expected_decision": "ACCEPT",
+      "actual_decision": "ACCEPT",
+      "decision_pass": true,
+      "semantic": {
+        "passed": true,
+        "failures": [],
+        "areas": {
+          "operations": true,
+          "money": true,
+          "auth": true,
+          "statuses": true,
+          "webhook": true,
+          "idempotency": true,
+          "fields": true
+        }
+      },
+      "generation": {
+        "attempted": true,
+        "passed": true,
+        "verification": {
+          "passed": true,
+          "syntax": [
+            {
+              "path": "service.rb",
+              "passed": true,
+              "stdout": "Syntax OK\n",
+              "stderr": ""
+            },
+            {
+              "path": "contract_smoke.rb",
+              "passed": true,
+              "stdout": "Syntax OK\n",
+              "stderr": ""
+            }
+          ],
+          "smoke": {
+            "passed": true,
+            "stdout": "contract smoke passed\n",
+            "stderr": ""
+          },
+          "transport": {
+            "status": "PASS",
+            "method": "localhost_http_e2e",
+            "outbound_http_supported": true,
+            "base_url_runtime_configurable": true,
+            "base_url_env": "ORBIT_BASE_URL",
+            "auth_location": "header",
+            "create_request": {
+              "passed": true
+            },
+            "status_request": {
+              "passed": true
+            },
+            "response_parsing": {
+              "passed": true,
+              "result_status": "approved"
+            },
+            "checks": [
+              {
+                "name": "create.method",
+                "passed": true,
+                "expected": "POST",
+                "actual": "POST"
+              },
+              {
+                "name": "create.path",
+                "passed": true,
+                "expected": "/payments",
+                "actual": "/payments"
+              },
+              {
+                "name": "create.query",
+                "passed": true,
+                "expected": [],
+                "actual": []
+              },
+              {
+                "name": "create.auth",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "create.body",
+                "passed": true,
+                "expected": {
+                  "money": {
+                    "value": 1,
+                    "currency": "RUB"
+                  },
+                  "external_reference": "preview-value",
+                  "beneficiary": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                },
+                "actual": {
+                  "money": {
+                    "value": 1,
+                    "currency": "RUB"
+                  },
+                  "external_reference": "preview-value",
+                  "beneficiary": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                }
+              },
+              {
+                "name": "create.content_type",
+                "passed": true,
+                "expected": "application/json",
+                "actual": "application/json"
+              },
+              {
+                "name": "status.method",
+                "passed": true,
+                "expected": "GET",
+                "actual": "GET"
+              },
+              {
+                "name": "status.path",
+                "passed": true,
+                "expected": "/payments/preview-value/state",
+                "actual": "/payments/preview-value/state"
+              },
+              {
+                "name": "status.auth",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "response.parsing",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "response.status_mapping",
+                "passed": true,
+                "expected": "approved",
+                "actual": "approved"
+              }
+            ],
+            "requests": {
+              "create": {
+                "method": "POST",
+                "path": "/payments",
+                "query": {},
+                "headers": {
+                  "accept-encoding": [
+                    "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+                  ],
+                  "accept": [
+                    "*/*"
+                  ],
+                  "user-agent": [
+                    "Ruby"
+                  ],
+                  "host": [
+                    "127.0.0.1:<PORT>"
+                  ],
+                  "authorization": [
+                    "[REDACTED]"
+                  ],
+                  "content-type": [
+                    "application/json"
+                  ],
+                  "content-length": [
+                    "156"
+                  ]
+                },
+                "body": {
+                  "money": {
+                    "value": 1,
+                    "currency": "RUB"
+                  },
+                  "external_reference": "preview-value",
+                  "beneficiary": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                }
+              },
+              "status": {
+                "method": "GET",
+                "path": "/payments/preview-value/state",
+                "query": {},
+                "headers": {
+                  "accept-encoding": [
+                    "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+                  ],
+                  "accept": [
+                    "*/*"
+                  ],
+                  "user-agent": [
+                    "Ruby"
+                  ],
+                  "host": [
+                    "127.0.0.1:<PORT>"
+                  ],
+                  "authorization": [
+                    "[REDACTED]"
+                  ]
+                },
+                "body": null
+              }
+            },
+            "external_provider_call": {
+              "executed": false,
+              "reason": "No real sandbox endpoint/credentials supplied"
+            }
+          }
+        }
+      },
+      "behavioral_vectors": [
+        {
+          "passed": true,
+          "checks": {
+            "method": true,
+            "path": true,
+            "body": true,
+            "auth": true
+          },
+          "actual": {
+            "method": "POST",
+            "path": "/payments",
+            "url": "https://sandbox.orbit-remit.example/api/payments",
+            "headers": {
+              "Authorization": "Bearer independent-vector-key"
+            },
+            "query": {},
+            "body": {
+              "money": {
+                "value": 12.34,
+                "currency": "RUB"
+              },
+              "external_reference": "op-orbit-1",
+              "beneficiary": {
+                "type": "sbp",
+                "bank_code": "044525225",
+                "phone": "79000000002"
+              }
+            }
+          },
+          "expected": {
+            "method": "POST",
+            "path": "/payments",
+            "body": {
+              "money": {
+                "value": 12.34,
+                "currency": "RUB"
+              },
+              "external_reference": "op-orbit-1",
+              "beneficiary": {
+                "type": "sbp",
+                "phone": "79000000002",
+                "bank_code": "044525225"
+              }
+            }
+          },
+          "name": "create_request"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "method": true,
+            "path": true,
+            "body": true,
+            "auth": true
+          },
+          "actual": {
+            "method": "GET",
+            "path": "/payments/pay_orbit_1/state",
+            "url": "https://sandbox.orbit-remit.example/api/payments/pay_orbit_1/state",
+            "headers": {
+              "Authorization": "Bearer independent-vector-key"
+            },
+            "query": {}
+          },
+          "expected": {
+            "method": "GET",
+            "path": "/payments/pay_orbit_1/state"
+          },
+          "name": "fetch_status"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "status": true,
+            "provider_operation_id": true,
+            "amount": true
+          },
+          "actual": {
+            "ok": true,
+            "provider_status": "completed",
+            "status": "approved",
+            "response": {
+              "payment_id": "pay_orbit_1",
+              "state": "completed",
+              "money": {
+                "value": 12.34,
+                "currency": "RUB"
+              }
+            },
+            "http_status": "200",
+            "provider_operation_id": "pay_orbit_1",
+            "amount": "0.1234e2",
+            "action": "approve_operation",
+            "terminal": true,
+            "action_result": {
+              "ok": true,
+              "action": "approve_operation",
+              "operation": "pay_orbit_1"
+            }
+          },
+          "expected": {
+            "status": "approved",
+            "provider_operation_id": "pay_orbit_1",
+            "amount": 12.34
+          },
+          "name": "provider_status_response"
+        },
+        {
+          "passed": true,
+          "actual": {
+            "ok": false,
+            "failure_code": "unprocessable_entity",
+            "i18n_key": "provider.polling_only",
+            "error": "provider has no webhook; polling-only integration",
+            "error_code": "polling_only",
+            "provider_compiler_failure": true
+          },
+          "expected": {
+            "error_code": "polling_only"
+          },
+          "name": "polling_callback"
+        }
+      ],
+      "no_case_defaults_or_human_overrides": true,
+      "passed": true,
+      "manifest_summary": {
+        "decisions": 11,
+        "blocking": 0,
+        "review_required": 0,
+        "accepted": 11
+      }
+    },
+    {
+      "provider_id": "quanta_payout",
+      "spec": "specs/quanta_payout.yaml",
+      "expected_decision": "ACCEPT",
+      "actual_decision": "ACCEPT",
+      "decision_pass": true,
+      "semantic": {
+        "passed": true,
+        "failures": [],
+        "areas": {
+          "operations": true,
+          "money": true,
+          "auth": true,
+          "statuses": true,
+          "webhook": true,
+          "idempotency": true,
+          "fields": true
+        }
+      },
+      "generation": {
+        "attempted": true,
+        "passed": true,
+        "verification": {
+          "passed": true,
+          "syntax": [
+            {
+              "path": "service.rb",
+              "passed": true,
+              "stdout": "Syntax OK\n",
+              "stderr": ""
+            },
+            {
+              "path": "contract_smoke.rb",
+              "passed": true,
+              "stdout": "Syntax OK\n",
+              "stderr": ""
+            }
+          ],
+          "smoke": {
+            "passed": true,
+            "stdout": "contract smoke passed\n",
+            "stderr": ""
+          },
+          "transport": {
+            "status": "PASS",
+            "method": "localhost_http_e2e",
+            "outbound_http_supported": true,
+            "base_url_runtime_configurable": true,
+            "base_url_env": "QUANTA_BASE_URL",
+            "auth_location": "header",
+            "create_request": {
+              "passed": true
+            },
+            "status_request": {
+              "passed": true
+            },
+            "response_parsing": {
+              "passed": true,
+              "result_status": "approved"
+            },
+            "checks": [
+              {
+                "name": "create.method",
+                "passed": true,
+                "expected": "POST",
+                "actual": "POST"
+              },
+              {
+                "name": "create.path",
+                "passed": true,
+                "expected": "/withdrawals",
+                "actual": "/withdrawals"
+              },
+              {
+                "name": "create.query",
+                "passed": true,
+                "expected": [],
+                "actual": []
+              },
+              {
+                "name": "create.auth",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "create.body",
+                "passed": true,
+                "expected": {
+                  "amount": 1,
+                  "currency": "RUB",
+                  "reference": "preview-value",
+                  "beneficiary": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                },
+                "actual": {
+                  "amount": 1,
+                  "currency": "RUB",
+                  "reference": "preview-value",
+                  "beneficiary": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                }
+              },
+              {
+                "name": "create.content_type",
+                "passed": true,
+                "expected": "application/json",
+                "actual": "application/json"
+              },
+              {
+                "name": "status.method",
+                "passed": true,
+                "expected": "GET",
+                "actual": "GET"
+              },
+              {
+                "name": "status.path",
+                "passed": true,
+                "expected": "/withdrawals/preview-value/state",
+                "actual": "/withdrawals/preview-value/state"
+              },
+              {
+                "name": "status.auth",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "response.parsing",
+                "passed": true,
+                "expected": true,
+                "actual": true
+              },
+              {
+                "name": "response.status_mapping",
+                "passed": true,
+                "expected": "approved",
+                "actual": "approved"
+              }
+            ],
+            "requests": {
+              "create": {
+                "method": "POST",
+                "path": "/withdrawals",
+                "query": {},
+                "headers": {
+                  "accept-encoding": [
+                    "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+                  ],
+                  "accept": [
+                    "*/*"
+                  ],
+                  "user-agent": [
+                    "Ruby"
+                  ],
+                  "host": [
+                    "127.0.0.1:<PORT>"
+                  ],
+                  "x-quanta-key": [
+                    "transport-verification-key"
+                  ],
+                  "content-type": [
+                    "application/json"
+                  ],
+                  "content-length": [
+                    "138"
+                  ]
+                },
+                "body": {
+                  "amount": 1,
+                  "currency": "RUB",
+                  "reference": "preview-value",
+                  "beneficiary": {
+                    "type": "sbp",
+                    "bank_code": "preview-value",
+                    "phone": "preview-value"
+                  }
+                }
+              },
+              "status": {
+                "method": "GET",
+                "path": "/withdrawals/preview-value/state",
+                "query": {},
+                "headers": {
+                  "accept-encoding": [
+                    "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
+                  ],
+                  "accept": [
+                    "*/*"
+                  ],
+                  "user-agent": [
+                    "Ruby"
+                  ],
+                  "host": [
+                    "127.0.0.1:<PORT>"
+                  ],
+                  "x-quanta-key": [
+                    "transport-verification-key"
+                  ]
+                },
+                "body": null
+              }
+            },
+            "external_provider_call": {
+              "executed": false,
+              "reason": "No real sandbox endpoint/credentials supplied"
+            }
+          }
+        }
+      },
+      "behavioral_vectors": [
+        {
+          "passed": true,
+          "checks": {
+            "method": true,
+            "path": true,
+            "body": true,
+            "auth": true
+          },
+          "actual": {
+            "method": "POST",
+            "path": "/withdrawals",
+            "url": "https://sandbox.quanta.example/v3/withdrawals",
+            "headers": {
+              "X-Quanta-Key": "independent-vector-key"
+            },
+            "query": {},
+            "body": {
+              "amount": 12345,
+              "currency": "RUB",
+              "reference": "op-quanta-1",
+              "beneficiary": {
+                "type": "sbp",
+                "bank_code": "044525225",
+                "phone": "79000000003"
+              }
+            }
+          },
+          "expected": {
+            "method": "POST",
+            "path": "/withdrawals",
+            "body": {
+              "amount": 12345,
+              "currency": "RUB",
+              "reference": "op-quanta-1",
+              "beneficiary": {
+                "type": "sbp",
+                "phone": "79000000003",
+                "bank_code": "044525225"
+              }
+            }
+          },
+          "name": "create_request"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "method": true,
+            "path": true,
+            "body": true,
+            "auth": true
+          },
+          "actual": {
+            "method": "GET",
+            "path": "/withdrawals/wd_quanta_1/state",
+            "url": "https://sandbox.quanta.example/v3/withdrawals/wd_quanta_1/state",
+            "headers": {
+              "X-Quanta-Key": "independent-vector-key"
+            },
+            "query": {}
+          },
+          "expected": {
+            "method": "GET",
+            "path": "/withdrawals/wd_quanta_1/state"
+          },
+          "name": "fetch_status"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "status": true,
+            "provider_operation_id": true,
+            "amount": true
+          },
+          "actual": {
+            "ok": true,
+            "provider_status": "declined",
+            "status": "rejected",
+            "response": {
+              "withdrawal_id": "wd_quanta_1",
+              "state": "declined",
+              "amount": 12345,
+              "currency": "RUB"
+            },
+            "http_status": "200",
+            "provider_operation_id": "wd_quanta_1",
+            "amount": "0.12345e2",
+            "action": "reject_operation",
+            "terminal": true,
+            "action_result": {
+              "ok": true,
+              "action": "reject_operation",
+              "operation": "wd_quanta_1"
+            }
+          },
+          "expected": {
+            "status": "rejected",
+            "provider_operation_id": "wd_quanta_1",
+            "amount": 12.345
+          },
+          "name": "provider_status_response"
+        },
+        {
+          "passed": true,
+          "checks": {
+            "status": true,
+            "event": true,
+            "action": true
+          },
+          "actual": {
+            "ok": true,
+            "provider_status": "",
+            "status": "rejected",
+            "event": "withdrawal.declined",
+            "external_id": "op-quanta-1",
+            "provider_operation_id": "wd_quanta_1",
+            "action": "reject_operation",
+            "terminal": true,
+            "action_result": {
+              "ok": true,
+              "action": "reject_operation",
+              "operation": "wd_quanta_1"
+            }
+          },
+          "expected": {
+            "status": "rejected",
+            "event": "withdrawal.declined",
+            "action": "reject_operation"
+          },
+          "name": "declined_webhook"
+        }
+      ],
+      "no_case_defaults_or_human_overrides": true,
+      "passed": true,
+      "manifest_summary": {
+        "decisions": 12,
+        "blocking": 0,
+        "review_required": 0,
+        "accepted": 12
+      }
+    }
+  ],
+  "aggregate": {
+    "providers_total": 3,
+    "providers_passed": 3,
+    "spec_only_accept_count": 3,
+    "spec_only_accept_rate": 100.0,
+    "generation_pass_count": 3,
+    "generation_pass_rate": 100.0,
+    "behavioral_vector_pass_count": 3,
+    "behavioral_vector_pass_rate": 100.0,
+    "semantic_pass_count": 3,
+    "operation_semantic_accuracy": 100.0,
+    "money_semantic_accuracy": 100.0,
+    "status_semantic_accuracy": 100.0,
+    "auth_semantic_accuracy": 100.0,
+    "webhook_semantic_accuracy": 100.0,
+    "idempotency_semantic_accuracy": 100.0,
+    "field_mapping_semantic_accuracy": 100.0,
+    "corpus_pass": true
+  },
+  "formulas": {
+    "spec_only_accept_rate": "spec-only ACCEPT providers / total providers",
+    "generation_pass_rate": "providers with generated service, contract smoke and verification PASS / total providers",
+    "behavioral_vector_pass_rate": "providers with all independent runtime vectors PASS / total providers",
+    "corpus_pass": "all providers pass decision, semantic, generation and behavioral checks"
+  }
+}

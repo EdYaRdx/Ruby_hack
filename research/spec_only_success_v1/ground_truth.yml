@@ -1,0 +1,80 @@
+schema_version: 1
+corpus: spec_only_success_v1
+providers:
+  ledger_one:
+    spec: specs/ledger_one.yaml
+    expected_decision: ACCEPT
+    operations:
+      create_request: { method: POST, path: /transfers, operation_id: createTransfer }
+      fetch_status: { method: GET, path: "/transfers/{transfer_id}", operation_id: getTransferStatus }
+      process_callback: { method: POST, path: /callbacks/transfer, operation_id: transferCallback }
+    money:
+      host_unit: major
+      provider_unit: minor
+      scale: 100
+      request_factor: 100
+      response_factor_decimal: "0.01"
+    auth: { kind: api_key, location: query, name: api_key }
+    idempotency: { header: Idempotency-Key, spec_required: false }
+    statuses: { queued: in_progress, settled: approved, declined: rejected }
+    webhook:
+      endpoint: /callbacks/transfer
+      algorithm: HMAC-SHA256
+      header: X-Ledger-Signature
+      input: raw_body
+      encoding: hex
+      events: { transfer.queued: in_progress, transfer.settled: approved, transfer.declined: rejected }
+    fields:
+      - { canonical_path: operation.amount, provider_path: request.amount, direction: request, factor: 100 }
+      - { canonical_path: operation.currency, provider_path: request.currency, direction: request }
+      - { canonical_path: operation.provider_operation_id, provider_path: response.transfer_id, direction: response }
+      - { canonical_path: operation.status, provider_path: response.status, direction: response, transform: status_map }
+  orbit_remit:
+    spec: specs/orbit_remit.yaml
+    expected_decision: ACCEPT
+    operations:
+      create_request: { method: POST, path: /payments, operation_id: initiatePayment }
+      fetch_status: { method: GET, path: "/payments/{payment_id}/state", operation_id: getPaymentState }
+    money:
+      host_unit: major
+      provider_unit: major
+      scale: 1
+      request_factor: 1
+      response_factor_decimal: "1"
+    auth: { kind: bearer, location: header, name: Authorization }
+    idempotency: { header: Idempotency-Key, spec_required: false }
+    statuses: { pending: in_progress, completed: approved, failed: rejected }
+    webhook: { mode: polling_only }
+    fields:
+      - { canonical_path: operation.amount, provider_path: request.money.value, direction: request, factor: 1 }
+      - { canonical_path: operation.currency, provider_path: request.money.currency, direction: request }
+      - { canonical_path: operation.provider_operation_id, provider_path: response.payment_id, direction: response }
+      - { canonical_path: operation.status, provider_path: response.state, direction: response, transform: status_map }
+  quanta_payout:
+    spec: specs/quanta_payout.yaml
+    expected_decision: ACCEPT
+    operations:
+      create_request: { method: POST, path: /withdrawals, operation_id: submitWithdrawal }
+      fetch_status: { method: GET, path: "/withdrawals/{withdrawal_id}/state", operation_id: getWithdrawalState }
+      process_callback: { method: POST, path: /notifications/withdrawals, operation_id: withdrawalNotification }
+    money:
+      host_unit: major
+      provider_unit: minor
+      scale: 1000
+      request_factor: 1000
+      response_factor_decimal: "0.001"
+    auth: { kind: api_key, location: header, name: X-Quanta-Key }
+    idempotency: { header: Idempotency-Key, spec_required: false }
+    statuses: { queued: in_progress, settled: approved, declined: rejected }
+    webhook:
+      endpoint: /notifications/withdrawals
+      algorithm: HMAC-SHA256
+      header: X-Quanta-Signature
+      input: raw_body
+      encoding: hex
+      events: { withdrawal.queued: in_progress, withdrawal.settled: approved, withdrawal.declined: rejected }
+    fields:
+      - { canonical_path: operation.amount, provider_path: request.amount, direction: request, factor: 1000 }
+      - { canonical_path: operation.currency, provider_path: request.currency, direction: request }
+      - { canonical_path: operation.provider_operation_id, provider_path: response.withdrawal_id, direction: response }
+      - { canonical_path: operation.status, provider_path: response.state, direction: response, transform: status_map }

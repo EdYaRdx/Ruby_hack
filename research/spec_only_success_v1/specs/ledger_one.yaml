@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: LedgerOne Transfer API
+  version: 1.0.0
+servers:
+  - url: https://sandbox.ledgerone.example/v1
+    description: Sandbox
+components:
+  securitySchemes:
+    QueryKey:
+      type: apiKey
+      in: query
+      name: api_key
+  schemas:
+    TransferRequest:
+      type: object
+      required: [amount, currency, external_id, recipient]
+      properties:
+        amount:
+          type: integer
+          description: Amount in minor RUB units (kopecks); scale 100.
+          x-minor-unit-scale: 100
+        currency: { type: string, enum: [RUB] }
+        external_id: { type: string }
+        recipient:
+          type: object
+          properties:
+            type: { type: string, enum: [sbp] }
+            phone: { type: string }
+            bank_code: { type: string }
+    TransferResponse:
+      type: object
+      properties:
+        transfer_id: { type: string }
+        status:
+          type: string
+          enum: [queued, settled, declined]
+          description: "queued: canonical in_progress; settled: canonical approved; declined: canonical rejected."
+        amount: { type: integer }
+        currency: { type: string }
+    TransferEvent:
+      type: object
+      properties:
+        event: { type: string, enum: [transfer.queued, transfer.settled, transfer.declined] }
+        transfer_id: { type: string }
+        external_id: { type: string }
+        status: { type: string, enum: [queued, settled, declined] }
+paths:
+  /transfers:
+    post:
+      operationId: createTransfer
+      security: [{ QueryKey: [] }]
+      parameters: [{ name: Idempotency-Key, in: header, required: false, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/TransferRequest' } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/TransferResponse' } } } }
+  /transfers/{transfer_id}:
+    get:
+      operationId: getTransferStatus
+      security: [{ QueryKey: [] }]
+      parameters: [{ name: transfer_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Status, content: { application/json: { schema: { $ref: '#/components/schemas/TransferResponse' } } } }
+  /callbacks/transfer:
+    post:
+      operationId: transferCallback
+      description: Signed callback uses HMAC-SHA256 over the raw body and sends the digest as hexadecimal text.
+      security: []
+      parameters:
+        - name: X-Ledger-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of the raw body, encoded as hex.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/TransferEvent' } }
+      responses: { '200': { description: Accepted } }

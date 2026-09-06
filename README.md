@@ -42,7 +42,7 @@ Provider Compiler берёт OpenAPI платёжного провайдера �
 
 **Доказательство (актуальный snapshot)**
 
-- RSpec: 135 примеров / 0 ошибок.
+- RSpec: 140 примеров / 0 ошибок.
 - Reference mutation benchmark: 37/37 adversarial cases, а не провайдеров.
 - Frozen black-box corpus: 12/12 cases, а не провайдеров.
 - Критических ложных ACCEPT: 0; попыток небезопасной генерации: 0.
@@ -158,6 +158,21 @@ ruby bin/provider_compiler analyze
 ruby bin/provider_compiler generate --out tmp/generated
 ruby bin/provider_compiler verify --out tmp/generated
 ```
+
+Для полного прохода в одну команду используйте `compile`: он выполняет
+analysis, safety gate, generation, verification и readiness report. Явный
+`--spec` работает без неявных NovaPay defaults; если критическая семантика
+не разрешена, команда завершится с кодом `2` и оставит только analysis/readiness
+artifacts.
+
+```powershell
+ruby bin/provider_compiler compile --spec fixtures/novapay_provider_api.yaml --profile profiles/space_payments_v1.yml --defaults fixtures/novapay_case_defaults.yml --out tmp/novapay-compiled
+```
+
+Независимое подтверждение spec-only универсальности находится в
+[`research/spec_only_success_v1/`](research/spec_only_success_v1/): три
+различающихся explicit OpenAPI specs, hand-authored ground truth, generation,
+localhost transport и behavioral vectors.
 
 Для Web UI:
 
@@ -562,9 +577,10 @@ Aurora и HeliosPay — синтетические fixture providers, а не pr
 runner-ов и текущего запуска RSpec. Числа не копируются вручную.
 
 <!-- BEGIN GENERATED: PROJECT_STATUS -->
+- Independent spec-only success corpus: 3/3 providers; semantic areas 100.0% / 100.0% / 100.0% / 100.0% / 100.0% / 100.0% / 100.0%; behavioral vectors 3/3.
 **Текущий снимок проверки (сгенерировано)**
 
-- RSpec: 135 примеров, ошибок: 0.
+- RSpec: 140 примеров, ошибок: 0.
 - Reference mutation benchmark: 37/37 adversarial-мутаций одного домена эталонного провайдера; точность семантики: 100.0%; критических ложных ACCEPT: 0.
 - Официальный NovaPay spec-only baseline: автоматизация решений 10/14 (71.4%); доля review 4/14 (28.6%); полностью готовых автоматически 0/1 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.
 - NovaPay spec-only mutation lane: автоматизация решений 74/98 (75.5%); доля review 24/98 (24.5%); полностью готовых автоматически 0/7 (0.0%); критических ложных ACCEPT 0; попыток небезопасной генерации 0.

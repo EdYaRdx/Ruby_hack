@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  title: Orbit Remit Payments API
+  version: 2.1.0
+servers:
+  - url: https://sandbox.orbit-remit.example/api
+    description: Sandbox
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Money:
+      type: object
+      description: Payment money is represented in major RUB units.
+      properties:
+        value: { type: number, description: Major RUB amount. }
+        currency: { type: string, enum: [RUB] }
+    PaymentRequest:
+      type: object
+      required: [money, external_reference, beneficiary]
+      properties:
+        money: { $ref: '#/components/schemas/Money' }
+        external_reference: { type: string }
+        beneficiary:
+          type: object
+          properties:
+            type: { type: string, enum: [sbp] }
+            phone: { type: string }
+            bank_code: { type: string }
+    PaymentResponse:
+      type: object
+      properties:
+        payment_id: { type: string }
+        state:
+          type: string
+          enum: [pending, completed, failed]
+          description: "pending: canonical in_progress; completed: canonical approved; failed: canonical rejected."
+        money: { $ref: '#/components/schemas/Money' }
+        currency: { type: string, enum: [RUB] }
+paths:
+  /payments:
+    post:
+      operationId: initiatePayment
+      security: [{ BearerAuth: [] }]
+      parameters: [{ name: Idempotency-Key, in: header, required: false, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/PaymentRequest' } }
+      responses:
+        '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/PaymentResponse' } } } }
+  /payments/{payment_id}/state:
+    get:
+      operationId: getPaymentState
+      security: [{ BearerAuth: [] }]
+      parameters: [{ name: payment_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: State, content: { application/json: { schema: { $ref: '#/components/schemas/PaymentResponse' } } } }

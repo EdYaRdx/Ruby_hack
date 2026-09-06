@@ -1,0 +1,69 @@
+schema_version: 1
+vectors:
+  ledger_one:
+    create_request:
+      request_method: sbp
+      input:
+        id: op-ledger-1
+        amount: 12.34
+        currency: RUB
+        payout_requisite: { sbp: { phone: "79000000001", bank_code: "044525225" } }
+      expected:
+        method: POST
+        path: /transfers
+        query: { api_key: "[REDACTED]" }
+        body: { amount: 1234, currency: RUB, external_id: op-ledger-1, recipient: { type: sbp, phone: "79000000001", bank_code: "044525225" } }
+    fetch_status:
+      input: { provider_operation_id: tr_ledger_1 }
+      expected: { method: GET, path: /transfers/tr_ledger_1, query: { api_key: "[REDACTED]" } }
+    provider_status_response:
+      input: { provider_operation_id: tr_ledger_1 }
+      response: { transfer_id: tr_ledger_1, status: settled, amount: 1234, currency: RUB }
+      expected: { status: approved, provider_operation_id: tr_ledger_1, amount: 12.34 }
+    settled_webhook:
+      input: { event: transfer.settled, transfer_id: tr_ledger_1, status: settled, external_id: op-ledger-1 }
+      expected: { status: approved, event: transfer.settled, action: approve_operation }
+  orbit_remit:
+    create_request:
+      request_method: sbp
+      input:
+        id: op-orbit-1
+        amount: 12.34
+        currency: RUB
+        payout_requisite: { sbp: { phone: "79000000002", bank_code: "044525225" } }
+      expected:
+        method: POST
+        path: /payments
+        body: { money: { value: 12.34, currency: RUB }, external_reference: op-orbit-1, beneficiary: { type: sbp, phone: "79000000002", bank_code: "044525225" } }
+    fetch_status:
+      input: { provider_operation_id: pay_orbit_1 }
+      expected: { method: GET, path: /payments/pay_orbit_1/state }
+    provider_status_response:
+      input: { provider_operation_id: pay_orbit_1 }
+      response: { payment_id: pay_orbit_1, state: completed, money: { value: 12.34, currency: RUB } }
+      expected: { status: approved, provider_operation_id: pay_orbit_1, amount: 12.34 }
+    polling_callback:
+      input: { raw_body: "{}", signature: unused }
+      expected: { error_code: polling_only }
+  quanta_payout:
+    create_request:
+      request_method: sbp
+      input:
+        id: op-quanta-1
+        amount: 12.345
+        currency: RUB
+        payout_requisite: { sbp: { phone: "79000000003", bank_code: "044525225" } }
+      expected:
+        method: POST
+        path: /withdrawals
+        body: { amount: 12345, currency: RUB, reference: op-quanta-1, beneficiary: { type: sbp, phone: "79000000003", bank_code: "044525225" } }
+    fetch_status:
+      input: { provider_operation_id: wd_quanta_1 }
+      expected: { method: GET, path: /withdrawals/wd_quanta_1/state }
+    provider_status_response:
+      input: { provider_operation_id: wd_quanta_1 }
+      response: { withdrawal_id: wd_quanta_1, state: declined, amount: 12345, currency: RUB }
+      expected: { status: rejected, provider_operation_id: wd_quanta_1, amount: 12.345 }
+    declined_webhook:
+      input: { event: withdrawal.declined, withdrawal_id: wd_quanta_1, state: declined, external_id: op-quanta-1 }
+      expected: { status: rejected, event: withdrawal.declined, action: reject_operation }

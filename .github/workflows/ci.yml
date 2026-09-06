@@ -60,6 +60,9 @@ jobs:
       - name: Run frozen black-box benchmark
         run: ruby research/black_box_v1/run.rb
 
+      - name: Run independent spec-only success corpus
+        run: ruby research/spec_only_success_v1/run.rb
+
       - name: Build release gem
         run: gem build provider_compiler.gemspec
 

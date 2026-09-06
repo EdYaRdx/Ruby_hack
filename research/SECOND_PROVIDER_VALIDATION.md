@@ -1,5 +1,7 @@
 # Независимая проверка Aurora Transfers
 
+> **Current GOAL 6.10 checkpoint (2026-09-06):** Aurora remains `3/3` across its resolution levels. The new generic status-description rule is validated independently by the separate three-provider spec-only corpus and does not replace Aurora's resolved-provider evidence.
+
 > Current semantic validation snapshot. Aurora — synthetic fixture provider, а
 > не production provider. Для текущего runtime transport evidence используйте
 > [`docs/BENCHMARK.md`](../docs/BENCHMARK.md) и

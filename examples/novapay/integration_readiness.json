@@ -503,7 +503,8 @@
       },
       "identifier_field": "payout_id",
       "raw_body_required": true,
-      "decision": "ACCEPT"
+      "decision": "ACCEPT",
+      "mode": "webhook"
     },
     "idempotency": {
       "header": "Idempotency-Key",
@@ -783,6 +784,11 @@
     "counts": {
       "total_semantic_decisions": 14,
       "automatic_accept_count": 14,
+      "accepted_decisions": 14,
+      "accepted_without_human_confirmed": 14,
+      "spec_evidence_decisions": 14,
+      "builtin_rule_evidence_decisions": 0,
+      "case_default_decisions": 3,
       "review_count": 0,
       "unknown_count": 0,
       "blocking_count": 0,
@@ -792,6 +798,7 @@
     "spec_derived": 14,
     "human_confirmed": 0,
     "case_defaults": 3,
+    "builtin_rule_evidence": 0,
     "adapter_policy": 1
   },
   "generation_ready": true,

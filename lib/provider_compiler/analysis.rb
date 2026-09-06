@@ -459,6 +459,16 @@ module ProviderCompiler
 
       nil
     end
+
+    # OpenAPI has no standard per-enum-value description. When a provider
+    # documents an unambiguous mapping in the property's description, keep it
+    # as specification evidence instead of treating a familiar alias as a
+    # generic guess. The explicit marker is deliberately narrow so ordinary
+    # prose cannot silently resolve a critical status.
+    def explicit_mapping(provider_value, description)
+      mappings = description.to_s.scan(/([A-Za-z][A-Za-z0-9_.-]*)\s*:\s*canonical\s+(approved|rejected|in_progress)\b/i)
+      mappings.to_h { |value, canonical| [value, canonical.downcase] }[provider_value.to_s]
+    end
   end
 
   class StatusMapper
@@ -467,19 +477,22 @@ module ProviderCompiler
     end
 
     def analyze(facts)
-      values = status_enums(facts.components).flatten
+      descriptions = status_values(facts.components)
       facts.operations.each do |operation|
-        values.concat(status_enums(operation["request_body"]).flatten)
-        values.concat(status_enums(operation["responses"]).flatten)
+        descriptions = merge_status_values(descriptions, status_values(operation["request_body"]))
+        descriptions = merge_status_values(descriptions, status_values(operation["responses"]))
       end
-      values = values.uniq
+      values = descriptions.keys
       mappings = values.map do |provider_value|
-        canonical = @defaults.statuses[provider_value]
+        spec_canonical = descriptions[provider_value]
+        default_canonical = @defaults.statuses[provider_value]
+        canonical = spec_canonical || default_canonical
         mapping_source = @defaults.data.fetch("status_source", "CASE_DEFAULT")
+        canonical_source = spec_canonical ? "SPEC_DESCRIPTION" : mapping_source
         mapping = {
           "provider_value" => provider_value,
           "canonical_value" => canonical || "UNKNOWN",
-          "evidence_sources" => ["SPEC_FACT", canonical ? mapping_source : "UNKNOWN"],
+          "evidence_sources" => ["SPEC_FACT", canonical ? canonical_source : "UNKNOWN"],
           "decision" => canonical ? "ACCEPT" : "REVIEW_REQUIRED"
         }
         if canonical.nil? && (candidate = StatusSemantics.candidate(provider_value))
@@ -494,31 +507,44 @@ module ProviderCompiler
       complete = !mappings.empty? && mappings.all? { |mapping| mapping["decision"] == "ACCEPT" }
       unresolved = mappings.select { |mapping| mapping["canonical_value"] == "UNKNOWN" }
       ambiguous = unresolved.any? { |mapping| mapping.key?("candidate_canonical_value") }
+      decision_evidence = [Evidence.new(source: "SPEC_FACT", locations: ["#/components/schemas/*/properties/status/enum"], excerpt: values.join(", "))]
+      decision_evidence << Evidence.new(source: "SPEC_DESCRIPTION", locations: ["#/components/schemas/*/properties/status/description"], excerpt: "explicit canonical status mappings") if descriptions.values.any?
+      decision_evidence << Evidence.new(source: @defaults.data.fetch("status_source", "CASE_DEFAULT"), locations: ["organizer_case_qa.statuses"], excerpt: "status mapping for this workspace") if @defaults.statuses.any?
       decision = Decision.new(
         id: "status:provider-map",
         outcome: complete ? "ACCEPT" : (ambiguous ? "REVIEW_REQUIRED" : "UNKNOWN"),
         severity: complete ? "INFO" : (ambiguous ? "WARNING" : "BLOCKING"),
         candidate: mappings,
-        evidence: [Evidence.new(source: "SPEC_FACT", locations: ["#/components/schemas/*/properties/status/enum"], excerpt: values.join(", ")), Evidence.new(source: @defaults.data.fetch("status_source", "CASE_DEFAULT"), locations: ["organizer_case_qa.statuses"], excerpt: "status mapping for this workspace")],
-        rationale: complete ? "every provider status has an explicit case-default canonical mapping" : (ambiguous ? "one or more provider statuses have plausible but unconfirmed terminal aliases" : "one or more provider statuses lack a confirmed canonical mapping")
+        evidence: decision_evidence,
+        rationale: complete ? (descriptions.values.any? ? "every provider status has an explicit canonical mapping in OpenAPI descriptions" : "every provider status has an explicit case-default canonical mapping") : (ambiguous ? "one or more provider statuses have plausible but unconfirmed terminal aliases" : "one or more provider statuses lack a confirmed canonical mapping")
       )
       AnalysisResult.new(section: mappings, decisions: [decision])
     end
 
     private
 
-    def status_enums(node, found = [])
+    def status_values(node, found = {})
       case node
       when Hash
         %w[status state phase].each do |name|
-          status = node.dig("properties", name, "enum")
-          found << Array(status) if status.is_a?(Array) && !status.empty?
+          property = node.dig("properties", name)
+          status = property.is_a?(Hash) ? property["enum"] : nil
+          next unless status.is_a?(Array) && !status.empty?
+
+          status.each do |provider_value|
+            found[provider_value] ||= StatusSemantics.explicit_mapping(provider_value, property["description"])
+          end
         end
-        node.each_value { |value| status_enums(value, found) }
+        node.each_value { |value| status_values(value, found) }
       when Array
-        node.each { |value| status_enums(value, found) }
+        node.each { |value| status_values(value, found) }
       end
       found
+    end
+
+    def merge_status_values(left, right)
+      right.each { |provider_value, canonical| left[provider_value] ||= canonical }
+      left
     end
   end
 

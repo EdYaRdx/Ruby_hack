@@ -3,7 +3,7 @@
 module ProviderCompiler
 
   class AnalysisArtifactWriter
-    RUNTIME_ARTIFACTS = %w[service.rb fixtures.json INTEGRATION.md contract_smoke.rb].freeze
+    RUNTIME_ARTIFACTS = %w[service.rb fixtures.json INTEGRATION.md contract_smoke.rb integration_readiness.json INTEGRATION_READINESS.md].freeze
 
     def self.write(output_dir, blueprint, manifest)
       FileUtils.mkdir_p(output_dir)
@@ -96,6 +96,8 @@ module ProviderCompiler
         IntegrationReadiness.write(output, IntegrationReadiness.build(pipeline, generated: true, verification: verification))
         puts "Generated #{options.fetch(:out)}"
         verification["passed"] ? 0 : 1
+      when "compile"
+        compile(options)
       when "export-review"
         raise ValidationError, ["--resolutions PATH is required for export-review"] unless options[:resolutions]
         pipeline = Pipeline.new(spec_path: options.fetch(:spec), profile_path: options.fetch(:profile), defaults_path: options.fetch(:defaults), adapter_policy: options.fetch(:idempotency_policy))
@@ -136,7 +138,7 @@ module ProviderCompiler
 
     def self.option_parser(options)
       OptionParser.new do |parser|
-        parser.banner = "Usage: provider_compiler COMMAND [options]"
+        parser.banner = "Usage: provider_compiler COMMAND [options]\nCommands: analyze, inspect, compile, generate, verify, export-review"
         parser.on("--spec PATH", "OpenAPI YAML/JSON") do |value|
           options[:spec] = value
           options[:spec_explicit] = true
@@ -154,6 +156,40 @@ module ProviderCompiler
         parser.on("--review-output PATH", "Review override output file") { |value| options[:review_output] = value }
         parser.on("--always-send-idempotency", "adapter policy; does not change spec_required") { options[:idempotency_policy] = "always" }
       end
+    end
+
+    def self.compile(options)
+      pipeline = Pipeline.new(spec_path: options.fetch(:spec), profile_path: options.fetch(:profile), defaults_path: options.fetch(:defaults), adapter_policy: options.fetch(:idempotency_policy), overrides_path: options[:overrides])
+      output = options.fetch(:out)
+      AnalysisArtifactWriter.write(output, pipeline.blueprint, pipeline.manifest)
+      generation_blocked = pipeline.blueprint.fetch("decision") != "ACCEPT" || Array(pipeline.blueprint["decisions"]).any? { |item| item["severity"] == "BLOCKING" }
+
+      if generation_blocked
+        report = IntegrationReadiness.build(pipeline)
+        IntegrationReadiness.write(output, report)
+        print_compile_summary(pipeline, report, output, generated_files: %w[provider_blueprint.json review_manifest.json integration_readiness.json INTEGRATION_READINESS.md])
+        return 2
+      end
+
+      pipeline.validate_blueprint!
+      files = DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, output, examples: pipeline.defaults.examples, spec_document: pipeline.source_document.resolved)
+      verification = Verification.new.verify(output)
+      report = IntegrationReadiness.build(pipeline, generated: true, verification: verification)
+      readiness_files = IntegrationReadiness.write(output, report)
+      print_compile_summary(pipeline, report, output, generated_files: files.map { |path| File.basename(path) } + readiness_files.map { |path| File.basename(path) })
+      verification["passed"] ? 0 : 1
+    end
+
+    def self.print_compile_summary(pipeline, report, output, generated_files:)
+      counts = report.dig("decisions", "counts")
+      puts "Provider: #{pipeline.blueprint.dig("provider", "name")}"
+      puts "Input: #{pipeline.source_document.root_path}"
+      puts "Decision: #{pipeline.blueprint.fetch("decision")}"
+      puts "Provenance: accepted=#{counts.fetch("accepted_decisions")} spec=#{counts.fetch("spec_evidence_decisions")} builtin_or_generic=#{counts.fetch("builtin_rule_evidence_decisions")} case_default=#{counts.fetch("case_default_decisions")} human_confirmed=#{counts.fetch("human_decisions_supplied")} review_required=#{counts.fetch("review_count")} blocking=#{counts.fetch("blocking_count")}"
+      puts "Generated: #{generated_files.join(", ")}"
+      puts "Output: #{output}"
+      puts "Verification: #{report.dig("verification", "passed") == true ? "PASS" : report.dig("verification", "status") || "NOT_RUN"}"
+      puts "Result: #{report.fetch("ready") ? "READY" : "GENERATION_BLOCKED"}"
     end
   end
 

@@ -15,13 +15,17 @@
 - Money: `major -> minor`
 - Status mappings: 5
 - Field mappings: 7
-- Webhook mode: ``
+- Webhook mode: `webhook`
 - Idempotency spec required: `false`
 
 ## Human effort
 
 - Total semantic decisions: 14
-- Automatically resolved decisions: 14
+- Accepted in current Blueprint: 14
+- Accepted without HUMAN_CONFIRMED: 14
+- Decisions with SPEC evidence: 14
+- Decisions with BUILTIN/generic rule evidence: 0
+- Decisions resolved using CASE_DEFAULT: 3
 - Questions requiring review: 0
 - Human decisions supplied: 0
 - Blocking unknowns: 0

@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Quanta Payout API
+  version: 3.0.0
+servers:
+  - url: https://sandbox.quanta.example/v3
+    description: Sandbox
+components:
+  securitySchemes:
+    QuantaKey:
+      type: apiKey
+      in: header
+      name: X-Quanta-Key
+  schemas:
+    WithdrawalRequest:
+      type: object
+      required: [amount, currency, reference, beneficiary]
+      properties:
+        amount:
+          type: integer
+          description: Integer amount in minor RUB units; one major unit equals 1000 minor units.
+          x-minor-unit-scale: 1000
+        currency: { type: string, enum: [RUB] }
+        reference: { type: string }
+        beneficiary:
+          type: object
+          properties:
+            type: { type: string, enum: [sbp] }
+            phone: { type: string }
+            bank_code: { type: string }
+    WithdrawalResponse:
+      type: object
+      properties:
+        withdrawal_id: { type: string }
+        state:
+          type: string
+          enum: [queued, settled, declined]
+          description: "queued: canonical in_progress; settled: canonical approved; declined: canonical rejected."
+        amount: { type: integer }
+        currency: { type: string, enum: [RUB] }
+    WithdrawalEvent:
+      type: object
+      properties:
+        event: { type: string, enum: [withdrawal.queued, withdrawal.settled, withdrawal.declined] }
+        withdrawal_id: { type: string }
+        external_id: { type: string }
+        state: { type: string, enum: [queued, settled, declined] }
+paths:
+  /withdrawals:
+    post:
+      operationId: submitWithdrawal
+      security: [{ QuantaKey: [] }]
+      parameters: [{ name: Idempotency-Key, in: header, required: false, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/WithdrawalRequest' } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/WithdrawalResponse' } } } }
+  /withdrawals/{withdrawal_id}/state:
+    get:
+      operationId: getWithdrawalState
+      security: [{ QuantaKey: [] }]
+      parameters: [{ name: withdrawal_id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: State, content: { application/json: { schema: { $ref: '#/components/schemas/WithdrawalResponse' } } } }
+  /notifications/withdrawals:
+    post:
+      operationId: withdrawalNotification
+      description: Signed notification uses HMAC-SHA256 over the raw body and sends hexadecimal text.
+      security: []
+      parameters:
+        - name: X-Quanta-Signature
+          in: header
+          required: true
+          description: HMAC-SHA256 signature over the raw body, hex encoded.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/WithdrawalEvent' } }
+      responses: { '200': { description: Accepted } }
