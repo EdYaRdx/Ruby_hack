@@ -173,7 +173,7 @@ amount:
 - Детерминированная Ruby-проекция и проверка результата реализованы в слоях generator и verification.
 - Канонический пример NovaPay: 9 файлов в `examples/novapay/` (`INTEGRATION.md`, `INTEGRATION_READINESS.md`, `contract_smoke.rb`, `fixtures.json`, `integration_readiness.json`, `provider_api.yaml`, `provider_blueprint.json`, `review_manifest.json`, `service.rb`).
 - Независимая проверка семантики: benchmark мутаций NovaPay и сравнения Aurora/Helios включены в сгенерированный статус ниже.
-- Реальные вызовы провайдера не реализованы; локальный Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
+- Live-вызовы реального платёжного провайдера не выполняются; transport сгенерированного adapter проверяется через локальный HTTP E2E без внешней сети. Локальный Web UI Demo Workbench реализован в `lib/provider_compiler/web.rb`, `lib/provider_compiler/web_renderer.rb` и `web/public/`.
 
 Выполните `ruby bin/update_docs`, чтобы обновить этот снимок.
 <!-- END GENERATED: CAPABILITIES -->

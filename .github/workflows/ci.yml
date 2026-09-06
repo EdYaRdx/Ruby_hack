@@ -76,6 +76,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           $changed = git diff --name-only
           if ($changed) {
+            git status --short
             git diff --stat
             git diff
             exit 1

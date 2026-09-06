@@ -22,6 +22,19 @@ def absolute(path)
   File.expand_path(path, CORPUS)
 end
 
+def repository_relative(path)
+  normalized_path = File.expand_path(path).tr("\\", "/")
+  normalized_root = File.expand_path(ROOT).tr("\\", "/").sub(%r{/$}, "")
+  prefix = "#{normalized_root}/"
+  normalized_path.start_with?(prefix) ? normalized_path.delete_prefix(prefix) : normalized_path
+end
+
+# Ruby versions may choose different pretty layouts for an empty Array. Keep
+# tracked judge-facing JSON independent of that formatter detail.
+def canonical_json(value)
+  JSON.pretty_generate(value).gsub(/\[\s*\]/, "[]") + "\n"
+end
+
 def run_command(*args)
   stdout, stderr, status = Open3.capture3(RbConfig.ruby, *args, chdir: ROOT)
   { "exit_status" => status.exitstatus, "stdout" => stdout, "stderr" => stderr }
@@ -229,9 +242,10 @@ report = {
     "compiler_crash_count" => results.count { |item| item["actual_decision"] == "COMPILER_ERROR" }
   }
 }
-File.write(OUTPUT, JSON.pretty_generate(report) + "\n", encoding: "UTF-8")
+File.write(OUTPUT, canonical_json(report), encoding: "UTF-8")
 failures_path = ENV.fetch("BLACK_BOX_FAILURES", File.join(File.dirname(OUTPUT), "failures.json"))
 failures = report.fetch("cases").reject { |item| item["passed"] }
-File.write(failures_path, JSON.pretty_generate("schema_version" => 1, "source" => OUTPUT, "failures" => failures) + "\n", encoding: "UTF-8")
+failures_report = { "schema_version" => 1, "source" => repository_relative(OUTPUT), "failures" => failures }
+File.write(failures_path, canonical_json(failures_report), encoding: "UTF-8")
 puts JSON.pretty_generate(report.fetch("aggregate"))
 puts "Wrote #{OUTPUT}"
