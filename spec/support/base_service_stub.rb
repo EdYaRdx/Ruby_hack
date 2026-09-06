@@ -6,14 +6,12 @@ module Provider
       success
     end
 
-    def success(value = true)
-      { "ok" => true, "value" => value }
+    def success(result: nil)
+      { "ok" => true, "result" => result }
     end
 
-    def failure(status = nil, code = nil, message = nil)
-      return { "ok" => false, "error" => status } if code.nil? && message.nil?
-
-      { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }
+    def failure(code, i18n_key)
+      { "ok" => false, "failure_code" => code, "i18n_key" => i18n_key }
     end
 
     def approve_operation(operation)

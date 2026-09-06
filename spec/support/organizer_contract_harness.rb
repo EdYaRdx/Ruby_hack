@@ -20,19 +20,19 @@ module OrganizerContractHarness
 
       def check_conditions(operation, _request_method)
         @base_check_calls = @base_check_calls.to_i + 1
-        return failure(:unprocessable_entity, "base_blocked", "BaseService rejected operation") if operation["base_blocked"]
+        return failure("base_blocked", "provider.base_blocked") if operation["base_blocked"]
 
         success
       end
 
-      def success(value = true)
-        { "ok" => true, "value" => value }
+      def success(result: nil)
+        { "ok" => true, "result" => result }
       end
 
-      def failure(status = nil, code = nil, message = nil)
+      def failure(code, i18n_key)
         @failure_calls ||= []
-        @failure_calls << [status, code, message]
-        { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }
+        @failure_calls << [code, i18n_key]
+        { "ok" => false, "failure_code" => code.to_s, "i18n_key" => i18n_key }
       end
 
       def approve_operation(operation)

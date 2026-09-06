@@ -53,15 +53,15 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1011
+          "loc": 1064
         },
         {
           "path": "lib/provider_compiler/application.rb",
-          "loc": 142
+          "loc": 148
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
-          "loc": 130
+          "loc": 131
         },
         {
           "path": "lib/provider_compiler/core.rb",
@@ -73,11 +73,11 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 834
+          "loc": 1077
         },
         {
           "path": "lib/provider_compiler/profile.rb",
-          "loc": 79
+          "loc": 91
         },
         {
           "path": "lib/provider_compiler/review.rb",
@@ -85,18 +85,18 @@
         },
         {
           "path": "lib/provider_compiler/transport_verification.rb",
-          "loc": 353
+          "loc": 360
         },
         {
           "path": "lib/provider_compiler/web.rb",
-          "loc": 593
+          "loc": 623
         },
         {
           "path": "lib/provider_compiler/web_renderer.rb",
           "loc": 1107
         }
       ],
-      "loc": 5325
+      "loc": 5677
     },
     "other_participant_source": {
       "files": [
@@ -111,8 +111,8 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 5879,
-    "ruby_share_percent": 90.6
+    "total_source_loc": 6231,
+    "ruby_share_percent": 91.1
   },
   "production_plus_tests": {
     "ruby": {
@@ -143,15 +143,15 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1011
+          "loc": 1064
         },
         {
           "path": "lib/provider_compiler/application.rb",
-          "loc": 142
+          "loc": 148
         },
         {
           "path": "lib/provider_compiler/blueprint.rb",
-          "loc": 130
+          "loc": 131
         },
         {
           "path": "lib/provider_compiler/core.rb",
@@ -163,11 +163,11 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 834
+          "loc": 1077
         },
         {
           "path": "lib/provider_compiler/profile.rb",
-          "loc": 79
+          "loc": 91
         },
         {
           "path": "lib/provider_compiler/review.rb",
@@ -175,11 +175,11 @@
         },
         {
           "path": "lib/provider_compiler/transport_verification.rb",
-          "loc": 353
+          "loc": 360
         },
         {
           "path": "lib/provider_compiler/web.rb",
-          "loc": 593
+          "loc": 623
         },
         {
           "path": "lib/provider_compiler/web_renderer.rb",
@@ -195,7 +195,7 @@
         },
         {
           "path": "spec/cli_spec.rb",
-          "loc": 71
+          "loc": 72
         },
         {
           "path": "spec/documentation_spec.rb",
@@ -207,7 +207,7 @@
         },
         {
           "path": "spec/goal5_spec.rb",
-          "loc": 196
+          "loc": 191
         },
         {
           "path": "spec/hostile_openapi_matrix_spec.rb",
@@ -220,6 +220,10 @@
         {
           "path": "spec/metrics_spec.rb",
           "loc": 54
+        },
+        {
+          "path": "spec/organizer_contract_spec.rb",
+          "loc": 205
         },
         {
           "path": "spec/persisted_review_spec.rb",
@@ -239,7 +243,7 @@
         },
         {
           "path": "spec/release_e2e_spec.rb",
-          "loc": 228
+          "loc": 237
         },
         {
           "path": "spec/runtime_hardening_spec.rb",
@@ -259,7 +263,7 @@
         },
         {
           "path": "spec/support/base_service_stub.rb",
-          "loc": 20
+          "loc": 19
         },
         {
           "path": "spec/support/organizer_contract_harness.rb",
@@ -278,7 +282,7 @@
           "loc": 393
         }
       ],
-      "loc": 7507
+      "loc": 8068
     },
     "other_participant_source": {
       "files": [
@@ -293,7 +297,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 8061,
-    "ruby_share_percent": 93.1
+    "total_source_loc": 8622,
+    "ruby_share_percent": 93.6
   }
 }

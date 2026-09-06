@@ -83,8 +83,14 @@ module ProviderCompiler
           puts Util.pretty_json(summary)
           return 0
         end
-        pipeline.validate_blueprint!
         output = options.fetch(:out)
+        generation_blocked = pipeline.blueprint.fetch("decision") != "ACCEPT" || Array(pipeline.blueprint["decisions"]).any? { |item| item["severity"] == "BLOCKING" }
+        if generation_blocked
+          DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, output, examples: pipeline.defaults.examples, spec_document: pipeline.source_document.resolved)
+          warn "Generation blocked; review artifacts written to #{output}"
+          return 2
+        end
+        pipeline.validate_blueprint!
         DeterministicGenerator.new.generate(pipeline.blueprint, pipeline.manifest, output, examples: pipeline.defaults.examples, spec_document: pipeline.source_document.resolved)
         verification = Verification.new.verify(output)
         IntegrationReadiness.write(output, IntegrationReadiness.build(pipeline, generated: true, verification: verification))

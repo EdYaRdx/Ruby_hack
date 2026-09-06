@@ -17,17 +17,18 @@ examples:
     operation:
       amount: 15000.0
       currency: RUB
-      external_id: op_abc123
+      id: op_abc123
       idempotency_key: key-1
-      recipient:
-        type: sbp
-        phone: "79001234567"
-        bank_code: "044525225"
+      payout_requisite:
+        sbp:
+          phone: "79001234567"
+          bank_code: "044525225"
+          bank_name: "Сбербанк"
     expected_provider_amount: 1500000
     expected_http_status: 201
   fetch_status:
     operation:
-      provider_operation_id: np_7f3a9b2c
+      id: np_7f3a9b2c
     response:
       id: np_7f3a9b2c
       status: completed
@@ -40,11 +41,11 @@ examples:
     operation:
       amount: 999.99
       currency: RUB
-      external_id: op_too_small
-      recipient:
-        type: sbp
-        phone: "79001234567"
-        bank_code: "044525225"
+      id: op_too_small
+      payout_requisite:
+        sbp:
+          phone: "79001234567"
+          bank_code: "044525225"
     expected_http_status: 422
     expected_error_code: validation_error
   callback_completed:

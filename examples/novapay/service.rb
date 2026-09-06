@@ -29,9 +29,16 @@ module Provider
     CREATE_SUCCESS_STATUSES = ["201"].freeze
     STATUS_SUCCESS_STATUSES = ["200"].freeze
     CALL_SUPER_CONDITIONS = true
-    FAILURE_ARGUMENTS = ["status", "code", "message"].freeze
+    FAILURE_ARGUMENTS = ["code", "i18n_key"].freeze
+    ALLOWED_FAILURE_CODES = ["bad_request", "unauthorized", "forbidden", "unprocessable_entity", "too_many_requests", "internal_server_error", "not_found"].freeze
+    FAILURE_HTTP_MAPPINGS = {"400" => {"code" => "bad_request", "i18n_key" => "provider.validation_error"}, "401" => {"code" => "unauthorized", "i18n_key" => "provider.invalid_credentials"}, "402" => {"code" => "unprocessable_entity", "i18n_key" => "provider.insufficient_balance"}, "404" => {"code" => "not_found", "i18n_key" => "provider.not_found"}, "409" => {"code" => "unprocessable_entity", "i18n_key" => "provider.conflict"}, "422" => {"code" => "unprocessable_entity", "i18n_key" => "provider.validation_error"}, "429" => {"code" => "too_many_requests", "i18n_key" => "provider.rate_limit"}, "500" => {"code" => "internal_server_error", "i18n_key" => "provider.internal_error"}, "502" => {"code" => "internal_server_error", "i18n_key" => "provider.transport_error"}}.freeze
+    FAILURE_PROVIDER_CODE_MAPPINGS = {"amount_limit_exceeded" => {"code" => "unprocessable_entity", "i18n_key" => "provider.amount_limit_exceeded"}}.freeze
     VALIDATION_FAILURE_STATUS = 422
-    VALIDATION_FAILURE_CODE = "validation_error"
+    VALIDATION_FAILURE_CODE = "unprocessable_entity"
+    VALIDATION_I18N_KEY = "provider.validation_error"
+    HOST_PROJECTION = {"canonical_paths" => {"external_id" => "operation.id", "provider_operation_id" => "operation.id", "recipient" => "operation.payout_requisite"}, "requisite" => {"branches" => {"card" => {"fields" => {"card_number" => "card_number", "phone" => "phone"}, "provider_type" => "card", "required" => ["card_number", "phone"]}, "sbp" => {"fields" => {"bank_code" => "sbp.bank_code", "bank_name" => "sbp.bank_name", "phone" => "sbp.phone"}, "provider_type" => "sbp", "required" => ["phone", "bank_code"]}}, "provider_path" => "recipient", "source" => "operation.payout_requisite", "unknown_required_policy" => "review_todo"}}.freeze
+    REQUEST_METHOD_CONFIG = {"allowed" => ["sbp", "card"], "conflict_policy" => "fail", "infer_from_requisite" => {"card" => "card_number", "sbp" => "sbp"}, "semantics" => "gateway_payment_method"}.freeze
+    CREATE_RESULT = {"field" => "id", "wrapper" => "result"}.freeze
 
     def initialize(api_key:, webhook_secret: nil, client: nil)
       @api_key = api_key
@@ -40,31 +47,33 @@ module Provider
       @idempotency_keys = {}
     end
 
-    def check_conditions(operation, request_method)
+    def check_conditions(operation, request_method = nil)
+      resolved_method = resolve_request_method(operation, request_method)
       if CALL_SUPER_CONDITIONS
-        base_result = super(operation, request_method)
+        base_result = super(operation, resolved_method)
         return base_result if failed_result?(base_result)
       end
 
-      return success if request_method.to_s != "create"
-
-      errors = validate_constraints(operation)
-      errors.concat(validate_conditionals(operation))
-      errors.empty? ? success : host_failure(errors.join("; "), status: VALIDATION_FAILURE_STATUS, code: VALIDATION_FAILURE_CODE)
+      errors = validate_constraints(operation, resolved_method)
+      errors.concat(validate_conditionals(operation, resolved_method))
+      errors.empty? ? success : host_failure(errors.join("; "), status: VALIDATION_FAILURE_STATUS, code: VALIDATION_FAILURE_CODE, i18n_key: VALIDATION_I18N_KEY)
+    rescue ArgumentError => e
+      host_failure(e.message, status: VALIDATION_FAILURE_STATUS, code: "bad_request", i18n_key: "provider.invalid_request")
     end
 
-    def build_create_request(operation, request_method = "create")
-      raise ArgumentError, "unsupported request_method: #{request_method}" unless request_method.to_s == "create"
-      condition_result = check_conditions(operation, request_method)
+    def build_create_request(operation, request_method = nil)
+      resolved_method = resolve_request_method(operation, request_method)
+      condition_result = check_conditions(operation, resolved_method)
       raise ArgumentError, condition_error(condition_result) if failed_result?(condition_result)
 
-      body = build_provider_body(operation)
+      body = build_provider_body(operation, resolved_method)
       headers, query = authentication
       key = read(operation, :idempotency_key)
       if IDEMPOTENCY.dig("adapter_policy", "send_header") == "always" || (IDEMPOTENCY.dig("adapter_policy", "send_header") == "if_available" && !blank?(key))
         if IDEMPOTENCY.fetch("header")
-          stable_key = key || @idempotency_keys[read(operation, :external_id).to_s] || SecureRandom.uuid
-          @idempotency_keys[read(operation, :external_id).to_s] = stable_key unless key
+          operation_key = read(operation, :external_id) || read(operation, :id)
+          stable_key = key || @idempotency_keys[operation_key.to_s] || SecureRandom.uuid
+          @idempotency_keys[operation_key.to_s] = stable_key unless key
           headers[IDEMPOTENCY.fetch("header")] = stable_key
         end
       end
@@ -72,14 +81,14 @@ module Provider
       { "method" => CREATE_METHOD, "path" => path, "url" => "#{BASE_URL}#{path}", "headers" => headers, "query" => query, "body" => body }
     end
 
-    def create_request(operation, request_method = "create")
+    def create_request(operation, request_method = nil)
       request = build_create_request(operation, request_method)
       return request unless @client
 
       response = dispatch_or_failure(request)
       return response if compiler_failure?(response)
 
-      handle_response(response, expected_success: CREATE_SUCCESS_STATUSES)
+      handle_response(response, expected_success: CREATE_SUCCESS_STATUSES, result_contract: CREATE_RESULT)
     end
 
     def fetch_status(operation)
@@ -93,7 +102,7 @@ module Provider
       response = dispatch_or_failure(request)
       return response if compiler_failure?(response)
 
-      handle_response(response, expected_success: STATUS_SUCCESS_STATUSES)
+      handle_response(response, expected_success: STATUS_SUCCESS_STATUSES, status_reference: id)
     end
 
     def process_callback(payload)
@@ -105,11 +114,12 @@ module Provider
       return host_failure("webhook signature is required", code: "missing_webhook_signature") if blank?(signature)
       return host_failure("invalid webhook signature", code: "invalid_webhook_signature") unless verify_webhook_signature(raw_body, signature)
 
-      event = read(payload, :event)
-      body = parse_json(raw_body)
-      body = body.is_a?(Hash) ? body : {}
-      provider_status = (read(payload, :status) || body["status"]).to_s
-      event = read(payload, :event) || body["event"]
+      parsed_payload = read(payload, :parsed_payload) || read(payload, :data) || payload
+      parsed_payload = {} unless parsed_payload.is_a?(Hash)
+      signed_body = parse_json(raw_body)
+      signed_body = signed_body.is_a?(Hash) ? signed_body : {}
+      provider_status = (read(parsed_payload, :status) || signed_body["status"]).to_s
+      event = read(parsed_payload, :event) || signed_body["event"]
       event_status = event.to_s.split(".").last
       if !blank?(provider_status) && !blank?(event_status) && provider_status.casecmp?(event_status) == false
         return host_failure("webhook event/status contradiction", code: "webhook_contradiction")
@@ -117,7 +127,7 @@ module Provider
       canonical = WEBHOOK.fetch("events", {})[event.to_s]
       return host_failure("unknown webhook event", code: "unknown_webhook_event") if canonical.nil? || canonical == "UNKNOWN"
 
-      result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(payload, :external_id) || body["external_id"], "provider_operation_id" => read(payload, WEBHOOK_ID_FIELD) || body[WEBHOOK_ID_FIELD] }
+      result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(parsed_payload, :external_id) || signed_body["external_id"], "provider_operation_id" => read(parsed_payload, WEBHOOK_ID_FIELD) || signed_body[WEBHOOK_ID_FIELD] }
       action_result = bind_callback_action(canonical, result["provider_operation_id"] || result["external_id"] || result)
       return action_result.merge("provider_status" => provider_status, "status" => canonical, "event" => event) unless action_result["ok"] != false
 
@@ -142,13 +152,44 @@ module Provider
       convert_host_amount(value)
     end
 
-    def host_failure(message, status: VALIDATION_FAILURE_STATUS, code: "runtime_error")
-      values = { "status" => status, "code" => code, "message" => message }
+    def host_failure(message, status: VALIDATION_FAILURE_STATUS, code: nil, i18n_key: nil, metadata: {})
+      platform_code = compatible_failure_code(code, status)
+      key = i18n_key || "provider.#{code || platform_code}"
+      values = { "status" => status, "code" => platform_code.to_sym, "message" => message, "i18n_key" => key }
       result = failure(*FAILURE_ARGUMENTS.map { |argument| values.fetch(argument.to_s) })
-      result.is_a?(Hash) ? result.merge("provider_compiler_failure" => true) : result
+      return result unless result.is_a?(Hash)
+
+      metadata = metadata.dup
+      metadata["error"] ||= message
+      metadata["error_code"] = code unless metadata.key?("error_code") || code.nil?
+      result.merge(metadata).merge(
+        "provider_compiler_failure" => true,
+        "failure_code" => platform_code,
+        "i18n_key" => key
+      )
     end
 
     private
+
+    def compatible_failure_code(code, status)
+      candidate = code.to_s
+      return candidate if !ALLOWED_FAILURE_CODES.empty? && ALLOWED_FAILURE_CODES.include?(candidate)
+      return candidate if ALLOWED_FAILURE_CODES.empty? && !candidate.empty? && candidate != "runtime_error"
+
+      mapped = case status.to_i
+               when 400 then "bad_request"
+               when 401 then "unauthorized"
+               when 403 then "forbidden"
+               when 404 then "not_found"
+               when 429 then "too_many_requests"
+               when 422 then "unprocessable_entity"
+               when 500, 502 then "internal_server_error"
+               else VALIDATION_FAILURE_CODE.to_s
+               end
+      return mapped if ALLOWED_FAILURE_CODES.empty? || ALLOWED_FAILURE_CODES.include?(mapped)
+
+      ALLOWED_FAILURE_CODES.first || mapped
+    end
 
     def failed_result?(result)
       return result["ok"] == false if result.is_a?(Hash) && result.key?("ok")
@@ -197,10 +238,12 @@ module Provider
       { "action" => action, "terminal" => true, "action_result" => public_send(action, operation_reference) }
     end
 
-    def validate_constraints(operation)
+    def validate_constraints(operation, request_method)
       CONSTRAINTS.filter_map do |constraint|
+        next if omitted_provider_field?(constraint, request_method)
+
         field = constraint.fetch("path").sub(/\Arequest\./, "")
-        value = mapped_constraint_value(operation, constraint)
+        value = mapped_constraint_value(operation, constraint, request_method)
         numeric_invalid = if !value.nil? && (constraint["minimum"] || constraint["maximum"])
                             begin
                               BigDecimal(value.to_s)
@@ -229,7 +272,10 @@ module Provider
       end
     end
 
-    def validate_conditionals(operation)
+    def validate_conditionals(operation, request_method)
+      branch = requisite_branch(request_method)
+      return branch_condition_errors(operation, request_method, branch) if branch
+
       recipient = read(operation, :recipient) || {}
       type = read(recipient, :type).to_s
       CONDITIONALS.filter_map do |condition|
@@ -241,6 +287,101 @@ module Provider
         end
         missing.empty? ? nil : "#{missing.join(", ")} is required when type=#{type}"
       end
+    end
+
+    def resolve_request_method(operation, requested_method)
+      return nil unless host_requisite_enabled?
+
+      allowed = Array(REQUEST_METHOD_CONFIG["allowed"]).map(&:to_s)
+      return requested_method.to_s if allowed.empty? && !blank?(requested_method)
+      return nil if allowed.empty?
+
+      requested = blank?(requested_method) ? nil : requested_method.to_s
+      raise ArgumentError, "unsupported request_method: #{requested}" if requested && !allowed.include?(requested)
+
+      source = read_path(operation, HOST_PROJECTION.dig("requisite", "source").to_s.sub("operation.", ""))
+      inferred = Array(REQUEST_METHOD_CONFIG["infer_from_requisite"]).filter_map do |method, path|
+        method.to_s if !source.nil? && !read_path(source, path.to_s).nil?
+      end
+      raise ArgumentError, "request_method conflicts with payout_requisite shape" if requested && inferred.any? && !inferred.include?(requested)
+      raise ArgumentError, "request_method cannot be inferred from payout_requisite" if requested.nil? && inferred.length != 1
+
+      requested || inferred.first
+    end
+
+    def host_requisite_enabled?
+      FIELD_MAPPINGS.any? do |mapping|
+        mapping["direction"].to_s == "request" && mapping["canonical_path"].to_s.sub("operation.", "") == "recipient"
+      end
+    end
+
+    def requisite_branch(request_method)
+      branches = HOST_PROJECTION.dig("requisite", "branches")
+      branches.is_a?(Hash) ? branches[request_method.to_s] : nil
+    end
+
+    def requisite_source(operation)
+      path = HOST_PROJECTION.dig("requisite", "source")
+      path ? read_path(operation, path.to_s.sub("operation.", "")) : nil
+    end
+
+    def branch_condition_errors(operation, request_method, branch)
+      source = requisite_source(operation)
+      return ["operation.payout_requisite is required"] unless source.is_a?(Hash)
+
+      missing = Array(branch["required"]).filter_map do |provider_field|
+        host_path = branch.fetch("fields", {})[provider_field.to_s]
+        provider_field unless host_path && !read_path(source, host_path).nil?
+      end
+      missing.empty? ? [] : ["#{missing.join(", ")} is required for request_method=#{request_method}"]
+    end
+
+    def build_provider_requisite(operation, request_method)
+      source = requisite_source(operation)
+      branch = requisite_branch(request_method)
+      return nil unless source.is_a?(Hash) && branch.is_a?(Hash)
+
+      result = {}
+      result["type"] = branch["provider_type"] if branch.key?("provider_type")
+      branch.fetch("fields", {}).each do |provider_field, host_path|
+        value = read_path(source, host_path)
+        set_path(result, provider_field, value) unless value.nil?
+      end
+      result
+    end
+
+    def host_value(operation, canonical_path)
+      path = HOST_PROJECTION.dig("canonical_paths", canonical_path) || canonical_path
+      read_path(operation, path.to_s.sub("operation.", ""))
+    end
+
+    def requisite_constraint?(provider_path)
+      requisite_path = HOST_PROJECTION.dig("requisite", "provider_path").to_s.sub("request.", "")
+      provider_path.to_s == "request.#{requisite_path}" || provider_path.to_s.start_with?("request.#{requisite_path}.")
+    end
+
+    def requisite_constraint_value(operation, provider_path, request_method)
+      requisite_path = HOST_PROJECTION.dig("requisite", "provider_path").to_s.sub("request.", "")
+      suffix = provider_path.to_s.delete_prefix("request.#{requisite_path}").sub(/\A\./, "")
+      source = requisite_source(operation)
+      return source if suffix.empty?
+
+      branch = requisite_branch(request_method)
+      return nil unless branch
+      return branch["provider_type"] if suffix == "type"
+
+      host_path = branch.fetch("fields", {})[suffix]
+      host_path ? read_path(source, host_path) : nil
+    end
+
+    def omitted_provider_field?(constraint, request_method)
+      provider_path = constraint.fetch("path")
+      return false unless requisite_constraint?(provider_path)
+
+      requisite_path = HOST_PROJECTION.dig("requisite", "provider_path").to_s.sub("request.", "")
+      field = provider_path.to_s.delete_prefix("request.#{requisite_path}.")
+      branch = requisite_branch(request_method)
+      Array(branch && branch["omit_provider_fields"]).map(&:to_s).include?(field)
     end
 
     def read_path(object, path)
@@ -287,7 +428,7 @@ module Provider
       value.to_s.gsub(/[^A-Za-z0-9._~-]/) { |character| "%%%02X" % character.ord }
     end
 
-    def handle_response(response, expected_success:)
+    def handle_response(response, expected_success:, result_contract: nil, status_reference: nil)
       body_present = (response.is_a?(Hash) && (response.key?("body") || response.key?(:body))) || (!response.is_a?(Hash) && response.respond_to?(:body))
       http_status = read(response, :http_status) || read(response, :status_code) || (body_present ? read(response, :status) : nil)
       body = if body_present
@@ -304,7 +445,11 @@ module Provider
       end
 
       return host_failure("provider response body is malformed JSON", status: 502, code: "invalid_provider_response") if body.nil? && raw_body.is_a?(String) && !raw_body.empty? && http_status
-      return { "ok" => true, "http_status" => http_status.to_s, "response" => nil } if body.nil? && http_status
+      if body.nil? && http_status
+        return host_failure("provider response did not include operation id", status: 502, code: "internal_server_error", i18n_key: "provider.missing_provider_operation_id") if result_contract.is_a?(Hash) && result_contract.fetch("wrapper", nil) == "result"
+
+        return { "ok" => true, "http_status" => http_status.to_s, "response" => nil }
+      end
       return host_failure("provider response body is not an object", status: 502, code: "invalid_provider_response") unless body.is_a?(Hash)
       mapped = map_provider_response(body)
       provider_status = mapped["provider_status"].to_s
@@ -315,16 +460,46 @@ module Provider
       result["error"] = read(body, :error) if read(body, :error)
       result["ok"] = false if canonical_status == "unknown"
       result["error"] ||= "unknown provider status" if canonical_status == "unknown"
+      if result["ok"] == false
+        return host_failure(result["error"], status: 502, code: "internal_server_error", i18n_key: "provider.unknown_status", metadata: result.reject { |key, _value| key.to_s == "response" })
+      end
+      if result_contract.is_a?(Hash) && result_contract.fetch("wrapper", nil) == "result"
+        provider_id = mapped["provider_operation_id"] || read(body, :id)
+        return host_failure("provider response did not include operation id", status: 502, code: "internal_server_error", i18n_key: "provider.missing_provider_operation_id") if blank?(provider_id)
+
+        return host_success_result(provider_id, result)
+      end
+      return apply_status_action(result, status_reference) if status_reference
+
       result
     end
 
-    def build_provider_body(operation)
+    def host_success_result(provider_id, normalized)
+      host_result = success(result: { id: provider_id })
+      return host_result unless host_result.is_a?(Hash)
+
+      extras = normalized.reject { |key, _value| key.to_s == "response" }
+      host_result.merge(extras).merge("result" => { "id" => provider_id })
+    end
+
+    def apply_status_action(result, operation_reference)
+      action_result = bind_callback_action(result["status"], operation_reference)
+      return action_result if compiler_failure?(action_result)
+
+      result.merge(action_result)
+    end
+
+    def build_provider_body(operation, request_method)
       body = {}
       mappings = FIELD_MAPPINGS.select { |mapping| mapping["direction"].to_s == "request" }
       mappings.each do |mapping|
         canonical_path = mapping.fetch("canonical_path").sub("operation.", "")
         provider_path = mapping.fetch("provider_path").sub("request.", "")
-        value = read_path(operation, canonical_path)
+        value = if canonical_path == "recipient" && requisite_branch(request_method)
+                  build_provider_requisite(operation, request_method)
+                else
+                  host_value(operation, canonical_path)
+                end
         next if value.nil?
 
         value = host_amount_to_provider(value) if canonical_path == "amount"
@@ -360,8 +535,12 @@ module Provider
       target[leaf] = value
     end
 
-    def mapped_constraint_value(operation, constraint)
+    def mapped_constraint_value(operation, constraint, request_method)
       provider_path = constraint.fetch("path")
+      if requisite_constraint?(provider_path) && requisite_branch(request_method)
+        return requisite_constraint_value(operation, provider_path, request_method)
+      end
+
       mapping = FIELD_MAPPINGS.find do |item|
         item["direction"].to_s == "request" && (item["provider_path"] == provider_path || provider_path.start_with?("#{item["provider_path"]}.") || item["provider_path"].start_with?("#{provider_path}."))
       end
@@ -375,7 +554,7 @@ module Provider
                        else
                          provider_path.sub("request.", "")
                        end
-      read_path(operation, canonical_path)
+      host_value(operation, canonical_path)
     end
 
     def provider_error(response, body, http_status)
@@ -389,7 +568,23 @@ module Provider
       retry_after = if headers.is_a?(Hash)
                       headers["Retry-After"] || headers["retry-after"] || headers["RETRY-AFTER"]
                     end
-      { "ok" => false, "http_status" => http_status.to_s, "error" => error, "error_code" => provider_code, "error_category" => entry ? entry["category"] : (status_entry && status_entry["canonical_category"]) || "unknown_provider_error", "retryable" => entry ? entry["retryable"] : !!(status_entry && status_entry["retryable"]), "action" => entry ? entry["action"] : (status_entry && status_entry["retryable"] ? "retry_after" : "preserve_and_review"), "retry_after" => retry_after }
+      failure_mapping = FAILURE_PROVIDER_CODE_MAPPINGS[provider_code.to_s] || FAILURE_HTTP_MAPPINGS[http_status.to_s] || default_failure_mapping(http_status)
+      metadata = { "http_status" => http_status.to_s, "error" => error, "error_code" => provider_code, "error_category" => entry ? entry["category"] : (status_entry && status_entry["canonical_category"]) || "unknown_provider_error", "retryable" => entry ? entry["retryable"] : !!(status_entry && status_entry["retryable"]), "action" => entry ? entry["action"] : (status_entry && status_entry["retryable"] ? "retry_after" : "preserve_and_review"), "retry_after" => retry_after }
+      host_failure(metadata["error_category"], status: http_status.to_i, code: failure_mapping.fetch("code"), i18n_key: failure_mapping.fetch("i18n_key"), metadata: metadata)
+    end
+
+    def default_failure_mapping(http_status)
+      code = case http_status.to_i
+             when 400 then "bad_request"
+             when 401 then "unauthorized"
+             when 403 then "forbidden"
+             when 404 then "not_found"
+             when 429 then "too_many_requests"
+             when 422 then "unprocessable_entity"
+             when 500..599 then "internal_server_error"
+             else "unprocessable_entity"
+             end
+      { "code" => code, "i18n_key" => "provider.#{code}" }
     end
 
     def parse_json(raw_body)

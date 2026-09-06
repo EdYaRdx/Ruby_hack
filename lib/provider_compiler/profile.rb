@@ -41,6 +41,22 @@ module ProviderCompiler
       data.fetch("canonical_amount", {})
     end
 
+    def host_operation
+      data.fetch("host_operation", {})
+    end
+
+    def host_projection
+      data.fetch("host_projection", {})
+    end
+
+    def request_method
+      data.fetch("request_method", {})
+    end
+
+    def create_result
+      data.fetch("create_result", {})
+    end
+
     def money
       data.fetch("money", {})
     end

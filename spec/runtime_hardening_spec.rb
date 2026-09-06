@@ -152,11 +152,11 @@ RSpec.describe "generated runtime hardening" do
           service = service_class.new(api_key: "nova-key", client: BlackBoxHttpClient.new)
           operation = pipeline.defaults.examples.fetch("create_request").fetch("operation")
 
-          result = service.create_request(operation.merge("external_id" => "bodyless"))
-          expect(result).to include("ok" => true, "http_status" => "204", "response" => nil)
+          result = service.create_request(operation.merge("id" => "bodyless"))
+          expect(result).to include("ok" => false, "failure_code" => "internal_server_error", "i18n_key" => "provider.missing_provider_operation_id")
           expect(state["requests"].first.dig("headers", "x-api-key")).to eq(["nova-key"])
 
-          limited = service.create_request(operation.merge("external_id" => "rate-limited"))
+          limited = service.create_request(operation.merge("id" => "rate-limited"))
           expect(limited).to include("ok" => false, "http_status" => "429", "error_code" => nil, "retry_after" => "7")
           expect(limited.fetch("error_category")).to eq("rate_limit_exceeded")
         end

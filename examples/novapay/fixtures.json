@@ -3,12 +3,13 @@
     "operation": {
       "amount": 15000,
       "currency": "RUB",
-      "external_id": "op_abc123",
-      "recipient": {
-        "type": "sbp",
-        "phone": "79001234567",
-        "bank_code": "044525225",
-        "bank_name": "Сбербанк"
+      "id": "op_abc123",
+      "payout_requisite": {
+        "sbp": {
+          "phone": "79001234567",
+          "bank_code": "044525225",
+          "bank_name": "Сбербанк"
+        }
       },
       "idempotency_key": "key-1"
     },
@@ -37,7 +38,7 @@
       "completed_at": "2026-01-01T00:00:00Z"
     },
     "operation": {
-      "provider_operation_id": "np_7f3a9b2c"
+      "id": "np_7f3a9b2c"
     },
     "expected_host_status": "approved",
     "expected_host_amount": 15000.0,
@@ -47,11 +48,12 @@
     "operation": {
       "amount": 999.99,
       "currency": "RUB",
-      "external_id": "op_too_small",
-      "recipient": {
-        "type": "sbp",
-        "phone": "79001234567",
-        "bank_code": "044525225"
+      "id": "op_too_small",
+      "payout_requisite": {
+        "sbp": {
+          "phone": "79001234567",
+          "bank_code": "044525225"
+        }
       }
     },
     "expected_http_status": 422,

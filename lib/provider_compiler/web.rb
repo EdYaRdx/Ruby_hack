@@ -329,16 +329,46 @@ module ProviderCompiler
         operation = Util.deep_dup(fixture_data.dig("create_request", "operation") || {})
         operation["amount"] = params.fetch("amount", operation.fetch("amount", "1500.50"))
         operation["currency"] = params.fetch("currency", operation.fetch("currency", blueprint.dig("money", "host", "currency")))
-        operation["external_id"] = params.fetch("external_id", operation.fetch("external_id", "preview-operation"))
         operation["idempotency_key"] ||= "preview-idempotency-key"
-        recipient = operation["recipient"] = Util.deep_dup(operation.fetch("recipient", {}))
-        recipient["type"] ||= params.fetch("recipient_type", "bank")
-        recipient["kind"] ||= params.fetch("recipient_kind", recipient["type"])
-        recipient["phone"] ||= params["recipient_phone"] if params["recipient_phone"]
-        recipient["bank_code"] ||= params["recipient_bank_code"] if params["recipient_bank_code"]
-        recipient["account"] ||= params["recipient_account"] if params["recipient_account"]
-        recipient["routing_number"] ||= params["recipient_routing_number"] if params["recipient_routing_number"]
-        recipient["card_number"] ||= params["recipient_card_number"] if params["recipient_card_number"]
+        host_projection = blueprint.dig("base_service_profile", "host_projection") || {}
+        branches = if blueprint.fetch("field_mappings", []).any? { |mapping| mapping["direction"].to_s == "request" && mapping["canonical_path"].to_s.sub("operation.", "") == "recipient" }
+                     host_projection.dig("requisite", "branches")
+                   end
+        if branches.is_a?(Hash) && !branches.empty?
+          operation["id"] = params.fetch("id", operation["id"] || operation.delete("external_id") || "preview-operation")
+          existing = Util.deep_dup(operation["payout_requisite"] || {})
+          legacy_recipient = operation["recipient"].is_a?(Hash) ? operation["recipient"] : {}
+          method = params.fetch("request_method", "").to_s
+          method = params.fetch("recipient_type", "").to_s if method.empty?
+          method = "sbp" if method.empty? || method == "bank"
+          method = "card" if method == "card"
+          branch = branches[method] || branches.values.first
+          method = branches.key(branch).to_s
+          source = if existing.key?(method)
+                     existing
+                   elsif method == "card"
+                     { "card_number" => existing["card_number"] || legacy_recipient["card_number"], "phone" => existing["phone"] || legacy_recipient["phone"] }
+                   else
+                     { "sbp" => { "phone" => legacy_recipient["phone"], "bank_code" => legacy_recipient["bank_code"], "bank_name" => legacy_recipient["bank_name"] } }
+                   end
+          source[method] = {} unless source[method].is_a?(Hash) if method != "card"
+          requisite = method == "card" ? source : source.fetch(method)
+          requisite["phone"] ||= params["recipient_phone"] if params["recipient_phone"]
+          requisite["bank_code"] ||= params["recipient_bank_code"] if params["recipient_bank_code"]
+          requisite["card_number"] ||= params["recipient_card_number"] if params["recipient_card_number"]
+          operation["payout_requisite"] = source
+          operation["request_method"] = method
+        else
+          operation["external_id"] = params.fetch("external_id", operation.fetch("external_id", "preview-operation"))
+          recipient = operation["recipient"] = Util.deep_dup(operation.fetch("recipient", {}))
+          recipient["type"] ||= params.fetch("recipient_type", "bank")
+          recipient["kind"] ||= params.fetch("recipient_kind", recipient["type"])
+          recipient["phone"] ||= params["recipient_phone"] if params["recipient_phone"]
+          recipient["bank_code"] ||= params["recipient_bank_code"] if params["recipient_bank_code"]
+          recipient["account"] ||= params["recipient_account"] if params["recipient_account"]
+          recipient["routing_number"] ||= params["recipient_routing_number"] if params["recipient_routing_number"]
+          recipient["card_number"] ||= params["recipient_card_number"] if params["recipient_card_number"]
+        end
         request = runtime_service.build_create_request(operation)
         {
           "host_input" => operation,

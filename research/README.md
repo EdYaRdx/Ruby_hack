@@ -26,7 +26,8 @@
 
 `REFERENCE_GROUND_TRUTH.md`, `GROUND_TRUTH_CORRECTIONS.md`,
 `PROVIDER_BLUEPRINT_V1.md`, `RULE_PRECEDENCE.md`, `ARCHITECTURE_INVARIANTS.md`,
-`ARCHITECTURE_RED_TEAM.md`, `SECOND_PROVIDER_VALIDATION.md` и
+`ARCHITECTURE_RED_TEAM.md`, `SECOND_PROVIDER_VALIDATION.md`,
+`ORGANIZER_CONTRACT_ALIGNMENT.md` и
 `POST_CHECKPOINT_RUBRIC_AUDIT.md` содержат актуальные
 подтверждающие материалы. Их aggregate-метрики всё равно публикуются
 канонически через [`docs/BENCHMARK.md`](../docs/BENCHMARK.md).
@@ -83,6 +84,7 @@
 - [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) — исторические benchmark metrics и ограничения evidence.
 - [REFERENCE_GROUND_TRUTH.md](REFERENCE_GROUND_TRUTH.md) — разбор официального OpenAPI reference-case.
 - [GROUND_TRUTH_CORRECTIONS.md](GROUND_TRUTH_CORRECTIONS.md) — corrections NovaPay ground truth и проверка влияния на architecture.
+- [ORGANIZER_CONTRACT_ALIGNMENT.md](ORGANIZER_CONTRACT_ALIGNMENT.md) — выравнивание generated adapter/host boundary с organizer contract и regression evidence GOAL 6.7.
 - [EDGE_CASES.md](EDGE_CASES.md) — критические неоднозначности и policy `ACCEPT`/`REVIEW`/`UNKNOWN`.
 - [EXPECTED_SCORE.md](EXPECTED_SCORE.md) — conservative score по официальной rubric.
 - [DONT_BUILD.md](DONT_BUILD.md) — scope, намеренно не входящий в MVP.

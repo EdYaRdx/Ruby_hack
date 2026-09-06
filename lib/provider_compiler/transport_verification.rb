@@ -89,7 +89,7 @@ module ProviderCompiler
         service = service_class.new(api_key: "transport-verification-key", client: NetHttpClient.new)
         expected_request = service.build_create_request(operation)
         created = service.create_request(operation)
-        provider_operation_id = read(created, "provider_operation_id") || "transport-provider-id"
+        provider_operation_id = created.dig("result", "id") || read(created, "provider_operation_id") || "transport-provider-id"
         status_path = status_endpoint.fetch("path").sub(/\{[^}]+\}/, escape_path_segment(provider_operation_id))
         fetched = service.fetch_status("provider_operation_id" => provider_operation_id)
       end
@@ -227,9 +227,14 @@ module ProviderCompiler
       operation = operation.is_a?(Hash) ? Util.deep_dup(operation) : {}
       operation["amount"] ||= 1
       operation["currency"] ||= @blueprint.dig("money", "host", "currency") || "XXX"
-      operation["external_id"] ||= "transport-operation"
-      recipient = operation["recipient"] = Util.deep_dup(operation["recipient"] || {})
-      recipient["type"] ||= "bank"
+      if @blueprint.dig("base_service_profile", "host_projection", "requisite", "branches").is_a?(Hash)
+        operation["id"] ||= operation.delete("external_id") || "transport-operation"
+        operation["payout_requisite"] ||= { "sbp" => { "phone" => "70000000000", "bank_code" => "000000000" } }
+      else
+        operation["external_id"] ||= "transport-operation"
+        recipient = operation["recipient"] = Util.deep_dup(operation["recipient"] || {})
+        recipient["type"] ||= "bank"
+      end
       operation
     end
 
@@ -361,8 +366,10 @@ module ProviderCompiler
       unless provider.const_defined?(:BaseService, false)
         provider.const_set(:BaseService, Class.new do
           def check_conditions(_operation, _request_method); success; end
-          def success(value = true); { "ok" => true, "value" => value }; end
-          def failure(status = nil, code = nil, message = nil); { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code }; end
+          def success(result: nil); { "ok" => true, "result" => result }; end
+          def failure(code, i18n_key); { "ok" => false, "failure_code" => code, "i18n_key" => i18n_key }; end
+          def approve_operation(operation); { "ok" => true, "action" => "approve_operation", "operation" => operation }; end
+          def reject_operation(operation); { "ok" => true, "action" => "reject_operation", "operation" => operation }; end
         end)
         @base_service_created = true
       end

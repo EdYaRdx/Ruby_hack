@@ -130,20 +130,14 @@ RSpec.describe "Goal 5 spec-only hardening and generator correctness" do
         service_class = load_generated_service(directory, pipeline.blueprint)
         service = service_class.new(api_key: "key")
         valid = pipeline.defaults.examples.dig("create_request", "operation")
-        expect(service.check_conditions(valid, "create")).to include("ok" => true)
+        expect(service.check_conditions(valid, "sbp")).to include("ok" => true)
         expect(service.base_check_calls).to eq(1)
-        blocked = service.check_conditions(valid.merge("base_blocked" => true), "create")
-        expect(blocked).to include("ok" => false, "error_code" => "base_blocked")
-        invalid = valid.merge("recipient" => { "type" => "sbp", "phone" => "79001234567" })
-        expect(service.check_conditions(invalid, "create")).to include("ok" => false, "http_status" => 422, "error_code" => "validation_error")
-        expect(service.failure_calls.last).to include(422, "validation_error")
-
-        non_create = service.check_conditions(invalid, "status")
-        expect(non_create).to include("ok" => true)
-        expect(service.base_check_calls).to eq(4)
-        non_create_blocked = service.check_conditions(valid.merge("base_blocked" => true), "status")
-        expect(non_create_blocked).to include("ok" => false, "error_code" => "base_blocked")
-        expect(service.base_check_calls).to eq(5)
+        blocked = service.check_conditions(valid.merge("base_blocked" => true), "sbp")
+        expect(blocked).to include("ok" => false, "failure_code" => "base_blocked")
+        invalid = valid.merge("payout_requisite" => { "sbp" => { "phone" => "79001234567" } })
+        expect(service.check_conditions(invalid, "sbp")).to include("ok" => false, "failure_code" => "unprocessable_entity", "i18n_key" => "provider.validation_error")
+        expect(service.failure_calls.last).to include(:unprocessable_entity, "provider.validation_error")
+        expect(service.base_check_calls).to eq(3)
       end
     end
   end

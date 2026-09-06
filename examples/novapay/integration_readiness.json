@@ -17,7 +17,7 @@
       "process_callback",
       "fetch_status"
     ],
-    "request_method_semantics": "logical_action",
+    "request_method_semantics": "gateway_payment_method",
     "canonical_operations": [
       "create",
       "status",
@@ -34,12 +34,123 @@
     },
     "failure_contract": {
       "arguments": [
-        "status",
         "code",
-        "message"
+        "i18n_key"
       ],
       "validation_status": 422,
-      "validation_code": "validation_error"
+      "validation_code": "unprocessable_entity",
+      "validation_i18n_key": "provider.validation_error",
+      "allowed_codes": [
+        "bad_request",
+        "unauthorized",
+        "forbidden",
+        "unprocessable_entity",
+        "too_many_requests",
+        "internal_server_error",
+        "not_found"
+      ],
+      "http_mappings": {
+        "400": {
+          "code": "bad_request",
+          "i18n_key": "provider.validation_error"
+        },
+        "401": {
+          "code": "unauthorized",
+          "i18n_key": "provider.invalid_credentials"
+        },
+        "402": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.insufficient_balance"
+        },
+        "404": {
+          "code": "not_found",
+          "i18n_key": "provider.not_found"
+        },
+        "409": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.conflict"
+        },
+        "422": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.validation_error"
+        },
+        "429": {
+          "code": "too_many_requests",
+          "i18n_key": "provider.rate_limit"
+        },
+        "500": {
+          "code": "internal_server_error",
+          "i18n_key": "provider.internal_error"
+        },
+        "502": {
+          "code": "internal_server_error",
+          "i18n_key": "provider.transport_error"
+        }
+      },
+      "provider_code_mappings": {
+        "amount_limit_exceeded": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.amount_limit_exceeded"
+        }
+      }
+    },
+    "host_operation": {
+      "id": "operation.id",
+      "amount": "operation.amount",
+      "payout_requisite": "operation.payout_requisite"
+    },
+    "host_projection": {
+      "canonical_paths": {
+        "external_id": "operation.id",
+        "recipient": "operation.payout_requisite",
+        "provider_operation_id": "operation.id"
+      },
+      "requisite": {
+        "source": "operation.payout_requisite",
+        "provider_path": "recipient",
+        "branches": {
+          "sbp": {
+            "provider_type": "sbp",
+            "required": [
+              "phone",
+              "bank_code"
+            ],
+            "fields": {
+              "phone": "sbp.phone",
+              "bank_code": "sbp.bank_code",
+              "bank_name": "sbp.bank_name"
+            }
+          },
+          "card": {
+            "provider_type": "card",
+            "required": [
+              "card_number",
+              "phone"
+            ],
+            "fields": {
+              "card_number": "card_number",
+              "phone": "phone"
+            }
+          }
+        },
+        "unknown_required_policy": "review_todo"
+      }
+    },
+    "request_method": {
+      "semantics": "gateway_payment_method",
+      "allowed": [
+        "sbp",
+        "card"
+      ],
+      "infer_from_requisite": {
+        "sbp": "sbp",
+        "card": "card_number"
+      },
+      "conflict_policy": "fail"
+    },
+    "create_result": {
+      "wrapper": "result",
+      "field": "id"
     }
   },
   "operations": {
@@ -704,7 +815,7 @@
     "smoke": {
       "passed": true,
       "stdout": "contract smoke passed\n",
-      "stderr": ""
+      "stderr": "C:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:301: warning: already initialized constant Gem::Platform::JAVA\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:279: warning: previous definition of JAVA was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:302: warning: already initialized constant Gem::Platform::MSWIN\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:280: warning: previous definition of MSWIN was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:303: warning: already initialized constant Gem::Platform::MSWIN64\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:281: warning: previous definition of MSWIN64 was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:304: warning: already initialized constant Gem::Platform::MINGW\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:282: warning: previous definition of MINGW was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:305: warning: already initialized constant Gem::Platform::X64_MINGW\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:284: warning: previous definition of X64_MINGW was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:307: warning: already initialized constant Gem::Platform::WINDOWS\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:286: warning: previous definition of WINDOWS was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:308: warning: already initialized constant Gem::Platform::X64_LINUX\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:287: warning: previous definition of X64_LINUX was here\nC:/Programs/Ruby40-x64/lib/ruby/gems/4.0.0/gems/bundler-2.5.22/lib/bundler/rubygems_ext.rb:309: warning: already initialized constant Gem::Platform::X64_LINUX_MUSL\nC:/Programs/Ruby40-x64/lib/ruby/4.0.0/rubygems/platform.rb:288: warning: previous definition of X64_LINUX_MUSL was here\n"
     },
     "transport": {
       "status": "PASS",
@@ -757,9 +868,9 @@
             "external_id": "op_abc123",
             "recipient": {
               "type": "sbp",
-              "phone": "79001234567",
               "bank_code": "044525225",
-              "bank_name": "Сбербанк"
+              "bank_name": "Сбербанк",
+              "phone": "79001234567"
             }
           },
           "actual": {
@@ -768,9 +879,9 @@
             "external_id": "op_abc123",
             "recipient": {
               "type": "sbp",
-              "phone": "79001234567",
               "bank_code": "044525225",
-              "bank_name": "Сбербанк"
+              "bank_name": "Сбербанк",
+              "phone": "79001234567"
             }
           }
         },
@@ -848,9 +959,9 @@
             "external_id": "op_abc123",
             "recipient": {
               "type": "sbp",
-              "phone": "79001234567",
               "bank_code": "044525225",
-              "bank_name": "Сбербанк"
+              "bank_name": "Сбербанк",
+              "phone": "79001234567"
             }
           }
         },
@@ -935,9 +1046,9 @@
           "external_id": "op_abc123",
           "recipient": {
             "type": "sbp",
-            "phone": "79001234567",
             "bank_code": "044525225",
-            "bank_name": "Сбербанк"
+            "bank_name": "Сбербанк",
+            "phone": "79001234567"
           }
         },
         "actual": {
@@ -946,9 +1057,9 @@
           "external_id": "op_abc123",
           "recipient": {
             "type": "sbp",
-            "phone": "79001234567",
             "bank_code": "044525225",
-            "bank_name": "Сбербанк"
+            "bank_name": "Сбербанк",
+            "phone": "79001234567"
           }
         }
       },
@@ -1026,9 +1137,9 @@
           "external_id": "op_abc123",
           "recipient": {
             "type": "sbp",
-            "phone": "79001234567",
             "bank_code": "044525225",
-            "bank_name": "Сбербанк"
+            "bank_name": "Сбербанк",
+            "phone": "79001234567"
           }
         }
       },

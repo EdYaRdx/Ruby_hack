@@ -42,6 +42,7 @@
 - Webhook secret: передаётся в generated adapter, если Blueprint содержит signature semantics (`X-NovaPay-Signature`)
 - Idempotency по спецификации: `false`; adapter policy: `if_available`; header: `Idempotency-Key`
 - Supported canonical operations: `create`, `status`, `callback`
+- Host operation source: `operation.id`, `operation.amount`, `operation.payout_requisite`
 
 Параметры, которые необходимо передать в окружение/host gateway, должны
 быть адаптированы к API host-приложения; этот generated документ не
@@ -65,6 +66,8 @@ durability across process restart не гарантируется.
 - HTTP 500: internal_error
 - HTTP 404: not_found → not_found
 - HTTP 409: invalid_status → conflict
+
+
 
 Обработка webhook использует fail-closed поведение, если raw body,
 signature, secret или known event outcome отсутствуют либо некорректны.

@@ -819,6 +819,64 @@ module ProviderCompiler
     end
   end
 
+  class HostProjectionAnalyzer
+    def initialize(profile)
+      @profile = profile
+    end
+
+    def analyze(facts)
+      projection = @profile.host_projection
+      requisite = projection.fetch("requisite", {})
+      branches = requisite.fetch("branches", {})
+      return AnalysisResult.new(section: { "requirements" => [], "decision" => "ACCEPT" }, decisions: []) if branches.empty?
+
+      operation = facts.operations.find { |item| item["method"] == "POST" && item["operation_id"].to_s.match?(/create|initiat|submit/i) }
+      operation ||= facts.operations.find { |item| item["method"] == "POST" }
+      schema = operation && operation.dig("request_body", "content", "application/json", "schema")
+      provider_path = requisite.fetch("provider_path", "recipient").sub("request.", "")
+      provider_schema = path_schema(schema, provider_path)
+      return AnalysisResult.new(section: { "requirements" => [], "decision" => "ACCEPT" }, decisions: []) unless provider_schema.is_a?(Hash) && provider_schema["properties"].is_a?(Hash)
+
+      configured_fields = branches.values.flat_map { |branch| branch.is_a?(Hash) ? branch.fetch("fields", {}).keys.map(&:to_s) : [] }.uniq
+      required_fields = Array(provider_schema["required"]).map(&:to_s)
+      missing = required_fields.reject do |field|
+        field == "type" || configured_fields.include?(field)
+      end
+      requirements = missing.map do |field|
+        {
+          "provider_field" => field,
+          "provider_path" => "request.#{provider_path}.#{field}",
+          "host_source" => requisite.fetch("source", "operation.payout_requisite"),
+          "mapping" => nil,
+          "generation_impact" => "BLOCKING",
+          "todo" => "provider requires field `#{field}`. Host mapping is not known. Confirm source inside operation.payout_requisite or extend BaseServiceProfile."
+        }
+      end
+      return AnalysisResult.new(section: { "requirements" => [], "decision" => "ACCEPT" }, decisions: []) if requirements.empty?
+
+      location = "#/paths/#{operation["path"].to_s.gsub("/", "~1")}/#{operation["method"].to_s.downcase}/requestBody/content/application~1json/schema/properties/#{provider_path.gsub(".", "/")}/required"
+      decision = Decision.new(
+        id: "host:requisite-mapping",
+        outcome: "REVIEW_REQUIRED",
+        severity: "BLOCKING",
+        candidate: requirements,
+        evidence: [Evidence.new(source: "SPEC_FACT", locations: [location], excerpt: "required provider requisite fields without a declared host projection")],
+        rationale: "required provider requisite fields must have an explicit operation.payout_requisite mapping before generation"
+      )
+      AnalysisResult.new(section: { "requirements" => requirements, "decision" => "REVIEW_REQUIRED" }, decisions: [decision])
+    end
+
+    private
+
+    def path_schema(schema, path)
+      path.to_s.split(".").reduce(schema) do |current, name|
+        break nil unless current.is_a?(Hash)
+
+        current.fetch("properties", {})[name]
+      end
+    end
+  end
+
   class ConstraintAnalyzer
     def analyze(facts, money)
       operation = facts.operations.find { |item| item["method"] == "POST" && item["operation_id"].to_s.match?(/create|initiat|submit/i) }
@@ -1113,6 +1171,9 @@ module ProviderCompiler
       field_result = FieldMapper.new(@profile, @defaults).analyze(facts, results.fetch(:money))
       results[:field_mappings] = field_result.section
       decisions.concat(field_result.decisions)
+      host_projection_result = HostProjectionAnalyzer.new(@profile).analyze(facts)
+      results[:host_projection] = host_projection_result.section
+      decisions.concat(host_projection_result.decisions)
       constraint_result = ConstraintAnalyzer.new.analyze(facts, results.fetch(:money))
       results[:constraints] = constraint_result.section
       decisions.concat(constraint_result.decisions)

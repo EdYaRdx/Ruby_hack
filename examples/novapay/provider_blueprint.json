@@ -104,7 +104,7 @@
       "process_callback",
       "fetch_status"
     ],
-    "request_method_semantics": "logical_action",
+    "request_method_semantics": "gateway_payment_method",
     "canonical_operations": [
       "create",
       "status",
@@ -121,12 +121,123 @@
     },
     "failure_contract": {
       "arguments": [
-        "status",
         "code",
-        "message"
+        "i18n_key"
       ],
       "validation_status": 422,
-      "validation_code": "validation_error"
+      "validation_code": "unprocessable_entity",
+      "validation_i18n_key": "provider.validation_error",
+      "allowed_codes": [
+        "bad_request",
+        "unauthorized",
+        "forbidden",
+        "unprocessable_entity",
+        "too_many_requests",
+        "internal_server_error",
+        "not_found"
+      ],
+      "http_mappings": {
+        "400": {
+          "code": "bad_request",
+          "i18n_key": "provider.validation_error"
+        },
+        "401": {
+          "code": "unauthorized",
+          "i18n_key": "provider.invalid_credentials"
+        },
+        "402": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.insufficient_balance"
+        },
+        "404": {
+          "code": "not_found",
+          "i18n_key": "provider.not_found"
+        },
+        "409": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.conflict"
+        },
+        "422": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.validation_error"
+        },
+        "429": {
+          "code": "too_many_requests",
+          "i18n_key": "provider.rate_limit"
+        },
+        "500": {
+          "code": "internal_server_error",
+          "i18n_key": "provider.internal_error"
+        },
+        "502": {
+          "code": "internal_server_error",
+          "i18n_key": "provider.transport_error"
+        }
+      },
+      "provider_code_mappings": {
+        "amount_limit_exceeded": {
+          "code": "unprocessable_entity",
+          "i18n_key": "provider.amount_limit_exceeded"
+        }
+      }
+    },
+    "host_operation": {
+      "id": "operation.id",
+      "amount": "operation.amount",
+      "payout_requisite": "operation.payout_requisite"
+    },
+    "host_projection": {
+      "canonical_paths": {
+        "external_id": "operation.id",
+        "recipient": "operation.payout_requisite",
+        "provider_operation_id": "operation.id"
+      },
+      "requisite": {
+        "source": "operation.payout_requisite",
+        "provider_path": "recipient",
+        "branches": {
+          "sbp": {
+            "provider_type": "sbp",
+            "required": [
+              "phone",
+              "bank_code"
+            ],
+            "fields": {
+              "phone": "sbp.phone",
+              "bank_code": "sbp.bank_code",
+              "bank_name": "sbp.bank_name"
+            }
+          },
+          "card": {
+            "provider_type": "card",
+            "required": [
+              "card_number",
+              "phone"
+            ],
+            "fields": {
+              "card_number": "card_number",
+              "phone": "phone"
+            }
+          }
+        },
+        "unknown_required_policy": "review_todo"
+      }
+    },
+    "request_method": {
+      "semantics": "gateway_payment_method",
+      "allowed": [
+        "sbp",
+        "card"
+      ],
+      "infer_from_requisite": {
+        "sbp": "sbp",
+        "card": "card_number"
+      },
+      "conflict_policy": "fail"
+    },
+    "create_result": {
+      "wrapper": "result",
+      "field": "id"
     }
   },
   "auth": {
@@ -866,6 +977,10 @@
       "decision": "ACCEPT"
     }
   ],
+  "host_projection": {
+    "requirements": [],
+    "decision": "ACCEPT"
+  },
   "extra_operations": [
     {
       "operation_id": "cancelPayout",

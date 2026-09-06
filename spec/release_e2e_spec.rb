@@ -127,15 +127,15 @@ RSpec.describe "release-grade generated adapter E2E" do
           nova_blueprint.fetch("endpoints").find { |item| item["canonical"] == "create_request" }.fetch("success_statuses") << "204"
           service = generated_service(nova, File.join(directory, "nova"), blueprint: nova_blueprint).new(api_key: "nova-key", webhook_secret: "secret", client: ReleaseNetHttpClient.new)
           operation = nova.defaults.examples.fetch("create_request").fetch("operation")
-          created = service.create_request(operation.merge("external_id" => "nova-create"))
+          created = service.create_request(operation.merge("id" => "nova-create"))
           expect(created).to include("ok" => true, "http_status" => "201", "status" => "in_progress")
           expect(state["requests"].find { |item| item["path"] == "/payouts" }.dig("headers", "x-api-key")).to eq(["nova-key"])
           expect(state["requests"].find { |item| item["path"] == "/payouts" }.dig("body", "amount")).to eq(1_500_000)
 
           fetched = service.fetch_status(provider_operation_id: "np-1")
           expect(fetched).to include("ok" => true, "http_status" => "200", "status" => "approved")
-          bodyless = service.create_request(operation.merge("external_id" => "bodyless"))
-          expect(bodyless).to include("ok" => true, "http_status" => "204")
+          bodyless = service.create_request(operation.merge("id" => "bodyless"))
+          expect(bodyless).to include("ok" => false, "failure_code" => "internal_server_error", "i18n_key" => "provider.missing_provider_operation_id")
         end
 
         with_env("HELIOSPAY_BASE_URL", base_url) do
@@ -162,12 +162,12 @@ RSpec.describe "release-grade generated adapter E2E" do
           service = generated_service(nova, File.join(directory, "nova-errors")).new(api_key: "nova-key", client: ReleaseNetHttpClient.new)
           operation = nova.defaults.examples.fetch("create_request").fetch("operation")
           [400, 401, 404, 409, 422, 429, 500].each do |status|
-            result = service.create_request(operation.merge("external_id" => "http-#{status}"))
+            result = service.create_request(operation.merge("id" => "http-#{status}"))
             expect(result).to include("ok" => false, "http_status" => status.to_s)
             expect(result.fetch("error_category")).not_to be_nil
             expect(result.fetch("error_code")).to be_nil
           end
-          limited = service.create_request(operation.merge("external_id" => "http-429"))
+          limited = service.create_request(operation.merge("id" => "http-429"))
           expect(limited.fetch("retry_after")).to eq("7")
         end
       end
@@ -228,6 +228,10 @@ RSpec.describe "release-grade generated adapter E2E" do
           processing: in_progress
           settled: approved
           declined: rejected
+        idempotency:
+          header: Idempotency-Key
+          spec_required: false
+          source: CASE_DEFAULT
       YAML
       pipeline = pipeline_for(File.join(root, "research", "black_box_v1", "specs", "07_scale_1000.yaml"), File.join(root, "profiles", "space_payments_v1.yml"), defaults)
       expect(pipeline.blueprint.dig("money", "request_conversion", "factor")).to eq(1000)
@@ -237,7 +241,12 @@ RSpec.describe "release-grade generated adapter E2E" do
       start_provider do |base_url, _state|
         with_env("MILLSTONE_BASE_URL", base_url) do
           service_class = generated_service(pipeline, File.join(directory, "generated"), blueprint: blueprint)
-          result = service_class.new(api_key: "mill-key", client: ReleaseNetHttpClient.new).create_request("amount" => 1.234, "recipient" => { "type" => "bank" })
+          result = service_class.new(api_key: "mill-key", client: ReleaseNetHttpClient.new).create_request(
+            "amount" => 1.234,
+            "currency" => "RUB",
+            "id" => "millstone-operation",
+            "payout_requisite" => { "sbp" => { "phone" => "70000000000", "bank_code" => "000000000" } }
+          )
           expect(result).to include("ok" => true, "http_status" => "200")
         end
       end

@@ -77,7 +77,8 @@ RSpec.describe "provider_compiler CLI" do
 
       expect(status.success?).to be(false), "stdout=#{stdout.inspect} stderr=#{stderr.inspect}"
       expect(File).to exist(File.join(directory, "keep.txt"))
-      expect(Dir.children(directory)).to contain_exactly("keep.txt")
+      expect(Dir.children(directory)).to contain_exactly("keep.txt", "provider_blueprint.json", "review_manifest.json", "INTEGRATION.md")
+      expect(File).not_to exist(File.join(directory, "service.rb"))
     end
   end
 end

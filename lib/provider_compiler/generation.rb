@@ -42,6 +42,9 @@ module ProviderCompiler
       status_success_statuses = success_statuses("fetch_status")
       profile = @blueprint.fetch("base_service_profile")
       failure_contract = profile.fetch("failure_contract", {})
+      host_projection = profile.fetch("host_projection", {})
+      request_method_config = profile.fetch("request_method", {})
+      create_result = profile.fetch("create_result", {})
       erb = ERB.new(TEMPLATE, trim_mode: "-")
       erb.result_with_hash(
         provider: provider,
@@ -63,9 +66,16 @@ module ProviderCompiler
         webhook_id_field: webhook_id_field,
         callback_actions: ruby_literal(@blueprint.dig("base_service_profile", "callback_actions") || {}),
         failure_arguments: ruby_literal(Array(failure_contract.fetch("arguments", ["message"]))),
+        allowed_failure_codes: ruby_literal(Array(failure_contract.fetch("allowed_codes", []))),
+        failure_http_mappings: ruby_literal(failure_contract.fetch("http_mappings", {})),
+        failure_provider_code_mappings: ruby_literal(failure_contract.fetch("provider_code_mappings", {})),
         call_super_conditions: profile.dig("check_conditions", "call_super") == true,
         validation_failure_status: ruby_literal(failure_contract.fetch("validation_status", 422)),
         validation_failure_code: ruby_literal(failure_contract.fetch("validation_code", "validation_error")),
+        validation_i18n_key: ruby_literal(failure_contract.fetch("validation_i18n_key", "provider.validation_error")),
+        host_projection: ruby_literal(host_projection),
+        request_method_config: ruby_literal(request_method_config),
+        create_result: ruby_literal(create_result),
         create_method: endpoint_method("create_request"),
         status_method: endpoint_method("fetch_status"),
         create_path: endpoint_path("create_request"),
@@ -171,8 +181,15 @@ module ProviderCompiler
           STATUS_SUCCESS_STATUSES = <%= status_success_statuses %>.freeze
           CALL_SUPER_CONDITIONS = <%= call_super_conditions.inspect %>
           FAILURE_ARGUMENTS = <%= failure_arguments %>.freeze
+          ALLOWED_FAILURE_CODES = <%= allowed_failure_codes %>.freeze
+          FAILURE_HTTP_MAPPINGS = <%= failure_http_mappings %>.freeze
+          FAILURE_PROVIDER_CODE_MAPPINGS = <%= failure_provider_code_mappings %>.freeze
           VALIDATION_FAILURE_STATUS = <%= validation_failure_status %>
           VALIDATION_FAILURE_CODE = <%= validation_failure_code %>
+          VALIDATION_I18N_KEY = <%= validation_i18n_key %>
+          HOST_PROJECTION = <%= host_projection %>.freeze
+          REQUEST_METHOD_CONFIG = <%= request_method_config %>.freeze
+          CREATE_RESULT = <%= create_result %>.freeze
 
           def initialize(api_key:, webhook_secret: nil, client: nil)
             @api_key = api_key
@@ -181,31 +198,33 @@ module ProviderCompiler
             @idempotency_keys = {}
           end
 
-          def check_conditions(operation, request_method)
+          def check_conditions(operation, request_method = nil)
+            resolved_method = resolve_request_method(operation, request_method)
             if CALL_SUPER_CONDITIONS
-              base_result = super(operation, request_method)
+              base_result = super(operation, resolved_method)
               return base_result if failed_result?(base_result)
             end
 
-            return success if request_method.to_s != "create"
-
-            errors = validate_constraints(operation)
-            errors.concat(validate_conditionals(operation))
-            errors.empty? ? success : host_failure(errors.join("; "), status: VALIDATION_FAILURE_STATUS, code: VALIDATION_FAILURE_CODE)
+            errors = validate_constraints(operation, resolved_method)
+            errors.concat(validate_conditionals(operation, resolved_method))
+            errors.empty? ? success : host_failure(errors.join("; "), status: VALIDATION_FAILURE_STATUS, code: VALIDATION_FAILURE_CODE, i18n_key: VALIDATION_I18N_KEY)
+          rescue ArgumentError => e
+            host_failure(e.message, status: VALIDATION_FAILURE_STATUS, code: "bad_request", i18n_key: "provider.invalid_request")
           end
 
-          def build_create_request(operation, request_method = "create")
-            raise ArgumentError, "unsupported request_method: #{request_method}" unless request_method.to_s == "create"
-            condition_result = check_conditions(operation, request_method)
+          def build_create_request(operation, request_method = nil)
+            resolved_method = resolve_request_method(operation, request_method)
+            condition_result = check_conditions(operation, resolved_method)
             raise ArgumentError, condition_error(condition_result) if failed_result?(condition_result)
 
-            body = build_provider_body(operation)
+            body = build_provider_body(operation, resolved_method)
             headers, query = authentication
             key = read(operation, :idempotency_key)
             if IDEMPOTENCY.dig("adapter_policy", "send_header") == "always" || (IDEMPOTENCY.dig("adapter_policy", "send_header") == "if_available" && !blank?(key))
               if IDEMPOTENCY.fetch("header")
-                stable_key = key || @idempotency_keys[read(operation, :external_id).to_s] || SecureRandom.uuid
-                @idempotency_keys[read(operation, :external_id).to_s] = stable_key unless key
+                operation_key = read(operation, :external_id) || read(operation, :id)
+                stable_key = key || @idempotency_keys[operation_key.to_s] || SecureRandom.uuid
+                @idempotency_keys[operation_key.to_s] = stable_key unless key
                 headers[IDEMPOTENCY.fetch("header")] = stable_key
               end
             end
@@ -213,14 +232,14 @@ module ProviderCompiler
             { "method" => CREATE_METHOD, "path" => path, "url" => "#{BASE_URL}#{path}", "headers" => headers, "query" => query, "body" => body }
           end
 
-          def create_request(operation, request_method = "create")
+          def create_request(operation, request_method = nil)
             request = build_create_request(operation, request_method)
             return request unless @client
 
             response = dispatch_or_failure(request)
             return response if compiler_failure?(response)
 
-            handle_response(response, expected_success: CREATE_SUCCESS_STATUSES)
+            handle_response(response, expected_success: CREATE_SUCCESS_STATUSES, result_contract: CREATE_RESULT)
           end
 
           def fetch_status(operation)
@@ -234,7 +253,7 @@ module ProviderCompiler
             response = dispatch_or_failure(request)
             return response if compiler_failure?(response)
 
-            handle_response(response, expected_success: STATUS_SUCCESS_STATUSES)
+            handle_response(response, expected_success: STATUS_SUCCESS_STATUSES, status_reference: id)
           end
 
           def process_callback(payload)
@@ -246,11 +265,12 @@ module ProviderCompiler
             return host_failure("webhook signature is required", code: "missing_webhook_signature") if blank?(signature)
             return host_failure("invalid webhook signature", code: "invalid_webhook_signature") unless verify_webhook_signature(raw_body, signature)
 
-            event = read(payload, :event)
-            body = parse_json(raw_body)
-            body = body.is_a?(Hash) ? body : {}
-            provider_status = (read(payload, :status) || body["status"]).to_s
-            event = read(payload, :event) || body["event"]
+            parsed_payload = read(payload, :parsed_payload) || read(payload, :data) || payload
+            parsed_payload = {} unless parsed_payload.is_a?(Hash)
+            signed_body = parse_json(raw_body)
+            signed_body = signed_body.is_a?(Hash) ? signed_body : {}
+            provider_status = (read(parsed_payload, :status) || signed_body["status"]).to_s
+            event = read(parsed_payload, :event) || signed_body["event"]
             event_status = event.to_s.split(".").last
             if !blank?(provider_status) && !blank?(event_status) && provider_status.casecmp?(event_status) == false
               return host_failure("webhook event/status contradiction", code: "webhook_contradiction")
@@ -258,7 +278,7 @@ module ProviderCompiler
             canonical = WEBHOOK.fetch("events", {})[event.to_s]
             return host_failure("unknown webhook event", code: "unknown_webhook_event") if canonical.nil? || canonical == "UNKNOWN"
 
-            result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(payload, :external_id) || body["external_id"], "provider_operation_id" => read(payload, WEBHOOK_ID_FIELD) || body[WEBHOOK_ID_FIELD] }
+            result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(parsed_payload, :external_id) || signed_body["external_id"], "provider_operation_id" => read(parsed_payload, WEBHOOK_ID_FIELD) || signed_body[WEBHOOK_ID_FIELD] }
             action_result = bind_callback_action(canonical, result["provider_operation_id"] || result["external_id"] || result)
             return action_result.merge("provider_status" => provider_status, "status" => canonical, "event" => event) unless action_result["ok"] != false
 
@@ -283,13 +303,44 @@ module ProviderCompiler
             convert_host_amount(value)
           end
 
-          def host_failure(message, status: VALIDATION_FAILURE_STATUS, code: "runtime_error")
-            values = { "status" => status, "code" => code, "message" => message }
+          def host_failure(message, status: VALIDATION_FAILURE_STATUS, code: nil, i18n_key: nil, metadata: {})
+            platform_code = compatible_failure_code(code, status)
+            key = i18n_key || "provider.#{code || platform_code}"
+            values = { "status" => status, "code" => platform_code.to_sym, "message" => message, "i18n_key" => key }
             result = failure(*FAILURE_ARGUMENTS.map { |argument| values.fetch(argument.to_s) })
-            result.is_a?(Hash) ? result.merge("provider_compiler_failure" => true) : result
+            return result unless result.is_a?(Hash)
+
+            metadata = metadata.dup
+            metadata["error"] ||= message
+            metadata["error_code"] = code unless metadata.key?("error_code") || code.nil?
+            result.merge(metadata).merge(
+              "provider_compiler_failure" => true,
+              "failure_code" => platform_code,
+              "i18n_key" => key
+            )
           end
 
           private
+
+          def compatible_failure_code(code, status)
+            candidate = code.to_s
+            return candidate if !ALLOWED_FAILURE_CODES.empty? && ALLOWED_FAILURE_CODES.include?(candidate)
+            return candidate if ALLOWED_FAILURE_CODES.empty? && !candidate.empty? && candidate != "runtime_error"
+
+            mapped = case status.to_i
+                     when 400 then "bad_request"
+                     when 401 then "unauthorized"
+                     when 403 then "forbidden"
+                     when 404 then "not_found"
+                     when 429 then "too_many_requests"
+                     when 422 then "unprocessable_entity"
+                     when 500, 502 then "internal_server_error"
+                     else VALIDATION_FAILURE_CODE.to_s
+                     end
+            return mapped if ALLOWED_FAILURE_CODES.empty? || ALLOWED_FAILURE_CODES.include?(mapped)
+
+            ALLOWED_FAILURE_CODES.first || mapped
+          end
 
           def failed_result?(result)
             return result["ok"] == false if result.is_a?(Hash) && result.key?("ok")
@@ -338,10 +389,12 @@ module ProviderCompiler
             { "action" => action, "terminal" => true, "action_result" => public_send(action, operation_reference) }
           end
 
-          def validate_constraints(operation)
+          def validate_constraints(operation, request_method)
             CONSTRAINTS.filter_map do |constraint|
+              next if omitted_provider_field?(constraint, request_method)
+
               field = constraint.fetch("path").sub(/\Arequest\./, "")
-              value = mapped_constraint_value(operation, constraint)
+              value = mapped_constraint_value(operation, constraint, request_method)
               numeric_invalid = if !value.nil? && (constraint["minimum"] || constraint["maximum"])
                                   begin
                                     BigDecimal(value.to_s)
@@ -370,7 +423,10 @@ module ProviderCompiler
             end
           end
 
-          def validate_conditionals(operation)
+          def validate_conditionals(operation, request_method)
+            branch = requisite_branch(request_method)
+            return branch_condition_errors(operation, request_method, branch) if branch
+
             recipient = read(operation, :recipient) || {}
             type = read(recipient, :type).to_s
             CONDITIONALS.filter_map do |condition|
@@ -382,6 +438,101 @@ module ProviderCompiler
               end
               missing.empty? ? nil : "#{missing.join(", ")} is required when type=#{type}"
             end
+          end
+
+          def resolve_request_method(operation, requested_method)
+            return nil unless host_requisite_enabled?
+
+            allowed = Array(REQUEST_METHOD_CONFIG["allowed"]).map(&:to_s)
+            return requested_method.to_s if allowed.empty? && !blank?(requested_method)
+            return nil if allowed.empty?
+
+            requested = blank?(requested_method) ? nil : requested_method.to_s
+            raise ArgumentError, "unsupported request_method: #{requested}" if requested && !allowed.include?(requested)
+
+            source = read_path(operation, HOST_PROJECTION.dig("requisite", "source").to_s.sub("operation.", ""))
+            inferred = Array(REQUEST_METHOD_CONFIG["infer_from_requisite"]).filter_map do |method, path|
+              method.to_s if !source.nil? && !read_path(source, path.to_s).nil?
+            end
+            raise ArgumentError, "request_method conflicts with payout_requisite shape" if requested && inferred.any? && !inferred.include?(requested)
+            raise ArgumentError, "request_method cannot be inferred from payout_requisite" if requested.nil? && inferred.length != 1
+
+            requested || inferred.first
+          end
+
+          def host_requisite_enabled?
+            FIELD_MAPPINGS.any? do |mapping|
+              mapping["direction"].to_s == "request" && mapping["canonical_path"].to_s.sub("operation.", "") == "recipient"
+            end
+          end
+
+          def requisite_branch(request_method)
+            branches = HOST_PROJECTION.dig("requisite", "branches")
+            branches.is_a?(Hash) ? branches[request_method.to_s] : nil
+          end
+
+          def requisite_source(operation)
+            path = HOST_PROJECTION.dig("requisite", "source")
+            path ? read_path(operation, path.to_s.sub("operation.", "")) : nil
+          end
+
+          def branch_condition_errors(operation, request_method, branch)
+            source = requisite_source(operation)
+            return ["operation.payout_requisite is required"] unless source.is_a?(Hash)
+
+            missing = Array(branch["required"]).filter_map do |provider_field|
+              host_path = branch.fetch("fields", {})[provider_field.to_s]
+              provider_field unless host_path && !read_path(source, host_path).nil?
+            end
+            missing.empty? ? [] : ["#{missing.join(", ")} is required for request_method=#{request_method}"]
+          end
+
+          def build_provider_requisite(operation, request_method)
+            source = requisite_source(operation)
+            branch = requisite_branch(request_method)
+            return nil unless source.is_a?(Hash) && branch.is_a?(Hash)
+
+            result = {}
+            result["type"] = branch["provider_type"] if branch.key?("provider_type")
+            branch.fetch("fields", {}).each do |provider_field, host_path|
+              value = read_path(source, host_path)
+              set_path(result, provider_field, value) unless value.nil?
+            end
+            result
+          end
+
+          def host_value(operation, canonical_path)
+            path = HOST_PROJECTION.dig("canonical_paths", canonical_path) || canonical_path
+            read_path(operation, path.to_s.sub("operation.", ""))
+          end
+
+          def requisite_constraint?(provider_path)
+            requisite_path = HOST_PROJECTION.dig("requisite", "provider_path").to_s.sub("request.", "")
+            provider_path.to_s == "request.#{requisite_path}" || provider_path.to_s.start_with?("request.#{requisite_path}.")
+          end
+
+          def requisite_constraint_value(operation, provider_path, request_method)
+            requisite_path = HOST_PROJECTION.dig("requisite", "provider_path").to_s.sub("request.", "")
+            suffix = provider_path.to_s.delete_prefix("request.#{requisite_path}").sub(/\A\./, "")
+            source = requisite_source(operation)
+            return source if suffix.empty?
+
+            branch = requisite_branch(request_method)
+            return nil unless branch
+            return branch["provider_type"] if suffix == "type"
+
+            host_path = branch.fetch("fields", {})[suffix]
+            host_path ? read_path(source, host_path) : nil
+          end
+
+          def omitted_provider_field?(constraint, request_method)
+            provider_path = constraint.fetch("path")
+            return false unless requisite_constraint?(provider_path)
+
+            requisite_path = HOST_PROJECTION.dig("requisite", "provider_path").to_s.sub("request.", "")
+            field = provider_path.to_s.delete_prefix("request.#{requisite_path}.")
+            branch = requisite_branch(request_method)
+            Array(branch && branch["omit_provider_fields"]).map(&:to_s).include?(field)
           end
 
           def read_path(object, path)
@@ -428,7 +579,7 @@ module ProviderCompiler
             value.to_s.gsub(/[^A-Za-z0-9._~-]/) { |character| "%%%02X" % character.ord }
           end
 
-          def handle_response(response, expected_success:)
+          def handle_response(response, expected_success:, result_contract: nil, status_reference: nil)
             body_present = (response.is_a?(Hash) && (response.key?("body") || response.key?(:body))) || (!response.is_a?(Hash) && response.respond_to?(:body))
             http_status = read(response, :http_status) || read(response, :status_code) || (body_present ? read(response, :status) : nil)
             body = if body_present
@@ -445,7 +596,11 @@ module ProviderCompiler
             end
 
             return host_failure("provider response body is malformed JSON", status: 502, code: "invalid_provider_response") if body.nil? && raw_body.is_a?(String) && !raw_body.empty? && http_status
-            return { "ok" => true, "http_status" => http_status.to_s, "response" => nil } if body.nil? && http_status
+            if body.nil? && http_status
+              return host_failure("provider response did not include operation id", status: 502, code: "internal_server_error", i18n_key: "provider.missing_provider_operation_id") if result_contract.is_a?(Hash) && result_contract.fetch("wrapper", nil) == "result"
+
+              return { "ok" => true, "http_status" => http_status.to_s, "response" => nil }
+            end
             return host_failure("provider response body is not an object", status: 502, code: "invalid_provider_response") unless body.is_a?(Hash)
             mapped = map_provider_response(body)
             provider_status = mapped["provider_status"].to_s
@@ -456,16 +611,46 @@ module ProviderCompiler
             result["error"] = read(body, :error) if read(body, :error)
             result["ok"] = false if canonical_status == "unknown"
             result["error"] ||= "unknown provider status" if canonical_status == "unknown"
+            if result["ok"] == false
+              return host_failure(result["error"], status: 502, code: "internal_server_error", i18n_key: "provider.unknown_status", metadata: result.reject { |key, _value| key.to_s == "response" })
+            end
+            if result_contract.is_a?(Hash) && result_contract.fetch("wrapper", nil) == "result"
+              provider_id = mapped["provider_operation_id"] || read(body, :id)
+              return host_failure("provider response did not include operation id", status: 502, code: "internal_server_error", i18n_key: "provider.missing_provider_operation_id") if blank?(provider_id)
+
+              return host_success_result(provider_id, result)
+            end
+            return apply_status_action(result, status_reference) if status_reference
+
             result
           end
 
-          def build_provider_body(operation)
+          def host_success_result(provider_id, normalized)
+            host_result = success(result: { id: provider_id })
+            return host_result unless host_result.is_a?(Hash)
+
+            extras = normalized.reject { |key, _value| key.to_s == "response" }
+            host_result.merge(extras).merge("result" => { "id" => provider_id })
+          end
+
+          def apply_status_action(result, operation_reference)
+            action_result = bind_callback_action(result["status"], operation_reference)
+            return action_result if compiler_failure?(action_result)
+
+            result.merge(action_result)
+          end
+
+          def build_provider_body(operation, request_method)
             body = {}
             mappings = FIELD_MAPPINGS.select { |mapping| mapping["direction"].to_s == "request" }
             mappings.each do |mapping|
               canonical_path = mapping.fetch("canonical_path").sub("operation.", "")
               provider_path = mapping.fetch("provider_path").sub("request.", "")
-              value = read_path(operation, canonical_path)
+              value = if canonical_path == "recipient" && requisite_branch(request_method)
+                        build_provider_requisite(operation, request_method)
+                      else
+                        host_value(operation, canonical_path)
+                      end
               next if value.nil?
 
               value = host_amount_to_provider(value) if canonical_path == "amount"
@@ -501,8 +686,12 @@ module ProviderCompiler
             target[leaf] = value
           end
 
-          def mapped_constraint_value(operation, constraint)
+          def mapped_constraint_value(operation, constraint, request_method)
             provider_path = constraint.fetch("path")
+            if requisite_constraint?(provider_path) && requisite_branch(request_method)
+              return requisite_constraint_value(operation, provider_path, request_method)
+            end
+
             mapping = FIELD_MAPPINGS.find do |item|
               item["direction"].to_s == "request" && (item["provider_path"] == provider_path || provider_path.start_with?("#{item["provider_path"]}.") || item["provider_path"].start_with?("#{provider_path}."))
             end
@@ -516,7 +705,7 @@ module ProviderCompiler
                              else
                                provider_path.sub("request.", "")
                              end
-            read_path(operation, canonical_path)
+            host_value(operation, canonical_path)
           end
 
           def provider_error(response, body, http_status)
@@ -530,7 +719,23 @@ module ProviderCompiler
             retry_after = if headers.is_a?(Hash)
                             headers["Retry-After"] || headers["retry-after"] || headers["RETRY-AFTER"]
                           end
-            { "ok" => false, "http_status" => http_status.to_s, "error" => error, "error_code" => provider_code, "error_category" => entry ? entry["category"] : (status_entry && status_entry["canonical_category"]) || "unknown_provider_error", "retryable" => entry ? entry["retryable"] : !!(status_entry && status_entry["retryable"]), "action" => entry ? entry["action"] : (status_entry && status_entry["retryable"] ? "retry_after" : "preserve_and_review"), "retry_after" => retry_after }
+            failure_mapping = FAILURE_PROVIDER_CODE_MAPPINGS[provider_code.to_s] || FAILURE_HTTP_MAPPINGS[http_status.to_s] || default_failure_mapping(http_status)
+            metadata = { "http_status" => http_status.to_s, "error" => error, "error_code" => provider_code, "error_category" => entry ? entry["category"] : (status_entry && status_entry["canonical_category"]) || "unknown_provider_error", "retryable" => entry ? entry["retryable"] : !!(status_entry && status_entry["retryable"]), "action" => entry ? entry["action"] : (status_entry && status_entry["retryable"] ? "retry_after" : "preserve_and_review"), "retry_after" => retry_after }
+            host_failure(metadata["error_category"], status: http_status.to_i, code: failure_mapping.fetch("code"), i18n_key: failure_mapping.fetch("i18n_key"), metadata: metadata)
+          end
+
+          def default_failure_mapping(http_status)
+            code = case http_status.to_i
+                   when 400 then "bad_request"
+                   when 401 then "unauthorized"
+                   when 403 then "forbidden"
+                   when 404 then "not_found"
+                   when 429 then "too_many_requests"
+                   when 422 then "unprocessable_entity"
+                   when 500..599 then "internal_server_error"
+                   else "unprocessable_entity"
+                   end
+            { "code" => code, "i18n_key" => "provider.#{code}" }
           end
 
           def parse_json(raw_body)
@@ -709,9 +914,38 @@ module ProviderCompiler
         next if value.nil?
 
         value = provider_to_host_amount(value) if mapping["canonical_path"] == "operation.amount"
-        set_path(operation, mapping.fetch("canonical_path").sub("operation.", ""), value)
+        canonical_path = mapping.fetch("canonical_path").sub("operation.", "")
+        if canonical_path == "recipient" && host_requisite_projection?
+          project_provider_requisite(operation, value)
+        else
+          set_path(operation, host_path_for(canonical_path), value)
+        end
       end
       operation
+    end
+
+    def host_requisite_projection?
+      @blueprint.dig("base_service_profile", "host_projection", "requisite", "branches").is_a?(Hash)
+    end
+
+    def host_path_for(canonical_path)
+      path = @blueprint.dig("base_service_profile", "host_projection", "canonical_paths", canonical_path)
+      path ? path.to_s.sub("operation.", "") : canonical_path
+    end
+
+    def project_provider_requisite(operation, provider_requisite)
+      projection = @blueprint.dig("base_service_profile", "host_projection", "requisite") || {}
+      branches = projection.fetch("branches", {})
+      provider_type = read_path(provider_requisite, "type") || read_path(provider_requisite, "kind")
+      branch = branches[provider_type.to_s] || branches.values.find { |item| item.is_a?(Hash) && item["provider_type"].to_s == provider_type.to_s }
+      return set_path(operation, host_path_for("recipient"), provider_requisite) unless branch
+
+      target = {}
+      branch.fetch("fields", {}).each do |provider_field, host_path|
+        value = read_path(provider_requisite, provider_field)
+        set_path(target, host_path, value) unless value.nil?
+      end
+      set_path(operation, host_path_for("recipient"), target)
     end
 
     def provider_to_host_amount(value)
@@ -782,6 +1016,20 @@ module ProviderCompiler
   class DeterministicGenerator
     def generate(blueprint, manifest, output_dir, examples: {}, spec_document: nil, readiness: nil)
       FileUtils.mkdir_p(output_dir)
+      if blueprint.fetch("decision", "ACCEPT") != "ACCEPT" || Array(blueprint["decisions"]).any? { |item| item["severity"] == "BLOCKING" }
+        files = {
+          "provider_blueprint.json" => Util.pretty_json(blueprint) + "\n",
+          "review_manifest.json" => Util.pretty_json(manifest.to_h) + "\n",
+          "INTEGRATION.md" => integration_doc(blueprint)
+        }
+        %w[service.rb fixtures.json contract_smoke.rb integration_readiness.json INTEGRATION_READINESS.md].each do |name|
+          path = File.join(output_dir, name)
+          File.delete(path) if File.file?(path)
+        end
+        files.each { |name, content| Util.write_text(File.join(output_dir, name), content) }
+        return files.keys.map { |name| File.join(output_dir, name) }
+      end
+
       fixture_data = fixtures(blueprint, examples, spec_document: spec_document)
       files = {
         "provider_blueprint.json" => Util.pretty_json(blueprint) + "\n",
@@ -831,6 +1079,8 @@ module ProviderCompiler
         label = codes.empty? ? item["canonical_category"] : codes.join(", ")
         "- HTTP #{item["http_status"]}: #{label}#{item["retry_after_header"] ? " (сохранять #{item["retry_after_header"]})" : ""}"
       end.uniq.join("\n")
+      host_requirements = Array(blueprint.dig("host_projection", "requirements"))
+      host_todos = host_requirements.map { |item| "- TODO: #{item.fetch("todo")}" }.join("\n")
       <<~DOC
         # Интеграция #{blueprint.dig("provider", "name")}
 
@@ -867,6 +1117,7 @@ module ProviderCompiler
         - Webhook secret: передаётся в generated adapter, если Blueprint содержит signature semantics (`#{blueprint.dig("webhook", "signature", "header") || "not resolved"}`)
         - Idempotency по спецификации: `#{idempotency["spec_required"]}`; adapter policy: `#{idempotency_policy}`; header: `#{idempotency["header"] || "not resolved"}`
         - Supported canonical operations: `#{Array(blueprint.dig("base_service_profile", "canonical_operations")).join("`, `")}`
+        - Host operation source: `#{blueprint.dig("base_service_profile", "host_operation").values.join("`, `")}`
 
         Параметры, которые необходимо передать в окружение/host gateway, должны
         быть адаптированы к API host-приложения; этот generated документ не
@@ -882,6 +1133,8 @@ module ProviderCompiler
         durability across process restart не гарантируется.
 
         #{error_lines}
+
+        #{host_todos.empty? ? "" : "## TODO\n\n#{host_todos}"}
 
         Обработка webhook использует fail-closed поведение, если raw body,
         signature, secret или known event outcome отсутствуют либо некорректны.
@@ -900,7 +1153,22 @@ module ProviderCompiler
     def smoke_harness(blueprint, examples)
       provider_class = "Provider::#{Util.camel(blueprint.dig("provider", "name"))}Service"
       operation = examples.dig("create_request", "operation") || examples.dig("request", "operation") || {}
-      operation = { "amount" => 1, "currency" => blueprint.dig("money", "host", "currency"), "external_id" => "smoke-operation", "recipient" => { "type" => "sbp", "phone" => "70000000000", "bank_code" => "000000000" } }.merge(operation)
+      default_operation = { "amount" => 1, "currency" => blueprint.dig("money", "host", "currency") }
+      branches = blueprint.dig("base_service_profile", "host_projection", "requisite", "branches")
+      if branches.is_a?(Hash) && !branches.empty?
+        method, branch = branches.first
+        requisite = {}
+        branch.fetch("fields", {}).each do |provider_field, host_path|
+          set_path(requisite, host_path, smoke_value(provider_field))
+        end
+        default_operation["id"] = "smoke-operation"
+        default_operation["payout_requisite"] = requisite
+        default_operation["request_method"] = method
+      else
+        default_operation["external_id"] = "smoke-operation"
+        default_operation["recipient"] = { "type" => "sbp", "phone" => "70000000000", "bank_code" => "000000000" }
+      end
+      operation = default_operation.merge(operation)
       event, expected_status = blueprint.dig("webhook", "events")&.first
       event ||= "completed"
       expected_status ||= "approved"
@@ -922,8 +1190,8 @@ module ProviderCompiler
         module Provider
           class BaseService
             def check_conditions(_operation, _request_method); success; end
-            def success(value = true); { "ok" => true, "value" => value }; end
-            def failure(status = nil, code = nil, message = nil); code.nil? && message.nil? ? { "ok" => false, "error" => status } : { "ok" => false, "http_status" => status, "error" => message || code, "error_code" => code, "message" => message }; end
+            def success(result: nil); { "ok" => true, "result" => result }; end
+            def failure(code, i18n_key); { "ok" => false, "failure_code" => code, "i18n_key" => i18n_key }; end
             def approve_operation(operation); { "ok" => true, "action" => "approve_operation", "operation" => operation }; end
             def reject_operation(operation); { "ok" => true, "action" => "reject_operation", "operation" => operation }; end
           end
@@ -933,7 +1201,7 @@ module ProviderCompiler
 
         service = #{provider_class}.new(api_key: "smoke-key", webhook_secret: "smoke-secret")
         operation = #{ruby_literal(operation)}
-        request = service.build_create_request(operation)
+        request = service.build_create_request(operation, operation["request_method"])
         provider_amount = request.dig("body", *#{ruby_literal(provider_amount_path)})
         raise "amount conversion smoke check failed" unless provider_amount == #{ruby_literal(expected_provider_amount)} || provider_amount.to_s == #{ruby_literal(expected_provider_amount.to_s)}
         raise "sandbox URL smoke check failed" unless request.fetch("url").start_with?(#{blueprint.fetch("servers").find { |server| server["environment"] == "sandbox" }.fetch("url").inspect})
@@ -941,7 +1209,7 @@ module ProviderCompiler
         if #{(blueprint.dig("webhook", "mode") == "polling_only").inspect}
           raise "polling-only callback guard failed" unless service.process_callback(raw_body: "{}", signature: "unused").fetch("ok") == false
         else
-          body = JSON.generate(#{ruby_literal(identifier_field => "smoke-provider-id", "event" => event, "status" => provider_status, "external_id" => operation.fetch("external_id"))})
+          body = JSON.generate(#{ruby_literal(identifier_field => "smoke-provider-id", "event" => event, "status" => provider_status, "external_id" => (operation["external_id"] || operation["id"] || "smoke-operation"))})
           signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("SHA256"), "smoke-secret", body)
           callback = service.process_callback(raw_body: body, signature: signature)
           raise "webhook smoke check failed" unless callback.fetch("status") == #{expected_status.inspect}
@@ -949,6 +1217,23 @@ module ProviderCompiler
         end
         puts "contract smoke passed"
       RUBY
+    end
+
+    def smoke_value(provider_field)
+      case provider_field.to_s
+      when /phone/i then "70000000000"
+      when /bank_code|routing|bic/i then "000000000"
+      when /card/i then "4111111111111111"
+      when /account|wallet|iban/i then "SMOKE-ACCOUNT"
+      else "smoke-value"
+      end
+    end
+
+    def set_path(object, path, value)
+      keys = path.to_s.split(".")
+      leaf = keys.pop
+      target = keys.reduce(object) { |current, key| current[key] ||= {} }
+      target[leaf] = value
     end
 
     def ruby_literal(value)
