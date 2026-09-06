@@ -1050,7 +1050,7 @@
           },
           "actual": {
             "ok": true,
-            "provider_status": "",
+            "provider_status": "declined",
             "status": "rejected",
             "event": "withdrawal.declined",
             "external_id": "op-quanta-1",

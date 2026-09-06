@@ -465,9 +465,9 @@ module ProviderCompiler
     # as specification evidence instead of treating a familiar alias as a
     # generic guess. The explicit marker is deliberately narrow so ordinary
     # prose cannot silently resolve a critical status.
-    def explicit_mapping(provider_value, description)
-      mappings = description.to_s.scan(/([A-Za-z][A-Za-z0-9_.-]*)\s*:\s*canonical\s+(approved|rejected|in_progress)\b/i)
-      mappings.to_h { |value, canonical| [value, canonical.downcase] }[provider_value.to_s]
+    def explicit_mappings(provider_value, description)
+      description.to_s.scan(/([A-Za-z][A-Za-z0-9_.-]*)\s*:\s*canonical\s+(approved|rejected|in_progress)\b/i)
+        .filter_map { |value, canonical| canonical.downcase if value == provider_value.to_s }
     end
   end
 
@@ -484,7 +484,10 @@ module ProviderCompiler
       end
       values = descriptions.keys
       mappings = values.map do |provider_value|
-        spec_canonical = descriptions[provider_value]
+        evidence = Array(descriptions[provider_value])
+        explicit_values = evidence.filter_map { |item| item["canonical"] }.uniq
+        conflicting_values = explicit_values.length > 1 ? explicit_values : []
+        spec_canonical = conflicting_values.empty? ? explicit_values.first : nil
         default_canonical = @defaults.statuses[provider_value]
         canonical = spec_canonical || default_canonical
         mapping_source = @defaults.data.fetch("status_source", "CASE_DEFAULT")
@@ -495,7 +498,15 @@ module ProviderCompiler
           "evidence_sources" => ["SPEC_FACT", canonical ? canonical_source : "UNKNOWN"],
           "decision" => canonical ? "ACCEPT" : "REVIEW_REQUIRED"
         }
-        if canonical.nil? && (candidate = StatusSemantics.candidate(provider_value))
+        if conflicting_values.any?
+          mapping["canonical_value"] = "UNKNOWN"
+          mapping["decision"] = "REVIEW_REQUIRED"
+          mapping["conflicts"] = [{
+            "provider_value" => provider_value,
+            "canonical_values" => conflicting_values,
+            "evidence" => evidence.select { |item| item["canonical"] }.map(&:dup)
+          }]
+        elsif canonical.nil? && (candidate = StatusSemantics.candidate(provider_value))
           mapping["candidate_canonical_value"] = candidate
           mapping["candidate_source"] = "BUILTIN_RULE"
           mapping["decision"] = "REVIEW_REQUIRED"
@@ -507,23 +518,54 @@ module ProviderCompiler
       complete = !mappings.empty? && mappings.all? { |mapping| mapping["decision"] == "ACCEPT" }
       unresolved = mappings.select { |mapping| mapping["canonical_value"] == "UNKNOWN" }
       ambiguous = unresolved.any? { |mapping| mapping.key?("candidate_canonical_value") }
+      conflicts = mappings.flat_map { |mapping| Array(mapping["conflicts"]) }
       decision_evidence = [Evidence.new(source: "SPEC_FACT", locations: ["#/components/schemas/*/properties/status/enum"], excerpt: values.join(", "))]
-      decision_evidence << Evidence.new(source: "SPEC_DESCRIPTION", locations: ["#/components/schemas/*/properties/status/description"], excerpt: "explicit canonical status mappings") if descriptions.values.any?
+      has_explicit_description = descriptions.values.any? { |evidence| Array(evidence).any? { |item| item["canonical"] } }
+      decision_evidence << Evidence.new(source: "SPEC_DESCRIPTION", locations: ["#/components/schemas/*/properties/status/description"], excerpt: "explicit canonical status mappings") if has_explicit_description
       decision_evidence << Evidence.new(source: @defaults.data.fetch("status_source", "CASE_DEFAULT"), locations: ["organizer_case_qa.statuses"], excerpt: "status mapping for this workspace") if @defaults.statuses.any?
+      decision_evidence << Evidence.new(source: "SPEC_DESCRIPTION", locations: ["#/components/schemas/*/properties/status/description"], excerpt: "conflicting explicit canonical status mappings") if conflicts.any?
+      decision_outcome = if conflicts.any?
+                           "REVIEW_REQUIRED"
+                         elsif complete
+                           "ACCEPT"
+                         elsif ambiguous
+                           "REVIEW_REQUIRED"
+                         else
+                           "UNKNOWN"
+                         end
+      decision_severity = if conflicts.any?
+                            "WARNING"
+                          elsif complete
+                            "INFO"
+                          elsif ambiguous
+                            "WARNING"
+                          else
+                            "BLOCKING"
+                          end
+      decision_rationale = if conflicts.any?
+                           "one or more provider statuses have contradictory explicit canonical mappings"
+                         elsif complete
+                             has_explicit_description ? "every provider status has an explicit canonical mapping in OpenAPI descriptions" : "every provider status has an explicit case-default canonical mapping"
+                           elsif ambiguous
+                             "one or more provider statuses have plausible but unconfirmed terminal aliases"
+                           else
+                             "one or more provider statuses lack a confirmed canonical mapping"
+                           end
       decision = Decision.new(
         id: "status:provider-map",
-        outcome: complete ? "ACCEPT" : (ambiguous ? "REVIEW_REQUIRED" : "UNKNOWN"),
-        severity: complete ? "INFO" : (ambiguous ? "WARNING" : "BLOCKING"),
+        outcome: decision_outcome,
+        severity: decision_severity,
         candidate: mappings,
         evidence: decision_evidence,
-        rationale: complete ? (descriptions.values.any? ? "every provider status has an explicit canonical mapping in OpenAPI descriptions" : "every provider status has an explicit case-default canonical mapping") : (ambiguous ? "one or more provider statuses have plausible but unconfirmed terminal aliases" : "one or more provider statuses lack a confirmed canonical mapping")
+        rationale: decision_rationale,
+        conflicts: conflicts
       )
       AnalysisResult.new(section: mappings, decisions: [decision])
     end
 
     private
 
-    def status_values(node, found = {})
+    def status_values(node, found = {}, path = "#")
       case node
       when Hash
         %w[status state phase].each do |name|
@@ -532,18 +574,32 @@ module ProviderCompiler
           next unless status.is_a?(Array) && !status.empty?
 
           status.each do |provider_value|
-            found[provider_value] ||= StatusSemantics.explicit_mapping(provider_value, property["description"])
+            key = provider_value.to_s
+            entry = { "canonical" => nil, "source" => "SPEC_FACT", "location" => "#{path}/properties/#{name}/enum" }
+            explicit_values = StatusSemantics.explicit_mappings(provider_value, property["description"])
+            if explicit_values.any?
+              explicit_values.each do |canonical|
+                found[key] ||= []
+                found[key] << entry.merge("canonical" => canonical, "source" => "SPEC_DESCRIPTION", "location" => "#{path}/properties/#{name}/description")
+              end
+            else
+              found[key] ||= []
+              found[key] << entry
+            end
           end
         end
-        node.each_value { |value| status_values(value, found) }
+        node.each { |key, value| status_values(value, found, "#{path}/#{key}") }
       when Array
-        node.each { |value| status_values(value, found) }
+        node.each_with_index { |value, index| status_values(value, found, "#{path}/#{index}") }
       end
       found
     end
 
     def merge_status_values(left, right)
-      right.each { |provider_value, canonical| left[provider_value] ||= canonical }
+      right.each do |provider_value, evidence|
+        left[provider_value] ||= []
+        left[provider_value].concat(Array(evidence))
+      end
       left
     end
   end

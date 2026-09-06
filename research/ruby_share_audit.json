@@ -53,7 +53,7 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1082
+          "loc": 1138
         },
         {
           "path": "lib/provider_compiler/application.rb",
@@ -73,7 +73,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 1134
+          "loc": 1167
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -96,7 +96,7 @@
           "loc": 1118
         }
       ],
-      "loc": 5869
+      "loc": 5958
     },
     "other_participant_source": {
       "files": [
@@ -111,8 +111,8 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 6423,
-    "ruby_share_percent": 91.4
+    "total_source_loc": 6512,
+    "ruby_share_percent": 91.5
   },
   "production_plus_tests": {
     "ruby": {
@@ -143,7 +143,7 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1082
+          "loc": 1138
         },
         {
           "path": "lib/provider_compiler/application.rb",
@@ -163,7 +163,7 @@
         },
         {
           "path": "lib/provider_compiler/generation.rb",
-          "loc": 1134
+          "loc": 1167
         },
         {
           "path": "lib/provider_compiler/profile.rb",
@@ -187,7 +187,7 @@
         },
         {
           "path": "spec/analyzers_spec.rb",
-          "loc": 72
+          "loc": 133
         },
         {
           "path": "spec/benchmark_spec.rb",
@@ -223,7 +223,7 @@
         },
         {
           "path": "spec/organizer_contract_spec.rb",
-          "loc": 206
+          "loc": 227
         },
         {
           "path": "spec/persisted_review_spec.rb",
@@ -286,7 +286,7 @@
           "loc": 396
         }
       ],
-      "loc": 8386
+      "loc": 8557
     },
     "other_participant_source": {
       "files": [
@@ -301,7 +301,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 8940,
-    "ruby_share_percent": 93.8
+    "total_source_loc": 9111,
+    "ruby_share_percent": 93.9
   }
 }

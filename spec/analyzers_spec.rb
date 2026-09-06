@@ -84,4 +84,72 @@ RSpec.describe "NovaPay analyzers and Blueprint" do
     expect(unresolved.fetch("decisions").find { |item| item["decision_id"] == "status:provider-map" }.fetch("outcome")).to eq("REVIEW_REQUIRED")
     expect { ProviderCompiler::BlueprintValidator.new.validate!(unresolved, profile) }.to raise_error(ProviderCompiler::BlueprintValidationError)
   end
+
+  it "reviews contradictory explicit status evidence and preserves both mappings" do
+    facts = pipeline.facts
+    components = Marshal.load(Marshal.dump(facts.components))
+    components["schemas"]["ContradictoryStatusA"] = {
+      "type" => "object",
+      "properties" => {
+        "status" => { "type" => "string", "enum" => ["settled"], "description" => "settled: canonical approved" }
+      }
+    }
+    components["schemas"]["ContradictoryStatusB"] = {
+      "type" => "object",
+      "properties" => {
+        "status" => { "type" => "string", "enum" => ["settled"], "description" => "settled: canonical rejected" }
+      }
+    }
+    contradictory = ProviderCompiler::FactsIR.new(
+      source: facts.source,
+      operations: facts.operations,
+      components: components,
+      info: facts.info,
+      servers: facts.servers,
+      text_facts: facts.text_facts
+    )
+
+    result = ProviderCompiler::StatusMapper.new(pipeline.defaults).analyze(contradictory)
+    mapping = result.section.find { |item| item["provider_value"] == "settled" }
+    decision = result.decisions.first.to_h
+
+    expect(mapping).to include("canonical_value" => "UNKNOWN", "decision" => "REVIEW_REQUIRED")
+    expect(mapping.fetch("conflicts").first.fetch("canonical_values")).to contain_exactly("approved", "rejected")
+    expect(decision).to include("outcome" => "REVIEW_REQUIRED")
+    expect(decision.fetch("conflicts").first.fetch("canonical_values")).to contain_exactly("approved", "rejected")
+
+    profile = ProviderCompiler::BaseServiceProfile.load(SpecSupport::PROFILE_PATH)
+    bundle = ProviderCompiler::AnalyzerEngine.new(profile: profile, defaults: pipeline.defaults).analyze(contradictory)
+    blueprint = ProviderCompiler::BlueprintBuilder.new.build(contradictory, profile, bundle)
+    expect(blueprint.fetch("decision")).to eq("REVIEW_REQUIRED")
+    expect { ProviderCompiler::BlueprintValidator.new.validate!(blueprint, profile) }.to raise_error(ProviderCompiler::BlueprintValidationError)
+  end
+
+  it "keeps duplicate identical explicit status evidence accepted" do
+    facts = pipeline.facts
+    components = Marshal.load(Marshal.dump(facts.components))
+    ["DuplicateStatusA", "DuplicateStatusB"].each do |name|
+      components["schemas"][name] = {
+        "type" => "object",
+        "properties" => {
+          "status" => { "type" => "string", "enum" => ["settled"], "description" => "settled: canonical approved" }
+        }
+      }
+    end
+    duplicate = ProviderCompiler::FactsIR.new(
+      source: facts.source,
+      operations: facts.operations,
+      components: components,
+      info: facts.info,
+      servers: facts.servers,
+      text_facts: facts.text_facts
+    )
+
+    result = ProviderCompiler::StatusMapper.new(pipeline.defaults).analyze(duplicate)
+    mapping = result.section.find { |item| item["provider_value"] == "settled" }
+
+    expect(mapping).to include("canonical_value" => "approved", "decision" => "ACCEPT")
+    expect(mapping).not_to have_key("conflicts")
+    expect(result.decisions.first.to_h).to include("outcome" => "ACCEPT")
+  end
 end
