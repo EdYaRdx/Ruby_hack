@@ -1255,7 +1255,7 @@ module ProviderCompiler
   class Verification
     def ruby_syntax(path)
       stdout, stderr, status = Open3.capture3(RbConfig.ruby, "-c", path)
-      { "path" => path, "passed" => status.success?, "stdout" => stdout, "stderr" => stderr }
+      { "path" => path, "passed" => status.success?, "stdout" => stdout, "stderr" => status.success? ? "" : stderr }
     end
 
     def verify(output_dir)
@@ -1268,7 +1268,7 @@ module ProviderCompiler
                     { "status" => "NOT_RUN", "reason" => "transport verification is unavailable" }
                   end
       transport_passed = transport["status"] != "FAIL"
-      { "passed" => syntax.all? { |item| item["passed"] } && status.success? && transport_passed, "syntax" => syntax, "smoke" => { "passed" => status.success?, "stdout" => stdout, "stderr" => stderr }, "transport" => transport }
+      { "passed" => syntax.all? { |item| item["passed"] } && status.success? && transport_passed, "syntax" => syntax, "smoke" => { "passed" => status.success?, "stdout" => stdout, "stderr" => status.success? ? "" : stderr }, "transport" => transport }
     end
   end
 

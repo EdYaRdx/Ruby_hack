@@ -44,7 +44,7 @@ end
 
 def run_command(*args)
   stdout, stderr, status = Open3.capture3(RbConfig.ruby, *args, chdir: ROOT)
-  { "exit_status" => status.exitstatus, "stdout" => stdout, "stderr" => stderr }
+  { "exit_status" => status.exitstatus, "stdout" => stdout, "stderr" => status.success? ? "" : stderr }
 end
 
 def equivalent?(expected, actual)
