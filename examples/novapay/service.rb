@@ -114,12 +114,16 @@ module Provider
       return host_failure("webhook signature is required", code: "missing_webhook_signature") if blank?(signature)
       return host_failure("invalid webhook signature", code: "invalid_webhook_signature") unless verify_webhook_signature(raw_body, signature)
 
-      parsed_payload = read(payload, :parsed_payload) || read(payload, :data) || payload
-      parsed_payload = {} unless parsed_payload.is_a?(Hash)
       signed_body = parse_json(raw_body)
-      signed_body = signed_body.is_a?(Hash) ? signed_body : {}
-      provider_status = (read(parsed_payload, :status) || signed_body["status"]).to_s
-      event = read(parsed_payload, :event) || signed_body["event"]
+      return host_failure("signed webhook body must be a JSON object", code: "invalid_webhook_payload") unless signed_body.is_a?(Hash)
+
+      supplied_payload, supplied = supplied_callback_payload(payload)
+      if supplied && !callback_payload_matches?(signed_body, supplied_payload)
+        return host_failure("parsed webhook payload does not match signed raw body", code: "webhook_payload_mismatch")
+      end
+
+      event = read(signed_body, :event)
+      provider_status = (read(signed_body, :status) || read(signed_body, :state) || read(signed_body, :phase) || event.to_s.split(".").last).to_s
       event_status = event.to_s.split(".").last
       if !blank?(provider_status) && !blank?(event_status) && provider_status.casecmp?(event_status) == false
         return host_failure("webhook event/status contradiction", code: "webhook_contradiction")
@@ -127,7 +131,7 @@ module Provider
       canonical = WEBHOOK.fetch("events", {})[event.to_s]
       return host_failure("unknown webhook event", code: "unknown_webhook_event") if canonical.nil? || canonical == "UNKNOWN"
 
-      result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(parsed_payload, :external_id) || signed_body["external_id"], "provider_operation_id" => read(parsed_payload, WEBHOOK_ID_FIELD) || signed_body[WEBHOOK_ID_FIELD] }
+      result = { "ok" => true, "provider_status" => provider_status, "status" => canonical, "event" => event, "external_id" => read(signed_body, :external_id), "provider_operation_id" => read(signed_body, WEBHOOK_ID_FIELD) }
       action_result = bind_callback_action(canonical, result["provider_operation_id"] || result["external_id"] || result)
       return action_result.merge("provider_status" => provider_status, "status" => canonical, "event" => event) unless action_result["ok"] != false
 
@@ -591,6 +595,43 @@ module Provider
       JSON.parse(raw_body.to_s)
     rescue JSON::ParserError
       nil
+    end
+
+    def supplied_callback_payload(payload)
+      return [read(payload, :parsed_payload), true] if payload_key_present?(payload, :parsed_payload)
+      return [read(payload, :data), true] if payload_key_present?(payload, :data)
+
+      [nil, false]
+    end
+
+    def callback_payload_matches?(signed_body, supplied_payload)
+      callback_payload_normalize(signed_body) == callback_payload_normalize(supplied_payload)
+    rescue ArgumentError
+      false
+    end
+
+    def callback_payload_normalize(value)
+      case value
+      when Hash
+        value.each_with_object({}) do |(key, item), result|
+          normalized_key = key.to_s
+          normalized_item = callback_payload_normalize(item)
+          if result.key?(normalized_key) && result[normalized_key] != normalized_item
+            raise ArgumentError, "duplicate callback keys after normalization"
+          end
+          result[normalized_key] = normalized_item
+        end
+      when Array
+        value.map { |item| callback_payload_normalize(item) }
+      else
+        value
+      end
+    end
+
+    def payload_key_present?(payload, key)
+      return false unless payload.is_a?(Hash)
+
+      payload.key?(key) || payload.key?(key.to_s) || payload.key?(key.to_sym)
     end
 
     def read(object, key)

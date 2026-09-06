@@ -142,6 +142,32 @@ RSpec.describe "organizer contract alignment" do
     end
   end
 
+  it "fails closed when the parsed callback payload is not the signed payload" do
+    Dir.mktmpdir("organizer-webhook-payload-mismatch") do |directory|
+      service = generated_service(directory, webhook_secret: "organizer-secret")
+      signed_body = JSON.generate("event" => "payout.failed", "status" => "failed", "payout_id" => "signed-id")
+      signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("SHA256"), "organizer-secret", signed_body)
+      unsigned_payload = { "event" => "payout.completed", "status" => "completed", "payout_id" => "unsigned-id" }
+
+      result = service.process_callback(raw_body: signed_body, signature: signature, parsed_payload: unsigned_payload)
+
+      expect(result).to include("ok" => false, "error_code" => "webhook_payload_mismatch")
+      expect(result).not_to include("action" => "approve_operation")
+      expect(result).not_to include("action" => "reject_operation")
+    end
+  end
+
+  it "accepts semantically identical callback hashes with symbol keys" do
+    Dir.mktmpdir("organizer-webhook-payload-normalization") do |directory|
+      service = generated_service(directory, webhook_secret: "organizer-secret")
+      body = JSON.generate("event" => "payout.completed", "status" => "completed", "payout_id" => "np-organizer-1")
+      signature = OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new("SHA256"), "organizer-secret", body)
+      parsed = { event: "payout.completed", status: "completed", payout_id: "np-organizer-1" }
+
+      expect(service.process_callback(raw_body: body, signature: signature, parsed_payload: parsed)).to include("status" => "approved", "action" => "approve_operation")
+    end
+  end
+
   it "fails closed when raw callback body is missing" do
     Dir.mktmpdir("organizer-webhook-missing-body") do |directory|
       result = generated_service(directory, webhook_secret: "organizer-secret").process_callback(signature: "unused")
