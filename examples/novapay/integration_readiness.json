@@ -124,12 +124,10 @@
           "card": {
             "provider_type": "card",
             "required": [
-              "card_number",
-              "phone"
+              "card_number"
             ],
             "fields": {
-              "card_number": "card_number",
-              "phone": "phone"
+              "card_number": "card_number"
             }
           }
         },
@@ -287,7 +285,63 @@
         "kind": "api_key",
         "transport": "header",
         "name": "X-API-Key"
-      }
+      },
+      "operation_requirements": [
+        {
+          "canonical": "create_request",
+          "operation_id": "createPayout",
+          "path": "/payouts",
+          "operation_location": "#/paths/~1payouts/post",
+          "security_source": "operation",
+          "security": [
+            {
+              "ApiKeyAuth": []
+            }
+          ],
+          "status": "resolved",
+          "strategy": {
+            "kind": "api_key",
+            "transport": "header",
+            "name": "X-API-Key"
+          },
+          "auth_mode": {
+            "kind": "api_key",
+            "transport": "header",
+            "name": "X-API-Key"
+          },
+          "scheme_names": [
+            "ApiKeyAuth"
+          ],
+          "resolution": "operation_requirement"
+        },
+        {
+          "canonical": "fetch_status",
+          "operation_id": "getPayoutStatus",
+          "path": "/payouts/{payout_id}",
+          "operation_location": "#/paths/~1payouts~1{payout_id}/get",
+          "security_source": "operation",
+          "security": [
+            {
+              "ApiKeyAuth": []
+            }
+          ],
+          "status": "resolved",
+          "strategy": {
+            "kind": "api_key",
+            "transport": "header",
+            "name": "X-API-Key"
+          },
+          "auth_mode": {
+            "kind": "api_key",
+            "transport": "header",
+            "name": "X-API-Key"
+          },
+          "scheme_names": [
+            "ApiKeyAuth"
+          ],
+          "resolution": "operation_requirement"
+        }
+      ]
     },
     "money": {
       "host": {

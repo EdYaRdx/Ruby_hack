@@ -36,7 +36,7 @@ module Provider
     VALIDATION_FAILURE_STATUS = 422
     VALIDATION_FAILURE_CODE = "unprocessable_entity"
     VALIDATION_I18N_KEY = "provider.validation_error"
-    HOST_PROJECTION = {"canonical_paths" => {"external_id" => "operation.id", "provider_operation_id" => "operation.id", "recipient" => "operation.payout_requisite"}, "requisite" => {"branches" => {"card" => {"fields" => {"card_number" => "card_number", "phone" => "phone"}, "provider_type" => "card", "required" => ["card_number", "phone"]}, "sbp" => {"fields" => {"bank_code" => "sbp.bank_code", "bank_name" => "sbp.bank_name", "phone" => "sbp.phone"}, "provider_type" => "sbp", "required" => ["phone", "bank_code"]}}, "provider_path" => "recipient", "source" => "operation.payout_requisite", "unknown_required_policy" => "review_todo"}}.freeze
+    HOST_PROJECTION = {"canonical_paths" => {"external_id" => "operation.id", "provider_operation_id" => "operation.id", "recipient" => "operation.payout_requisite"}, "requisite" => {"branches" => {"card" => {"fields" => {"card_number" => "card_number"}, "provider_type" => "card", "required" => ["card_number"]}, "sbp" => {"fields" => {"bank_code" => "sbp.bank_code", "bank_name" => "sbp.bank_name", "phone" => "sbp.phone"}, "provider_type" => "sbp", "required" => ["phone", "bank_code"]}}, "provider_path" => "recipient", "source" => "operation.payout_requisite", "unknown_required_policy" => "review_todo"}}.freeze
     REQUEST_METHOD_CONFIG = {"allowed" => ["sbp", "card"], "conflict_policy" => "fail", "infer_from_requisite" => {"card" => "card_number", "sbp" => "sbp"}, "semantics" => "gateway_payment_method"}.freeze
     CREATE_RESULT = {"field" => "id", "wrapper" => "result"}.freeze
 

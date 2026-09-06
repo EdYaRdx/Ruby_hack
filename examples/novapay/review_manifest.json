@@ -205,10 +205,26 @@
           ],
           "excerpt": "ApiKeyAuth",
           "note": null
+        },
+        {
+          "source": "SPEC_FACT",
+          "locations": [
+            "#/paths/~1payouts/post"
+          ],
+          "excerpt": "create_request security (operation): ApiKeyAuth",
+          "note": null
+        },
+        {
+          "source": "SPEC_FACT",
+          "locations": [
+            "#/paths/~1payouts~1{payout_id}/get"
+          ],
+          "excerpt": "fetch_status security (operation): ApiKeyAuth",
+          "note": null
         }
       ],
       "conflicts": [],
-      "rationale": "an explicit supported security scheme is present"
+      "rationale": "canonical outgoing operations resolve to one supported authentication strategy"
     },
     {
       "decision_id": "money:amount-units",

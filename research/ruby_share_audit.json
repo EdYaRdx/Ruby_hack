@@ -53,7 +53,7 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1138
+          "loc": 1278
         },
         {
           "path": "lib/provider_compiler/application.rb",
@@ -65,7 +65,7 @@
         },
         {
           "path": "lib/provider_compiler/core.rb",
-          "loc": 462
+          "loc": 467
         },
         {
           "path": "lib/provider_compiler/decisions.rb",
@@ -96,7 +96,7 @@
           "loc": 1118
         }
       ],
-      "loc": 5958
+      "loc": 6103
     },
     "other_participant_source": {
       "files": [
@@ -111,8 +111,8 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 6512,
-    "ruby_share_percent": 91.5
+    "total_source_loc": 6657,
+    "ruby_share_percent": 91.7
   },
   "production_plus_tests": {
     "ruby": {
@@ -143,7 +143,7 @@
         },
         {
           "path": "lib/provider_compiler/analysis.rb",
-          "loc": 1138
+          "loc": 1278
         },
         {
           "path": "lib/provider_compiler/application.rb",
@@ -155,7 +155,7 @@
         },
         {
           "path": "lib/provider_compiler/core.rb",
-          "loc": 462
+          "loc": 467
         },
         {
           "path": "lib/provider_compiler/decisions.rb",
@@ -188,6 +188,10 @@
         {
           "path": "spec/analyzers_spec.rb",
           "loc": 133
+        },
+        {
+          "path": "spec/auth_hardening_spec.rb",
+          "loc": 68
         },
         {
           "path": "spec/benchmark_spec.rb",
@@ -223,7 +227,7 @@
         },
         {
           "path": "spec/organizer_contract_spec.rb",
-          "loc": 227
+          "loc": 249
         },
         {
           "path": "spec/persisted_review_spec.rb",
@@ -286,7 +290,7 @@
           "loc": 396
         }
       ],
-      "loc": 8557
+      "loc": 8792
     },
     "other_participant_source": {
       "files": [
@@ -301,7 +305,7 @@
       ],
       "loc": 554
     },
-    "total_source_loc": 9111,
-    "ruby_share_percent": 93.9
+    "total_source_loc": 9346,
+    "ruby_share_percent": 94.1
   }
 }

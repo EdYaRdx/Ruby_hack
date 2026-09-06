@@ -168,23 +168,182 @@ module ProviderCompiler
           "strategy" => strategy_for(scheme)
         }
       end
-      selected = schemes.find { |scheme| scheme["decision"] == "ACCEPT" }
+      outgoing = canonical_outgoing_operations(facts)
+      operation_requirements = outgoing.map { |item| operation_auth_candidate(item, schemes) }
+      supported_schemes = schemes.select { |scheme| scheme["decision"] == "ACCEPT" }
+      unresolved = operation_requirements.any? { |item| item["status"] != "resolved" }
+      strategies = operation_requirements.filter_map { |item| item["strategy"] }.uniq { |strategy| Util.canonicalize(strategy) }
+      auth_modes = operation_requirements.select { |item| item["status"] == "resolved" }.map { |item| item["strategy"] || { "kind" => "public" } }.uniq { |mode| Util.canonicalize(mode) }
+      mixed = auth_modes.length > 1
+      selected = if operation_requirements.any? && !unresolved && !mixed
+                   schemes.find { |scheme| scheme["decision"] == "ACCEPT" && Util.canonicalize(scheme["strategy"]) == Util.canonicalize(strategies.first) }
+                 else
+                   supported_schemes.first
+                 end
+      decision_outcome = if operation_requirements.any? && (unresolved || mixed)
+                           supported_schemes.empty? && unresolved ? "UNKNOWN" : "REVIEW_REQUIRED"
+                         else
+                           selected ? "ACCEPT" : "UNKNOWN"
+                         end
+      decision_severity = decision_outcome == "ACCEPT" ? "INFO" : "BLOCKING"
+      conflicts = if mixed
+                    [{
+                      "kind" => "outgoing_operation_auth",
+                      "operations" => operation_requirements.map { |item| item.slice("canonical", "operation_id", "path", "strategy", "scheme_names") }
+                    }]
+                  elsif unresolved
+                    operation_requirements.select { |item| item["status"] != "resolved" }.map do |item|
+                      item.slice("canonical", "operation_id", "path", "security_source", "security", "resolution")
+                    end
+                  else
+                    []
+                  end
+      rationale = if mixed
+                   "canonical outgoing operations require materially different authentication strategies"
+                 elsif unresolved
+                   "canonical outgoing operation authentication could not be resolved confidently"
+                 elsif selected
+                   operation_requirements.any? ? "canonical outgoing operations resolve to one supported authentication strategy" : "an explicit supported security scheme is present"
+                 else
+                   "no supported explicit authentication scheme was found"
+                 end
       decision = Decision.new(
         id: "auth:security-schemes",
-        outcome: selected ? "ACCEPT" : "UNKNOWN",
-        severity: selected ? "INFO" : "BLOCKING",
-        candidate: selected,
-        evidence: [Evidence.new(
-          source: "SPEC_FACT",
-          locations: ["#/components/securitySchemes"],
-          excerpt: schemes.map { |scheme| scheme["name"] }.join(", ")
-        )],
-        rationale: selected ? "an explicit supported security scheme is present" : "no supported explicit authentication scheme was found"
+        outcome: decision_outcome,
+        severity: decision_severity,
+        candidate: operation_requirements.any? && (mixed || unresolved) ? { "operations" => operation_requirements } : selected,
+        evidence: auth_evidence(schemes, operation_requirements),
+        rationale: rationale,
+        conflicts: conflicts
       )
-      AnalysisResult.new(section: { "schemes" => schemes, "selected" => selected && selected["name"], "strategy" => selected && selected["strategy"] }, decisions: [decision])
+      AnalysisResult.new(section: { "schemes" => schemes, "selected" => selected && selected["name"], "strategy" => selected && selected["strategy"], "operation_requirements" => operation_requirements }, decisions: [decision])
     end
 
     private
+
+    def auth_evidence(schemes, operation_requirements)
+      evidence = [Evidence.new(
+        source: "SPEC_FACT",
+        locations: ["#/components/securitySchemes"],
+        excerpt: schemes.map { |scheme| scheme["name"] }.join(", ")
+      )]
+      operation_requirements.each do |item|
+        evidence << Evidence.new(
+          source: "SPEC_FACT",
+          locations: [item.fetch("operation_location")],
+          excerpt: "#{item["canonical"]} security (#{item["security_source"]}): #{item["scheme_names"].join(", ")}"
+        )
+      end
+      evidence
+    end
+
+    def operation_auth_candidate(item, schemes)
+      operation = item.fetch("operation")
+      security, source = security_for(operation)
+      resolution = resolve_security(security, schemes)
+      {
+        "canonical" => item.fetch("canonical"),
+        "operation_id" => operation["operation_id"],
+        "path" => operation["path"],
+        "operation_location" => operation_location(operation),
+        "security_source" => source,
+        "security" => security,
+        "status" => resolution.fetch("status"),
+        "strategy" => resolution["strategy"],
+        "auth_mode" => resolution["strategy"] || { "kind" => "public" },
+        "scheme_names" => resolution.fetch("scheme_names"),
+        "resolution" => resolution["resolution"]
+      }
+    end
+
+    def security_for(operation)
+      if operation["security_declared"]
+        [operation["security"], "operation"]
+      elsif operation["root_security_declared"]
+        [operation["root_security"], "root"]
+      else
+        [nil, "provider_default"]
+      end
+    end
+
+    def resolve_security(security, schemes)
+      if security == []
+        return { "status" => "resolved", "strategy" => nil, "scheme_names" => [], "resolution" => "explicitly_public" }
+      end
+
+      if security.nil?
+        supported = schemes.select { |scheme| scheme["decision"] == "ACCEPT" }
+        return { "status" => "resolved", "strategy" => supported.first["strategy"], "scheme_names" => [supported.first["name"]], "resolution" => "single_provider_strategy" } if supported.length == 1
+
+        return { "status" => "unresolved", "strategy" => nil, "scheme_names" => [], "resolution" => supported.empty? ? "no_supported_scheme" : "multiple_provider_strategies_without_operation_requirement" }
+      end
+
+      return { "status" => "unresolved", "strategy" => nil, "scheme_names" => [], "resolution" => "security_requirement_is_not_an_array" } unless security.is_a?(Array) && !security.empty?
+
+      alternatives = security.filter_map do |requirement|
+        next unless requirement.is_a?(Hash) && requirement.length == 1
+
+        name = requirement.keys.first.to_s
+        scheme = schemes.find { |candidate| candidate["name"].to_s == name }
+        next unless scheme && scheme["decision"] == "ACCEPT"
+
+        { "name" => name, "strategy" => scheme["strategy"] }
+      end
+      return { "status" => "unresolved", "strategy" => nil, "scheme_names" => [], "resolution" => "unsupported_or_composite_security_requirement" } unless alternatives.length == security.length
+
+      strategies = alternatives.map { |item| item["strategy"] }.uniq { |strategy| Util.canonicalize(strategy) }
+      return { "status" => "unresolved", "strategy" => nil, "scheme_names" => alternatives.map { |item| item["name"] }, "resolution" => "alternative_strategies_differ" } unless strategies.length == 1
+
+      { "status" => "resolved", "strategy" => strategies.first, "scheme_names" => alternatives.map { |item| item["name"] }, "resolution" => "operation_requirement" }
+    end
+
+    def canonical_outgoing_operations(facts)
+      facts.operations.filter_map do |operation_fact|
+        operation = operation_fact.to_h
+        next if incoming_operation?(operation)
+
+        role = if create_operation?(operation)
+                 "create_request"
+               elsif status_operation?(operation)
+                 "fetch_status"
+               end
+        role ? { "canonical" => role, "operation" => operation } : nil
+      end
+    end
+
+    def incoming_operation?(operation)
+      return true if operation["source_kind"].to_s == "webhook"
+
+      [operation["operation_id"], operation["path"], operation["summary"], operation["description"]].compact.join(" ").downcase.match?(/webhook|callback|notification/)
+    end
+
+    def create_operation?(operation)
+      return false unless operation["method"].to_s.upcase == "POST"
+      return false if operation["operation_id"].to_s.downcase.match?(/cancel|void|abort|revoke/)
+
+      text = [operation["operation_id"], operation["path"], operation["summary"], operation["description"]].compact.join(" ").downcase
+      return true if text.match?(/create|initiat|submit|payment|payout|transfer|withdraw|fund/)
+
+      schema = operation.dig("request_body", "content", "application/json", "schema") || {}
+      properties = schema.fetch("properties", {})
+      properties.keys.any? { |name| name.to_s.match?(/amount|sum|total|value/) }
+    end
+
+    def status_operation?(operation)
+      return false unless operation["method"].to_s.upcase == "GET"
+
+      text = [operation["operation_id"], operation["path"], operation["summary"], operation["description"]].compact.join(" ").downcase
+      return true if text.match?(/status|state/)
+
+      operation.fetch("responses", {}).values.any? do |response|
+        properties = response.dig("content", "application/json", "schema", "properties") || {}
+        properties.keys.any? { |name| name.to_s.match?(/\A(?:status|state|phase)\z/i) }
+      end
+    end
+
+    def operation_location(operation)
+      "#/paths/#{operation["path"].to_s.gsub("/", "~1")}/#{operation["method"].to_s.downcase}"
+    end
 
     def supported?(scheme)
       (scheme["type"] == "apiKey" && %w[header query].include?(scheme["in"])) || scheme["type"] == "http" && scheme["scheme"].to_s.downcase == "bearer"
@@ -919,21 +1078,26 @@ module ProviderCompiler
       provider_schema = path_schema(schema, provider_path)
       return AnalysisResult.new(section: { "requirements" => [], "decision" => "ACCEPT" }, decisions: []) unless provider_schema.is_a?(Hash) && provider_schema["properties"].is_a?(Hash)
 
-      configured_fields = branches.values.flat_map { |branch| branch.is_a?(Hash) ? branch.fetch("fields", {}).keys.map(&:to_s) : [] }.uniq
       required_fields = Array(provider_schema["required"]).map(&:to_s)
-      missing = required_fields.reject do |field|
-        field == "type" || configured_fields.include?(field)
-      end
-      requirements = missing.map do |field|
-        {
-          "provider_field" => field,
-          "provider_path" => "request.#{provider_path}.#{field}",
-          "host_source" => requisite.fetch("source", "operation.payout_requisite"),
-          "mapping" => nil,
-          "generation_impact" => "BLOCKING",
-          "todo" => "provider requires field `#{field}`. Host mapping is not known. Confirm source inside operation.payout_requisite or extend BaseServiceProfile."
-        }
-      end
+      all_configured_fields = branches.values.flat_map { |branch| branch.is_a?(Hash) ? branch.fetch("fields", {}).keys.map(&:to_s) : [] }.uniq
+      requirements = branches.filter_map do |branch_name, branch|
+        next unless branch.is_a?(Hash)
+
+        branch_fields = branch.fetch("fields", {}).keys.map(&:to_s)
+        branch_anchor = (branch_fields & required_fields).any?
+        configured_fields = branch_anchor ? branch_fields : all_configured_fields
+        required_fields.reject { |field| field == "type" || configured_fields.include?(field) }.map do |field|
+          {
+            "branch" => branch_name.to_s,
+            "provider_field" => field,
+            "provider_path" => "request.#{provider_path}.#{field}",
+            "host_source" => requisite.fetch("source", "operation.payout_requisite"),
+            "mapping" => nil,
+            "generation_impact" => "BLOCKING",
+            "todo" => "provider requires field `#{field}` for #{branch_name}. Host mapping is not known. Confirm source inside operation.payout_requisite or extend BaseServiceProfile."
+          }
+        end
+      end.flatten
       return AnalysisResult.new(section: { "requirements" => [], "decision" => "ACCEPT" }, decisions: []) if requirements.empty?
 
       location = "#/paths/#{operation["path"].to_s.gsub("/", "~1")}/#{operation["method"].to_s.downcase}/requestBody/content/application~1json/schema/properties/#{provider_path.gsub(".", "/")}/required"

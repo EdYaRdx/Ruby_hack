@@ -444,7 +444,7 @@ module ProviderCompiler
           operation = path_item[method]
           next unless operation.is_a?(Hash)
 
-          operations << operation_fact(path: path, method: method, path_item: path_item, operation: operation)
+          operations << operation_fact(path: path, method: method, path_item: path_item, operation: operation, root_security: document["security"], root_security_declared: document.key?("security"))
         end
       end
 
@@ -471,7 +471,9 @@ module ProviderCompiler
                   path_item: callback_path_item,
                   operation: callback_operation,
                   source_kind: "webhook",
-                  source_name: callback_name
+                  source_name: callback_name,
+                  root_security: document["security"],
+                  root_security_declared: document.key?("security")
                 )
               end
             end
@@ -486,7 +488,7 @@ module ProviderCompiler
           operation = path_item[method]
           next unless operation.is_a?(Hash)
 
-          operations << operation_fact(path: webhook_name, method: method, path_item: path_item, operation: operation, source_kind: "webhook", source_name: webhook_name)
+          operations << operation_fact(path: webhook_name, method: method, path_item: path_item, operation: operation, source_kind: "webhook", source_name: webhook_name, root_security: document["security"], root_security_declared: document.key?("security"))
         end
       end
 
@@ -502,7 +504,7 @@ module ProviderCompiler
 
     private
 
-    def operation_fact(path:, method:, path_item:, operation:, source_kind: nil, source_name: nil)
+    def operation_fact(path:, method:, path_item:, operation:, source_kind: nil, source_name: nil, root_security: nil, root_security_declared: false)
       data = {
         "path" => path,
         "method" => method.upcase,
@@ -515,6 +517,9 @@ module ProviderCompiler
         "responses" => operation.fetch("responses", {}),
         "success_statuses" => operation.fetch("responses", {}).keys.map(&:to_s).select { |status| status.match?(/\A2\d\d\z/) }.sort,
         "security" => operation["security"],
+        "security_declared" => operation.key?("security"),
+        "root_security" => root_security,
+        "root_security_declared" => root_security_declared,
         "callbacks" => operation["callbacks"],
         "raw" => operation
       }

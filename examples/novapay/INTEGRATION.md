@@ -64,7 +64,6 @@ Host operation передаёт идентификатор, сумму и `payou
 - `request_method=sbp`: `operation.payout_requisite["sbp"]["bank_code"]` → `recipient.bank_code`
 - `request_method=sbp`: `operation.payout_requisite["sbp"]["bank_name"]` → `recipient.bank_name`
 - `request_method=card`: `operation.payout_requisite["card_number"]` → `recipient.card_number`
-- `request_method=card`: `operation.payout_requisite["phone"]` → `recipient.phone`
 
 `request_method` — логический способ выплаты, поддерживаемые значения:
 `sbp`, `card`. Это не HTTP method и

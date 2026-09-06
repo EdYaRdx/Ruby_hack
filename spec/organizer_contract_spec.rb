@@ -71,13 +71,19 @@ RSpec.describe "organizer contract alignment" do
     end
   end
 
-  it "projects the card branch from payout_requisite without requiring a top-level phone" do
+  it "projects a card-only payout_requisite without inventing a host phone" do
     Dir.mktmpdir("organizer-card") do |directory|
+      spec = YAML.safe_load(File.read(SpecSupport::SPEC_PATH, encoding: "UTF-8"), aliases: true)
+      spec.dig("components", "schemas", "Recipient")["required"] = ["type"]
+      spec_path = File.join(directory, "novapay-card-without-phone.yml")
+      File.write(spec_path, YAML.dump(spec), encoding: "UTF-8")
+      card_pipeline = ProviderCompiler::Pipeline.new(spec_path: spec_path, profile_path: SpecSupport::PROFILE_PATH, defaults_path: SpecSupport::DEFAULTS_PATH)
       operation = host_operation(
-        "payout_requisite" => { "card_number" => "4111111111111111", "phone" => "79001234567" }
+        "payout_requisite" => { "card_number" => "4111111111111111" }
       )
-      request = generated_service(directory).build_create_request(operation)
-      expect(request.dig("body", "recipient")).to include("type" => "card", "card_number" => "4111111111111111", "phone" => "79001234567")
+      request = generated_service(directory, source_pipeline: card_pipeline).build_create_request(operation)
+      expect(request.dig("body", "recipient")).to include("type" => "card", "card_number" => "4111111111111111")
+      expect(request.dig("body", "recipient")).not_to have_key("phone")
     end
   end
 
@@ -240,6 +246,25 @@ RSpec.describe "organizer contract alignment" do
       expect(File).not_to exist(File.join(directory, "review", "service.rb"))
       integration_doc = File.read(File.join(directory, "review", "INTEGRATION.md"), encoding: "UTF-8")
       expect(integration_doc).to include("iban", "required: `true`", "host source: `operation.payout_requisite`")
+    end
+  end
+
+  it "reviews a provider-required card phone when the host contract has no mapping" do
+    Dir.mktmpdir("organizer-card-review") do |directory|
+      spec = YAML.safe_load(File.read(SpecSupport::SPEC_PATH, encoding: "UTF-8"), aliases: true)
+      spec.dig("components", "schemas", "Recipient")["required"] = ["type", "card_number", "phone"]
+      spec_path = File.join(directory, "novapay-card-phone-required.yml")
+      File.write(spec_path, YAML.dump(spec), encoding: "UTF-8")
+      review_pipeline = ProviderCompiler::Pipeline.new(spec_path: spec_path, profile_path: SpecSupport::PROFILE_PATH, defaults_path: SpecSupport::DEFAULTS_PATH)
+
+      expect(review_pipeline.blueprint.fetch("decision")).to eq("REVIEW_REQUIRED")
+      expect(review_pipeline.blueprint.dig("host_projection", "requirements")).to include(
+        include("branch" => "card", "provider_field" => "phone", "mapping" => nil, "generation_impact" => "BLOCKING")
+      )
+
+      files = ProviderCompiler::DeterministicGenerator.new.generate(review_pipeline.blueprint, review_pipeline.manifest, File.join(directory, "review"))
+      expect(files.map { |path| File.basename(path) }).to contain_exactly("provider_blueprint.json", "review_manifest.json", "INTEGRATION.md")
+      expect(File).not_to exist(File.join(directory, "review", "service.rb"))
     end
   end
 

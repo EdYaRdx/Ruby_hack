@@ -38,10 +38,9 @@ host_projection:
           bank_name: sbp.bank_name
       card:
         provider_type: card
-        required: [card_number, phone]
+        required: [card_number]
         fields:
           card_number: card_number
-          phone: phone
     unknown_required_policy: review_todo
 request_method:
   semantics: gateway_payment_method
