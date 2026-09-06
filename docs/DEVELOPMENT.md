@@ -2,7 +2,7 @@
 
 ## Предварительные условия и локальный запуск
 
-Gemspec требует Ruby `>= 3.3`; CI matrix проверяет Ruby 3.3, а текущий checkout проверен на Ruby 4.0.6 и
+Gemspec требует Ruby `>= 3.3`; CI matrix проверяет Ruby 3.3 и 4.0 на Windows и Linux, а текущий checkout проверен на Ruby 4.0.6 и
 Bundler 2.5.22. Виртуальное окружение не нужно: зависимости устанавливаются
 Bundler-ом в обычный Ruby environment.
 
@@ -22,7 +22,8 @@ bundle exec ruby bin/provider_compiler_web
 После запуска откройте `http://127.0.0.1:4567`. Хост и порт можно изменить
 переменными `PROVIDER_COMPILER_WEB_HOST` и `PROVIDER_COMPILER_WEB_PORT`.
 UI-тесты находятся в `spec/web_spec.rb`; они проверяют загрузку, демо-сценарии,
-безопасность Review, runtime Preview и сгенерированные артефакты.
+безопасность Review, runtime Preview, HTTP transport evidence и сгенерированные
+артефакты.
 
 ## Процесс изменения
 
@@ -45,8 +46,12 @@ ruby bin/provider_compiler generate --out tmp/generated
 ruby bin/provider_compiler verify --out tmp/generated
 ruby research/benchmark/run.rb
 ruby research/benchmark/second_provider.rb
+ruby research/benchmark/third_provider.rb
+ruby research/black_box_v1/run.rb
+ruby bin/audit_ruby_share
 ruby bin/update_examples
 ruby bin/update_docs
+git diff --check
 ```
 
 `analyze` — только analysis stage: он записывает `provider_blueprint.json` и
@@ -55,6 +60,9 @@ ruby bin/update_docs
 `generate` сначала выполняет `validate_blueprint!`; при unresolved critical
 semantics runtime artifacts не создаются. Для ACCEPT `generate` также создаёт
 `INTEGRATION_READINESS.md` и `integration_readiness.json`.
+
+`verify` проверяет синтаксис Ruby, `contract_smoke.rb` и generated outbound
+transport через ephemeral localhost HTTP server. Внешний provider не вызывается.
 
 Подтверждённые Review decisions экспортируются в versioned
 `provider_overrides.yml` командой `export-review` и применяются через
@@ -74,7 +82,9 @@ semantics runtime artifacts не создаются. Для ACCEPT `generate` т
   Blueprint.
 - Web UI остаётся адаптером представления над тем же Application/Core pipeline и не
   дублирует анализаторы, mapper-ы или BlueprintValidator.
-- Не добавляйте live network calls, credentials или внешние runtime services.
+- Не добавляйте live calls к внешнему provider, credentials или внешние runtime
+  services. Локальный loopback HTTP harness используется только для
+  детерминированной verification.
 
 Перед semantic change прочитайте [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) и
 соответствующие invariants. Перед изменением документации прочитайте

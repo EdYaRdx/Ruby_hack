@@ -1,118 +1,187 @@
-# Текущая архитектура
+# Текущая архитектура Provider Compiler
 
-Документ описывает реализованную архитектуру. Он намеренно стабилен и не
-содержит сводных значений benchmark.
+Документ описывает реализацию текущего checkout. Он не содержит исторических
+планов и не является обещанием поддержки любого OpenAPI или production host
+contract.
 
-## Граница системы
+## Назначение и граница системы
 
-Компилятор принимает локальный OpenAPI-документ, профиль контракта хоста и
-case defaults. Provider Blueprint создаётся только после анализа с учётом
-доказательств. Ruby generator — детерминированная проекция этого Blueprint, а не
-независимый источник семантики интеграции.
+Provider Compiler принимает локальный OpenAPI YAML/JSON, `BaseServiceProfile` и
+необязательные явно переданные `CaseDefaults`/Review overrides. Он извлекает
+provider facts, сопоставляет их с контрактом Space Payments, сохраняет
+доказательства и генерирует детерминированную Ruby projection только после
+проверки критической семантики.
 
-## Слои и ответственность
-
-- **Вход:** OpenAPI, локальные `$ref`, `BaseServiceProfile` и case defaults.
-- **Ядро:** загрузка, разрешение ссылок, неизменяемый Facts IR и fingerprint.
-- **Анализ:** `OperationFact`, анализаторы, evidence, provenance и precedence.
-- **Решение:** `ACCEPT`, `REVIEW_REQUIRED` или `UNKNOWN`; критические нерешённые
-  вопросы получают blocking severity.
-- **Blueprint:** resolved Provider Blueprint и Review Manifest — соответственно
-  ЧТО и ПОЧЕМУ выбранных решений.
-- **Генерация:** детерминированная Ruby-проекция без нового семантического вывода.
-- **Проверка:** синтаксис Ruby, contract smoke и проверки согласованности.
-- **Приложение:** orchestration общего pipeline для CLI и Web UI.
-- **CLI/Web:** разные адаптеры представления над теми же слоями Application/Core.
-
-## Web UI Demo Workbench
-
-`lib/provider_compiler/web.rb` — тонкий WEBrick HTTP-слой, а
-`lib/provider_compiler/web_renderer.rb` и `web/public/` отвечают только за
-рендеринг представления и взаимодействие с браузером. Он создаёт
-изолированное временное рабочее пространство на каждую загрузку, вызывает
-существующий `Pipeline`, показывает `ReviewManifest`, а Preview и Generate
-используют существующие сгенерированные runtime и verification. Web-слой не
-добавляет новую семантическую модель, БД, аутентификацию или live provider calls.
+Система локальная и детерминированная. В ней нет моделей машинного обучения,
+удалённого inference service, базы данных или автоматического live-вызова
+внешнего provider.
 
 ## Конвейер
 
 ```text
-исходные файлы
-  -> OpenAPILoader / OpenAPIValidator
-  -> FactsBuilder (неизменяемые факты провайдера)
-  -> AnalyzerEngine (evidence, precedence, решения по безопасности)
-  -> Evidence + ReviewManifest
-  -> Resolved Provider Blueprint
-  -> BlueprintValidator
-  -> DeterministicGenerator
-  -> Verification (синтаксис Ruby + contract smoke)
+OpenAPI
+  ↓
+Spec Ingestion
+  ↓
+Immutable Facts IR
+  ↓
+Analyzers
+  ↓
+Evidence Ledger
+  ↓
+Review Manifest
+  ↓
+Human-confirmed resolutions
+  ↓
+Resolved Provider Blueprint
+  ↓
+Blueprint Validation
+  ↓
+Deterministic Generator
+  ↓
+Artifacts
+  ↓
+Verification
 ```
 
-Локальные ссылки разрешаются до анализа. Source fingerprint включает корневой
-документ, разрешённые локальные файлы и политику resolver, поэтому изменение
-набора входных данных не может выглядеть как тот же самый источник провайдера.
+### Роли слоёв
 
-## Семантические уровни
+| Слой | Ответственность |
+|---|---|
+| `Spec Ingestion` | загрузка YAML/JSON, валидация OpenAPI, разрешение локальных `$ref`, source fingerprint |
+| `Facts IR` | неизменяемая нормализованная запись того, что присутствует во входе |
+| `Analyzers` | операции, auth, money, поля, статусы, webhook, idempotency, constraints и errors |
+| `Evidence Ledger` | provenance, locations, excerpts, confidence и источники решений |
+| `Review Manifest` | объясняет `WHY`: решения, доказательства, конфликты и unresolved items |
+| `Provider Blueprint` | фиксирует `WHAT`: выбранные endpoint-ы, mapping, policy и runtime contract |
+| `Blueprint Validation` | проверяет, что resolved Blueprint безопасен для генерации |
+| `Generator` | выражает Blueprint как Ruby adapter и документацию; новых semantic решений не принимает |
+| `Verification` | проверяет syntax, contract smoke и фактический localhost HTTP transport |
 
-Facts фиксируют то, что сказано во входных данных. Evidence показывает, откуда
-взято заключение. Анализаторы интерпретируют факты в рамках выбранного
-`BaseServiceProfile` и case defaults. Blueprint содержит выбранное сопоставление
-и его состояние решения; Review Manifest сохраняет перечень решений для проверки.
+Главный инвариант: `FACT != INFERENCE`. `Review Manifest` — это **WHY**,
+`Provider Blueprint` — **WHAT**, generated Ruby — **HOW**.
 
-Эти обязанности разделены между следующими частями реализации:
+## Реализация по каталогам
 
-- `lib/provider_compiler/core.rb` — загрузка, ссылки, факты и общие утилиты;
-- `lib/provider_compiler/analysis.rb` — анализаторы и правила precedence/safety;
-- `lib/provider_compiler/profile.rb` — контракт хоста и политика profile;
-- `lib/provider_compiler/blueprint.rb` — каноническое представление и validation;
-- `lib/provider_compiler/generation.rb` — детерминированный результат и verification;
-- `lib/provider_compiler/application.rb` — orchestration CLI.
+- `lib/provider_compiler/core.rb` — ingestion, local refs, immutable facts и fingerprint;
+- `lib/provider_compiler/profile.rb` — `BaseServiceProfile` и host contract;
+- `lib/provider_compiler/analysis.rb` — analyzers, evidence, precedence и safety decisions;
+- `lib/provider_compiler/blueprint.rb` — Blueprint, Manifest projection и validation;
+- `lib/provider_compiler/generation.rb` — deterministic Ruby projection и syntax/smoke verification;
+- `lib/provider_compiler/transport_verification.rb` — local HTTP socket verification generated adapter;
+- `lib/provider_compiler/application.rb` — общий orchestration для CLI;
+- `lib/provider_compiler/web.rb` и `web_renderer.rb` — тонкий Web UI adapter над тем же pipeline;
+- `profiles/` — host profiles;
+- `fixtures/` — reproducible OpenAPI, defaults, ground truth и behavioral vectors;
+- `examples/` — generated reference artifacts;
+- `spec/` — unit, integration, UI и safety regression tests.
 
-## Состояния безопасности
+## Источники знаний и precedence
 
-| Decision | Значение | Политика вывода |
+OpenAPI — основной источник provider facts. Profile описывает canonical host
+contract. `CaseDefaults` и Review overrides — отдельные, явно переданные знания
+конкретного кейса; они не выводятся из имени provider или файла и не становятся
+глобальными facts.
+
+Локальные `$ref` разрешаются до анализа. Fingerprint включает root document,
+разрешённые local input refs и resolver policy. Поэтому изменение подключённого
+файла не может незаметно использовать старые persisted decisions.
+
+## Persisted Review
+
+```text
+human decision
+  ↓
+HUMAN_CONFIRMED
+  ↓
+provider_overrides.yml
+  ↓
+spec fingerprint/profile validation
+  ↓
+reuse OR stale rejection
+```
+
+Экспортируются только подтверждённые решения. При применении проверяются
+fingerprint спецификации, root hash, profile/version, decision ids и отсутствие
+credential-like полей. Изменившаяся спецификация или несовместимый profile
+отклоняют старый override; тихого переноса решений нет. CLI и Web UI используют
+один формат persisted Review.
+
+## Решения и fail-closed safety
+
+| Decision | Смысл | Поведение |
 |---|---|---|
-| `ACCEPT` | Обязательная семантика разрешена с достаточными доказательствами | Blueprint можно генерировать и проверять |
-| `REVIEW_REQUIRED` | Существенная неоднозначность остаётся | Сохранить evidence; при blocking-проблеме остановить генерацию |
-| `UNKNOWN` | Поведение провайдера не поддержано или не восстановимо | Сохранить и сообщить item; не придумывать сопоставление |
+| `ACCEPT` | достаточные доказательства для обязательной семантики | Blueprint допускается к validation/generation |
+| `REVIEW_REQUIRED` | значимая неоднозначность требует человека | evidence сохраняется; `BLOCKING` запрещает generation |
+| `UNKNOWN` | information unsupported или mapping не восстановим | item сохраняется и сообщается; скрытого mapping нет |
 
-Дополнительные endpoint-ы сохраняются как записи `EXTRA_OPERATION`. Они не
-становятся каноническими методами хоста, если profile явно их не связывает.
+Endpoint-ы, которые не объявлены canonical в profile, сохраняются как
+неблокирующие `EXTRA_OPERATION`. В частности, `/balance` не становится
+canonical `BaseService` operation без явного profile binding.
 
-## Контракт хоста и семантика провайдера
+Provider facts и adapter policy разделяются. Например, optional
+`Idempotency-Key` остаётся `SPEC_FACT` с `required: false`, а решение отправлять
+переданный ключ — `ADAPTER_POLICY`.
 
-Profiles задают имена канонических операций хоста, словарь статусов, callback
-capabilities и предположения о представлении данных. Сопоставления провайдера
-остаются в Blueprint. Например, amount хоста в major units может требовать
-конвертацию в provider minor units; такая конвертация является самостоятельным
-значением Blueprint и проверяется до генерации.
+## Runtime transport boundary
 
-Решения адаптера, например отправлять доступный idempotency header по выбранной
-политике, представляются как `ADAPTER_POLICY`. Их нельзя выдавать за provider
-specification facts: в NovaPay OpenAPI `Idempotency-Key` имеет `required: false`.
+```text
+Generated adapter
+  ↓
+Outbound HTTP
+  ↓
+Provider base_url из runtime config
+  ↓
+Auth
+  ↓
+Request serialization
+  ↓
+Response / status / error handling
+```
 
-## Точки расширения
+`TransportVerification` поднимает ephemeral localhost provider, загружает
+generated adapter, задаёт runtime Base URL и отправляет реальный socket request
+через `Net::HTTP`. Captured request проверяется по method/path/query/auth/body и
+`Content-Type`; status request проверяется по method/path parameter/auth; затем
+проверяются response parsing и canonical status mapping.
 
-Для нового провайдера добавьте воспроизводимые входные fixtures, выберите или
-расширьте profile, запустите анализаторы, проверьте manifest и пересоздайте
-example. Для нового семантического правила сначала добавьте evidence и
-safety-тесты, затем меняйте generator. Независимый benchmark comparator должен
-оставаться независимым от деталей реализации анализаторов.
+Это различает три утверждения:
 
-Подробные safety-инварианты и история исследования находятся в
-[`research/ARCHITECTURE_INVARIANTS.md`](../research/ARCHITECTURE_INVARIANTS.md)
-и [`research/README.md`](../research/README.md).
+1. outbound HTTP transport implemented — **да**;
+2. executable verification через localhost HTTP — **да**;
+3. external provider sandbox executed — **нет**, endpoint/credentials не заданы.
 
-## Контракт входов GOAL 5
+Результат сохраняется как `runtime_transport` в readiness JSON/Markdown и
+показывается на Generate page. Локальная проверка не является production
+acceptance с реальным `Space Payments BaseService`.
 
-OpenAPI — основной источник фактов провайдера и документированной семантики.
-`CaseDefaults` — необязательные явные переопределения или резервные знания
-провайдера; их нельзя выводить из имени файла, fingerprint или общего кода
-анализаторов. Явный `--spec` без `--defaults` использует
-`fixtures/empty_case_defaults.yml`. Поэтому spec-only анализ показывает реальные
-решения REVIEW/UNKNOWN, а не молча импортирует семантику NovaPay.
+## Web UI Demo Workbench
 
-Существующий pipeline Facts IR -> Review Manifest -> Provider Blueprint не
-изменён. Успешные HTTP-коды переносятся из OpenAPI в Blueprint и generator;
-категории runtime-ошибок, обработка Retry-After и provenance fixtures являются
-проекциями resolved Blueprint.
+`lib/provider_compiler/web.rb` создаёт изолированное временное workspace на
+каждую загрузку. `web_renderer.rb` и `web/public/` отвечают за presentation.
+Workbench показывает NovaPay, Aurora, HeliosPay и arbitrary upload, но использует
+тот же Application/Core pipeline, что и CLI. UI не содержит отдельного analyzer
+или provider-name mapping engine.
+
+## Архитектурные инварианты
+
+- Facts IR неизменяем и отделён от inference;
+- semantic decisions не живут в templates;
+- Blueprint — источник истины для generated runtime;
+- provenance и safety decision сохраняются в Manifest;
+- unresolved critical semantics не генерируются молча;
+- extra и unsupported information не теряются;
+- provider-specific defaults не попадают в generic analyzer/core;
+- CI и tests не вызывают внешний provider;
+- generated artifacts воспроизводимы через updater commands.
+
+## Ограничения
+
+Remote `$ref`, OAuth2/cookie auth, сложные schema compositions и неизвестные
+runtime host protocols не обещаются автоматически. Production
+`Provider::BaseService` в checkout отсутствует, поэтому verification использует
+profile-driven stub/harness. Для нового provider могут потребоваться явные
+defaults, profile extension и human Review.
+
+Подробные invariants: [`research/ARCHITECTURE_INVARIANTS.md`](../research/ARCHITECTURE_INVARIANTS.md).
+Policy документации: [`docs/DOCS_POLICY.md`](DOCS_POLICY.md).

@@ -1,9 +1,9 @@
-# Демонстрационный checkpoint: NovaPay, Aurora, HeliosPay и fail-closed
+# Demo за 4 минуты
 
-Сценарий рассчитан на live-показ из корня репозитория. Он использует локальные
-fixtures, не требует credentials и не выполняет сетевые вызовы к реальному provider.
-При Generate generated adapter выполняется против ephemeral localhost HTTP server,
-чтобы проверить outbound transport без обращения к внешнему sandbox.
+Эта инструкция предназначена для evaluator или teammate. Она запускается из
+корня репозитория, использует локальные fixtures и не требует credentials.
+Внешний provider sandbox не вызывается. На шаге Generate generated adapter
+проверяется через реальный localhost HTTP socket.
 
 ## Подготовка
 
@@ -13,127 +13,131 @@ bundle exec rspec
 bundle exec ruby bin/provider_compiler_web
 ```
 
-Откройте `http://127.0.0.1:4567`. Если нужен только CLI, перейдите к разделу
-[Запасной сценарий CLI](#d-запасной-сценарий-cli).
+Откройте в браузере `http://127.0.0.1:4567`. Это адрес локального Demo
+Workbench, а не публичный сервис.
 
-## Сравнение нескольких OpenAPI
+## 1. Home — показать pipeline
 
-На стартовом экране виден единый блок сравнения NovaPay, Aurora и HeliosPay.
-Значения в нём строятся из текущих fixtures и результатов анализа: отличаются
-auth transport, структура money, методы и paths, webhook и дополнительные
-операции. Кнопка «Загрузить произвольный OpenAPI» оставляет тот же общий pipeline
-для нового входного документа.
+На стартовом экране покажите последовательность:
 
-После Generate откройте блок `HTTP transport`. Статус `PASS` означает, что
-сгенерированный adapter сделал реальные localhost HTTP-запросы к временному
-провайдеру и прошёл проверки create/status, auth, body, content type и response
-mapping. Это не live-вызов provider sandbox: внешний endpoint и credentials не
-используются.
+```text
+OpenAPI → Facts → Analysis/Evidence → Review → Blueprint → Generate → Verification
+```
 
-## A. Успешный сценарий NovaPay — 2–3 минуты
+В блоке сравнения видны NovaPay, Aurora, HeliosPay и кнопка загрузки
+произвольного OpenAPI. Таблица строится из текущих fixtures/Blueprint данных:
+auth, структура money, operations, webhook и extra operations различаются.
 
-### Шаг 1 — загрузка
+## 2. NovaPay spec-only — 10/14 и Review
 
-**ЧТО НАЖАТЬ:** нажмите «Загрузить пример NovaPay».
+Нажмите «Загрузить пример NovaPay — только OpenAPI». На Analysis/Review покажите
+`10/14` автоматически принятых решений, оставшиеся вопросы и отсутствие
+автоматической готовности всей спецификации. Это официальный/reference
+OpenAPI без provider defaults.
 
-**ЧТО СКАЗАТЬ:** «Мы загружаем локальную OpenAPI-спецификацию. Workbench не
-запрашивает provider и использует тот же pipeline, что и CLI».
+Покажите, что evidence содержит `POST /payouts`,
+`GET /payouts/{payout_id}` с operationId `getPayoutStatus`, а `/balance`
+сохранён как неблокирующий `EXTRA_OPERATION`.
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** откроется экран загрузки и анализа; будет виден статус
-успешного чтения спецификации и переход к анализу.
+## 3. Money Review — факт, предложение и решение человека
 
-### Шаг 2 — анализ
+Откройте money decision. Разделите на экране:
 
-**ЧТО НАЖАТЬ:** откройте карточки операций и evidence.
+- evidence провайдера о единице и subunit;
+- предложение analyzer;
+- значение, которое подтверждает человек.
 
-**ЧТО СКАЗАТЬ:** «Компилятор извлекает методы, paths, параметры, auth, статусы,
-ошибки и webhook-сигналы, а затем показывает происхождение каждого решения».
+Для NovaPay host `operation.amount` — major RUB, provider amount — minor
+kopecks, request conversion — `×100`. `Idempotency-Key` имеет
+`required: false` в OpenAPI; отправка переданного ключа — `ADAPTER_POLICY`,
+а не `SPEC_FACT`.
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** видны `POST /payouts` для `create_request`, `GET
-/payouts/{payout_id}` для `fetch_status` с operationId `getPayoutStatus`, а
-`/balance` сохранён как `EXTRA_OPERATION`.
+## 4. Resolved NovaPay — Preview
 
-### Шаг 3 — проверка решения
+Нажмите подтверждённый пример NovaPay и откройте Preview:
 
-**ЧТО НАЖАТЬ:** перейдите в Review и раскройте элементы money/auth/status/webhook.
+```text
+1500.50 RUB → provider amount 150050 kopecks
+completed → approved → approve_operation
+```
 
-**ЧТО СКАЗАТЬ:** «Важна граница между фактом спецификации, case default,
-inference и политикой адаптера».
+Покажите request, response/status и completed webhook с
+`X-NovaPay-Signature`, `HMAC-SHA256`, raw body и hex.
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** evidence показывает, что host `operation.amount` — major
-RUB, provider amount — minor/kopecks, а request conversion использует factor
-`100`. `Idempotency-Key` отмечен как optional в OpenAPI; выбранная отправка
-ключа — это adapter policy. Webhook показывает HMAC-SHA256,
-`X-NovaPay-Signature`, raw body и hex.
+## 5. Generation — artifacts и обязательные проверки
 
-### Шаг 4 — preview
+Нажмите Generate. В каталоге результата создаётся следующий набор generated artifacts:
 
-**ЧТО НАЖАТЬ:** нажмите Preview и выполните create fixture, затем покажите
-status fixture и completed webhook.
+```text
+service.rb
+INTEGRATION.md
+fixtures.json
+provider_blueprint.json
+review_manifest.json
+contract_smoke.rb
+INTEGRATION_READINESS.md
+integration_readiness.json
+```
 
-**ЧТО СКАЗАТЬ:** «Preview выполняет локальный generated runtime, поэтому можно
-увидеть преобразование без обращения к реальному API».
+В Generate page покажите `HTTP transport`: `PASS`, `localhost HTTP E2E`,
+`Create request: PASS`, `Status request: PASS` и
+`External provider call: NOT EXECUTED`. Это actual verification state, а не
+статический label. Canonical `examples/novapay/` содержит этот набор и копию
+входного `provider_api.yaml`; актуальное количество фиксируется generated
+capabilities block в README.
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** `1500.50 RUB` превращается в provider amount `150050`,
-а terminal provider status `completed` превращается в canonical action `approved`.
+## 6. Other OpenAPI — Aurora и HeliosPay
 
-### Шаг 5 — генерация
+Откройте Aurora и HeliosPay из Home. Это synthetic provider fixtures для
+independent validation, не production providers.
 
-**ЧТО НАЖАТЬ:** нажмите Generate, затем откройте список artifacts и результат
-Verification.
+Покажите контраст:
 
-**ЧТО СКАЗАТЬ:** «Blueprint уже разрешён; generator только проецирует его и не
-пытается заново угадывать семантику».
+| Case | Что показать |
+|---|---|
+| Aurora | Bearer header, nested `money.value`, `/transfers`, `/notifications`, four status mappings |
+| HeliosPay | API key query, nested payment/settlement money, HTTP `202`, `Retry-After`, extra operation |
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** создаются `provider_blueprint.json`,
-`review_manifest.json`, `service.rb`, `fixtures.json`, `INTEGRATION.md`,
-`contract_smoke.rb` и копия `provider_api.yaml`; generation и verification
-завершаются успешно.
+Aurora проходит `3/3` levels, HeliosPay — `2/2`. `12/12` относится к frozen
+black-box cases, а не к числу провайдеров.
 
-## B. Неоднозначность с безопасной остановкой — 1–2 минуты
+## 7. HTTP transport
 
-**ЧТО НАЖАТЬ:** перезапустите загрузку и нажмите «Загрузить пример Ambiguous».
-Откройте Review.
+После Generate откройте readiness или technical details. Проверка выполняет:
 
-**ЧТО СКАЗАТЬ:** «Если критическая семантика не разрешена, система не маскирует
-догадку под готовое сопоставление».
+```text
+generated adapter
+  → provider base_url из runtime config
+  → реальный localhost HTTP socket
+  → captured create/status request
+  → method/path/query/auth/body/content type
+  → response parsing и status mapping
+```
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** решение — `REVIEW_REQUIRED`, критическая проблема
-помечена `BLOCKING`, evidence и unresolved item сохранены, а Generate недоступен
-или возвращает отказ. В resolved Blueprint нет скрытого money factor или другого
-неподтверждённого критического значения.
+Реальный внешний sandbox не запускается: для него нет endpoint и credentials.
+Не называйте localhost E2E live provider integration.
 
-## C. Проверка Aurora — 30–60 секунд
+## Объяснение за 20 секунд
 
-**ЧТО НАЖАТЬ:** загрузите «Aurora» и покажите Analysis/Review, затем Preview.
+«Provider Compiler берёт OpenAPI платёжного провайдера, отделяет факты от
+семантических выводов, показывает provenance и Review, а затем после разрешения
+критических вопросов детерминированно генерирует Ruby adapter. В отличие от
+обычного OpenAPI Generator он проверяет payment-domain mapping: деньги,
+статусы, auth, webhook, idempotency и safety. Неоднозначность не угадывается,
+а внешний provider sandbox в этом prototype не вызывается».
 
-**ЧТО СКАЗАТЬ:** «Это независимая синтетическая форма API. Здесь нет NovaPay
-hardcode: проверяются другие paths, nested money и другая auth/webhook
-терминология».
+## Если UI не запускается
 
-**ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:** видны Bearer auth, `POST /transfers`, `GET
-/transfers/{transfer_id}`, nested `money.value`/`money.currency`, destination,
-`POST /notifications`, `X-Aurora-Signature`, HMAC-SHA256, raw body и hex.
-Провайдерские `queued`, `settled`, `declined`, `voided` отображаются как
-`in_progress`, `approved`, `rejected`, `rejected`; extra operations сохранены.
-
-## D. Запасной сценарий CLI
-
-Если браузер недоступен, из второго терминала выполните:
+Проверьте `ruby --version` (`>= 3.3`), выполните `bundle install` и убедитесь,
+что порт `4567` свободен. Можно сразу использовать CLI fallback:
 
 ```powershell
 ruby bin/provider_compiler inspect
+ruby bin/provider_compiler analyze
 ruby bin/provider_compiler generate --out tmp/demo-generated
 ruby bin/provider_compiler verify --out tmp/demo-generated
 ```
 
-`inspect` показывает сводку Review Manifest, `generate` создаёт ту же
-проверяемую проекцию, а `verify` проверяет синтаксис Ruby и contract-smoke
-harness. Для другого входа укажите явно `--spec`, `--profile` и `--defaults`.
-Для отдельного unresolved анализа используйте `analyze`: он создаёт только
-`provider_blueprint.json` и `review_manifest.json`, а runtime-файлы появляются
-только после успешной validation в `generate`.
-Карточка NovaPay — явный reference-case и использует свой case profile. Обычный
-загруженный OpenAPI-документ анализируется с пустыми provider defaults. Чтобы
-показать общий путь, используйте fixtures Aurora или HeliosPay: их resolved
-демо запускаются отдельными явными действиями.
+Для произвольного входа укажите явно `--spec`, `--profile` и при необходимости
+`--defaults`. `analyze` создаёт только Blueprint и Manifest; runtime artifacts
+появляются после успешной validation в `generate`.

@@ -67,7 +67,46 @@ Provider Compiler не позиционируется как универсал�
 результатом является проверяемая проекция API провайдера на конкретный контракт
 хост-системы.
 
-## Как работает
+## Проверенный результат
+
+Текущий checkout подтверждает следующий ограниченный scope:
+
+| Evidence | Результат |
+|---|---|
+| Reference mutation benchmark | PASS — independent semantic comparator |
+| Independent provider lanes | PASS — Aurora and HeliosPay |
+| Frozen black-box corpus | PASS — independent case corpus |
+| Safety | critical false ACCEPT and unsafe generation checks PASS |
+| Outbound HTTP | generated adapter → real localhost HTTP E2E: `PASS` |
+| Cross-platform CI | Windows/Linux × Ruby `3.3`/`4.0`: PASS |
+
+Это доказательства воспроизводимого prototype scope, а не live-проверка
+внешнего платёжного provider или production `BaseService`; точные числа
+поддерживаются generated status block ниже.
+
+## Быстрый запуск
+
+Нужен Ruby `>= 3.3`; отдельное виртуальное окружение не требуется.
+
+```powershell
+bundle install
+bundle exec rspec
+ruby bin/provider_compiler inspect
+ruby bin/provider_compiler analyze
+ruby bin/provider_compiler generate --out tmp/generated
+ruby bin/provider_compiler verify --out tmp/generated
+```
+
+Для Web UI:
+
+```powershell
+bundle exec ruby bin/provider_compiler_web
+```
+
+Откройте `http://127.0.0.1:4567`. Полный сценарий находится в
+[`docs/DEMO.md`](docs/DEMO.md).
+
+## Pipeline: как работает
 
 1. OpenAPI читается и нормализуется; локальные `$ref` разрешаются до анализа.
 2. Неизменяемый `Facts IR` сохраняет факты входного документа без семантических догадок.
@@ -204,7 +243,8 @@ ruby bin/provider_compiler inspect --spec path/to/provider.yaml `
 сгенерированный `fixtures.json` сохраняет provenance и остаётся побайтно
 детерминированным.
 
-Требуется Ruby >= 3.3. CI проверяет Ruby 3.3; текущий checkout дополнительно проверен на Ruby 4.0.6 и Bundler 2.5.22.
+Требуется Ruby >= 3.3. CI проверяет Ruby 3.3 и 4.0 на Windows и Linux; текущий
+checkout дополнительно проверен на Ruby 4.0.6 и Bundler 2.5.22.
 
 ```powershell
 bundle install
@@ -241,7 +281,7 @@ Override содержит `spec_fingerprint`, hash корневого докум
 и только решения с provenance `HUMAN_CONFIRMED`. Изменённая спецификация,
 несовместимый profile, неизвестный decision id или credential-like поле приводят
 к отказу, а не к тихому применению старого решения. Web UI предоставляет те же
-операции через Review: `Export decisions` и `Import decisions`.
+операции через Review: «Экспортировать решения» и «Импортировать решения».
 
 `generate` дополнительно создаёт `INTEGRATION_READINESS.md` и
 `integration_readiness.json`. Это отчёт по фактическим Blueprint, verification,
@@ -323,7 +363,7 @@ tmp/analyzed/
 └── review_manifest.json
 ```
 
-Команда `generate` создаёт восемь файлов в каталоге результата:
+Команда `generate` создаёт каталог результата со следующим набором artifacts:
 
 ```text
 tmp/generated/
@@ -346,11 +386,12 @@ tmp/generated/
 - `INTEGRATION_READINESS.md` / `integration_readiness.json` — фактический
   readiness report для человека и автоматизации.
 
-Канонический `examples/novapay/` дополнительно хранит копию входного
-`provider_api.yaml`, поэтому там семь файлов. Сгенерированные артефакты следует
+Канонический `examples/novapay/` хранит этот generated artifact set и копию
+входного `provider_api.yaml`. Актуальное количество файлов в canonical example
+обновляется автоматически в блоке возможностей выше. Сгенерированные артефакты следует
 пересоздавать из fixture/profile/defaults, а не редактировать вручную.
 
-## Web UI
+## Demo Workbench
 
 Локальный Demo Workbench показывает тот же pipeline, не меняя семантику
 компилятора:
@@ -419,6 +460,18 @@ paths, query API-key auth, вложенные `payment` / `settlement` money, о
 В этой проверке Aurora — второй синтетический провайдер, а HeliosPay — независимая
 проверка третьего провайдера.
 
+### Матрица проверенных provider lanes
+
+| Provider / lane | Назначение | Auth | Data shape | Особые случаи | Статус |
+|---|---|---|---|---|---|
+| NovaPay | official/reference case | API key header | flat amount, major → minor ×100 | optional idempotency, `/balance` extra, webhook | spec-only review + resolved reference |
+| Aurora | synthetic independent validation | Bearer header | nested `money.value`, major → major | `/notifications`, four status mappings, extra operations | `3/3` levels |
+| HeliosPay | synthetic independent validation | API key query | nested payment/settlement money | HTTP `202`, `Retry-After`, extra operation | `2/2` levels |
+| Frozen black-box | 12 independent shape cases | header/query/bearer variants | varied fields, units, refs and webhooks | unsupported/ambiguous safety cases | `12/12` |
+
+Aurora и HeliosPay — синтетические fixture providers, а не production providers.
+`12/12` означает 12 black-box cases, а не 12 провайдеров.
+
 Подробная методика и определения метрик находятся в
 [`docs/BENCHMARK.md`](docs/BENCHMARK.md). Исторический comparator record — в
 [`research/SEMANTIC_BENCHMARK_VALIDATION.md`](research/SEMANTIC_BENCHMARK_VALIDATION.md),
@@ -469,14 +522,44 @@ runner-ов и текущего запуска RSpec. Числа не копир
 
 Регрессионное покрытие UI находится в [`spec/web_spec.rb`](spec/web_spec.rb).
 
+## Что проверено
+
+- parsing OpenAPI и локальных `$ref`;
+- semantic analysis, provenance и fail-closed Review;
+- deterministic generation и Blueprint validation;
+- Ruby syntax, contract smoke и generated artifacts;
+- outbound HTTP localhost E2E с captured create/status requests;
+- multi-provider fixtures Aurora и HeliosPay;
+- frozen black-box corpus;
+- cross-platform CI на Windows/Linux и Ruby 3.3/4.0.
+
+## Что не заявляется
+
+- поддержка любого существующего OpenAPI;
+- 100% automatic integration;
+- 37 реальных providers — benchmark содержит 37 mutation cases одного домена;
+- совместимость с реальным production `Space Payments BaseService` без его
+  фактического contract;
+- live-вызов внешнего NovaPay sandbox.
+
 ## Документация
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — текущая архитектура и
   инварианты;
 - [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — методика, формулы и актуальные
   результаты;
+- [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — фактическая матрица
+  поддерживаемых и отклоняемых OpenAPI-возможностей;
 - [`docs/DEMO.md`](docs/DEMO.md) — готовый live-сценарий для Web UI, fail-closed,
-  Aurora и CLI fallback;
+  Aurora, HeliosPay и CLI fallback;
+- [`research/RUBRIC_TRACEABILITY_V2.md`](research/RUBRIC_TRACEABILITY_V2.md) —
+  трассировка official rubric: implementation → UI evidence → tests → limits;
+- [`research/GOAL_6_5_RESULT.md`](research/GOAL_6_5_RESULT.md) — текущий acceptance
+  snapshot multi-spec и localhost HTTP evidence;
+- [`research/GOAL_6_6_RESULT.md`](research/GOAL_6_6_RESULT.md) — итоговая нормализация
+  jury-facing документации и проверка готовности документации;
+- [`research/POST_CHECKPOINT_RUBRIC_AUDIT.md`](research/POST_CHECKPOINT_RUBRIC_AUDIT.md) —
+  audit official rubric и граница доказательств;
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — процесс разработки и проверок;
 - [`docs/DOCS_POLICY.md`](docs/DOCS_POLICY.md) — правила для стабильной и
   сгенерированной документации;
@@ -506,8 +589,8 @@ Workflow [`CI`](.github/workflows/ci.yml) запускается на Windows и
 3.3 и 4.0 и выполняет RSpec, аудит синтаксиса Ruby, аудит доли Ruby, reference
 benchmark, NovaPay spec-only benchmark, frozen black-box benchmark, проверки
 Aurora и HeliosPay, сборку gem, оба детерминированных updater-а и `git diff --check`. Он не
-использует credentials, live provider API или browser; кроме checkout и
-установки gems, проверки работают offline.
+использует credentials, live provider API или browser; кроме checkout, установки
+gems и loopback HTTP verification, внешняя сеть не используется.
 
 Локальный эквивалент полного прогона:
 
@@ -539,8 +622,8 @@ production credentials и deployment не входят в scope.
 
 Доля Ruby измеряется по написанным участниками строкам исходного кода: пустые и
 содержащие только комментарии строки исключены; сгенерированные примеры, данные,
-документация и зависимости не считаются. Текущий результат только для production — `90.1%`, production + tests —
-`92.9%`. Методология и machine-readable evidence находятся в
+документация и зависимости не считаются. Текущий результат только для production — `90.6%`, production + tests —
+`93.1%`. Методология и machine-readable evidence находятся в
 [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) и
 [`research/ruby_share_audit.json`](research/ruby_share_audit.json).
 
@@ -553,7 +636,8 @@ open-source gems, сгенерированный результат не тре�
 ## Безопасность и соответствие ограничениям
 
 Спецификации обрабатываются локально; UI не сохраняет production credentials и
-не выполняет вызовы провайдера. Неизвестная или критически неоднозначная
+не выполняет вызовы реального внешнего provider. Для локальной transport-проверки
+generated adapter обращается только к ephemeral localhost server. Неизвестная или критически неоднозначная
 семантика сохраняется в `Review Manifest` и не превращается молча в `ACCEPT`.
 Source fingerprint включает корневой документ, разрешённые локальные входы и
 политику resolver.

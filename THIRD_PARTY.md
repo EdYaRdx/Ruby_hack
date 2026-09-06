@@ -26,4 +26,5 @@ Ruby и его standard library являются prerequisites, поставля
 credentials или сетевой доступ к провайдеру.
 
 Web UI использует `webrick` 1.9.2 из RubyGems как небольшой локальный
-HTTP-сервер. Он не добавляет внешние runtime API или сетевые вызовы к provider.
+HTTP-сервер. Он не добавляет внешние runtime API и не вызывает реальный provider;
+локальный transport harness также работает только с ephemeral localhost server.

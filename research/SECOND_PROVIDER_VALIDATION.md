@@ -1,4 +1,9 @@
-# GOAL 3: независимая проверка второго провайдера
+# Независимая проверка Aurora Transfers
+
+> Current semantic validation snapshot. Aurora — synthetic fixture provider, а
+> не production provider. Для текущего runtime transport evidence используйте
+> [`docs/BENCHMARK.md`](../docs/BENCHMARK.md) и
+> [`GOAL_6_5_RESULT.md`](GOAL_6_5_RESULT.md).
 
 Provider: Aurora Transfers
 
@@ -75,11 +80,14 @@ semantics, а неизвестные webhook raw-body/encoding details оста�
 - nested request/response field mappings.
 
 Полученная Blueprint имеет `ACCEPT`, нулевые blocking/review decisions, а generated
-artifacts проходят syntax и contract smoke verification:
+artifacts проходят syntax, contract smoke и localhost HTTP transport verification:
 
 - `tmp/benchmark/aurora-generic_plus_case_defaults/provider_blueprint.json`;
 - `tmp/benchmark/aurora-generic_plus_case_defaults/service.rb`;
 - `tmp/benchmark/aurora-generic_plus_case_defaults/contract_smoke.rb`.
+
+Readiness сохраняет `runtime_transport.status = PASS`, а внешний provider
+sandbox остаётся `NOT_EXECUTED`.
 
 Smoke contract проверяет nested request projection, decimal same-unit money,
 Bearer auth, обработку notification signature и callback status processing.

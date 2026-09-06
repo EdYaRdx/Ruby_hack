@@ -11,6 +11,17 @@
 > [`docs/`](../docs/). Исторические планы и snapshots ниже помечаются явно и не
 > заменяют текущую реализацию.
 
+## Что считать текущим
+
+Для jury-facing описания используйте только корневой [`README.md`](../README.md),
+[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md),
+[`docs/SUPPORT_MATRIX.md`](../docs/SUPPORT_MATRIX.md),
+[`docs/BENCHMARK.md`](../docs/BENCHMARK.md),
+[`docs/DEMO.md`](../docs/DEMO.md) и текущие acceptance reports
+`POST_CHECKPOINT_RUBRIC_AUDIT.md` / `GOAL_6_5_RESULT.md` / `GOAL_6_6_RESULT.md`.
+Остальные материалы
+ниже — traceability, background или исторические snapshots.
+
 ## Текущие дополнительные материалы
 
 `REFERENCE_GROUND_TRUTH.md`, `GROUND_TRUTH_CORRECTIONS.md`,
@@ -35,7 +46,7 @@
 как superseded. Для текущих чисел используйте `docs/BENCHMARK.md` и
 `NOVAPAY_SPEC_ONLY_BASELINE.md`.
 
-## GOAL 3: артефакты реальной проверки
+## Исторические записи GOAL 3
 
 - [SEMANTIC_BENCHMARK_VALIDATION.md](SEMANTIC_BENCHMARK_VALIDATION.md) — исторический snapshot независимого semantic comparator GOAL 3.5.
 - [GOAL_3_5_SCORECARD.md](GOAL_3_5_SCORECARD.md) — исторический scorecard и итоговый verdict GOAL 3.5.
@@ -85,6 +96,7 @@
 - [SCORE_AUDIT.md](SCORE_AUDIT.md) — audit каждого критерия без fake score.
 - [POST_CHECKPOINT_RUBRIC_AUDIT.md](POST_CHECKPOINT_RUBRIC_AUDIT.md) — post-checkpoint audit rubric, multi-spec visibility и outbound HTTP evidence.
 - [GOAL_6_5_RESULT.md](GOAL_6_5_RESULT.md) — итог multi-spec validation, localhost HTTP evidence и regression matrix GOAL 6.5.
+- [GOAL_6_6_RESULT.md](GOAL_6_6_RESULT.md) — итоговая нормализация документации и jury-facing readiness.
 - [BONUS_FEATURE_ROI.md](BONUS_FEATURE_ROI.md) — ROI и порядок bonus features.
 - [IMPLEMENTATION_PLAN_FINAL.md](IMPLEMENTATION_PLAN_FINAL.md) — critical path и vertical slice после verdict.
 - [ARCHITECTURE_INVARIANTS.md](ARCHITECTURE_INVARIANTS.md) — invariants, которые нельзя нарушать.
@@ -103,7 +115,7 @@ OpenAPI-документов материализованы из NovaPay fixture
 mutation corpus, а не произвольное покрытие providers. Semantic и behavioral
 validation Aurora проводится отдельно и описана в `SECOND_PROVIDER_VALIDATION.md`.
 
-## Доказательства GOAL 5
+## Исторические записи GOAL 5
 
 - [`GOAL_5_3_RESULT.md`](GOAL_5_3_RESULT.md) — итоговый аудит GitHub, compliance, CI, visibility и freeze.
 - [`GOAL_5_2_RESULT.md`](GOAL_5_2_RESULT.md) — итоговый pre-push-аудит репозитория, документации/UI и regression verdict.
@@ -115,7 +127,7 @@ validation Aurora проводится отдельно и описана в `SE
 - [`benchmark/third_provider.rb`](benchmark/third_provider.rb) — независимая проверка HeliosPay.
 - [`../fixtures/heliospay_ground_truth.yml`](../fixtures/heliospay_ground_truth.yml) — подготовленная авторами ground truth третьего провайдера.
 
-## GOAL 6.2: release-grade acceptance
+## Исторические записи GOAL 6.2 и последующих checkpoint-ов
 
 - [`RELEASE_ENGINEERING_RESULT.md`](RELEASE_ENGINEERING_RESULT.md) — clean gem install, package audit, platform matrix and generated-adapter E2E.
 - [`PERSISTED_REVIEW_RESULT.md`](PERSISTED_REVIEW_RESULT.md) — versioned Review export/import, fingerprint/profile guards and Web coverage.

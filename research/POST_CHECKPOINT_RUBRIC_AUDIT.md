@@ -2,9 +2,9 @@
 
 Дата проверки: 2026-09-06
 Исходное состояние: `6e0f534` (`docs: record final checkpoint UI acceptance`)
-Официальный источник rubric: `C:\Users\Эдуард\Downloads\описание.docx`
+Официальный источник rubric: `описание.docx` (локальный attachment)
 SHA-256 источника: `8807A4DFB98FDCF7B25517E9443A8805A33542BA844D2285CECD3EE7B3FD6B2F`
-Официальная NovaPay OpenAPI: `C:\Users\Эдуард\Downloads\provider_api.yaml`
+Официальная NovaPay OpenAPI: `provider_api.yaml` (локальный attachment)
 SHA-256 OpenAPI: `415F50EE36FB331DFAB49CEED0E8ED3B0EBE16053D7E00DBABD32282F4396551`
 
 ## Назначение проверки

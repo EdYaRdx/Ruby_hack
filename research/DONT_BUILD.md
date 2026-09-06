@@ -3,6 +3,10 @@
 > **POLICY RECORD.** Упомянутые ниже LLM, embeddings, neural models и внешние
 > neural APIs — явно исключённые исторические альтернативы. Текущий prototype
 > работает на детерминированном Ruby pipeline и не использует их.
+>
+> **HISTORICAL / NOT CURRENT.** Этот файл фиксирует границы раннего MVP. Web UI
+> и localhost transport verification были реализованы позже; текущим источником
+> фактов являются `README.md` и `docs/`.
 
 Эти элементы намеренно исключены после сравнения ожидаемого прироста score с
 risk solo implementation.
@@ -20,10 +24,10 @@ risk solo implementation.
 
 ## Исключённый product scope
 
-- Web UI: детерминированный `OptionParser` CLI показывает полный flow с меньшей
-  failure surface.
-- Runtime network calls к реальному provider: для безопасной hackathon demo
-  достаточно fixtures и generated adapter.
+- Web UI: в раннем MVP был исключён в пользу CLI; текущий Web Workbench описан в
+  `docs/DEMO.md` и не меняет compiler semantics.
+- Runtime network calls к реальному provider: остаются вне scope; текущая demo
+  дополнительно использует только локальный ephemeral HTTP harness.
 - Автоматическое угадывание undocumented currency units, retry rules или
   signature algorithms.
 - Произвольная natural-language conditional logic; поддерживаются только
