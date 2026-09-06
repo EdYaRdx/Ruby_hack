@@ -64,9 +64,11 @@ Benchmark ground truth changed: **NO**.
 | `git diff --check` | PASS |
 | Production Ruby share | PASS — 90.1% |
 
-The frozen input paths `research/black_box_v1/expected`, `specs`,
-`ground_truth.yml`, `MANIFEST.json` and `runtime_vectors.yml` have no diff from
-the frozen baseline.
+The frozen corpus paths introduced at `7257a89` —
+`research/black_box_v1/specs`, `ground_truth.yml` and `MANIFEST.json` — have no
+diff from that freeze point. The later runtime-hardening fixture
+`runtime_vectors.yml` was introduced by `64f9988` and is unchanged since that
+commit.
 
 ## Remote matrix
 
